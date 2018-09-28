@@ -19,7 +19,7 @@ Included algorithms for undersampling:
 
 * **Instance Hardness Threshold.** Original paper: "An Empirical Study of Instance Hardness" by Michael R. Smith, Tony Martinez and Christophe Giraud-Carrier.
 
-* **Iterative Instance Adjustment for Imbalanced Domains.** Original paper: "Addressing soul classification with instance generation techniques: IPADE-ID" by Victoria López, Isaac Triguero, Cristóbal J. Carmona, Salvador García and Francisco Herrera.
+* **Iterative Instance Adjustment for Imbalanced Domains.** Original paper: "Addressing imbalanced classification with instance generation techniques: IPADE-ID" by Victoria López, Isaac Triguero, Cristóbal J. Carmona, Salvador García and Francisco Herrera.
 
 * **NearMiss.** Original paper: "kNN Approach to Unbalanced Data Distribution: A Case Study involving Information Extraction" by Jianping Zhang and Inderjeet Mani.
 
@@ -43,7 +43,7 @@ Included algorithms for oversampling:
 
 * **DBSMOTE.** Original paper: "DBSMOTE: Density-Based Synthetic Minority Over-sampling TEchnique" by Chumphol Bunkhumpornpat,  Krung Sinapiromsaran and Chidchanok Lursinsap.
 
-* **MDO.** Original paper: "To combat multi-class soul problems by means of over-sampling and boosting techniques" by Lida Adbi and Sattar Hashemi.
+* **MDO.** Original paper: "To combat multi-class imbalanced problems by means of over-sampling and boosting techniques" by Lida Adbi and Sattar Hashemi.
 
 * **MWMOTE.** Original paper: "MWMOTE—Majority Weighted Minority Oversampling Technique for Imbalanced Data Set Learning" by Sukarna Barua, Md. Monirul Islam, Xin Yao, Fellow, IEEE, and Kazuyuki Muras.
 
@@ -53,7 +53,7 @@ Included algorithms for oversampling:
 
 * **SMOTE + ENN and SMOTE + TL.** Original paper: "A Study of the Behavior of Several Methods for Balancing Machine Learning Training Data" by Gustavo E. A. P. A. Batista, Ronaldo C. Prati and Maria Carolina Monard.
 
-* **SMOTE-RSB.** Original paper: "kNN Approach to Unbalanced Data Distribution: SMOTE-RSB: a hybrid preprocessing approach based on oversampling and undersampling for high soul data-sets using SMOTE and rough sets theory" by Enislay Ramentol, Yailé Caballero, Rafael Bello and Francisco Herrera.
+* **SMOTE-RSB.** Original paper: "kNN Approach to Unbalanced Data Distribution: SMOTE-RSB: a hybrid preprocessing approach based on oversampling and undersampling for high imbalanced data-sets using SMOTE and rough sets theory" by Enislay Ramentol, Yailé Caballero, Rafael Bello and Francisco Herrera.
 
 * **Spider2.** Original paper: "Learning from Imbalanced Data in Presence of Noisy and Borderline Examples" by Krystyna Napiera la, Jerzy Stefanowski and Szymon Wilk.
 
