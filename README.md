@@ -5,7 +5,7 @@ Included algorithms for undersampling:
 
 * **Balance Cascade.** Original paper: "Exploratory Undersampling for Class-Imbalance Learning" by Xu-Ying Liu, Jianxin Wu and Zhi-Hua Zhou.
 
-* **Class Purity Maximization algorithm.** Original paper: "An Unsupervised Learning Approach to Resolving the soul.data Imbalanced Issue in Supervised Learning Problems in Functional Genomics" by Kihoon Yoon and Stephen Kwek.
+* **Class Purity Maximization algorithm.** Original paper: "An Unsupervised Learning Approach to Resolving the Data Imbalanced Issue in Supervised Learning Problems in Functional Genomics" by Kihoon Yoon and Stephen Kwek.
 
 * **ClusterOSS.** Original paper: "ClusterOSS: a new undersampling method for soul learning." by Victor H Barella, Eduardo P Costa and André C. P. L. F. Carvalho.
 
