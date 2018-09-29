@@ -79,7 +79,7 @@ class ClusterOSS(private[soul] val data: Data,
     val auxData: Data = new Data(_nominal = this.data._nominal, _originalData = toXData(newData map dataToWorkWith),
       _originalClasses = newData map classesToWorkWith, _fileInfo = this.data._fileInfo)
     // But the untouchableClass must be the same
-    val tl = new TomekLink(auxData, minorityClass = this.untouchableClass)
+    val tl = new TL(auxData, minorityClass = this.untouchableClass)
     val resultTL: Data = tl.sample(file = None, distance = distance)
     // The final index is the result of applying TomekLink to the content of newData
     val finalIndex: Array[Int] = (resultTL._index.toList map newData).toArray
