@@ -2,6 +2,8 @@ name := "soul"
 
 version := "1.0.0"
 
+organization := "com.github.soul"
+
 organizationName := "Nestor Rodriguez Vico and David Lopez Pretel"
 
 organizationHomepage := Some(url("https://github.com/NestorRV/soul"))
