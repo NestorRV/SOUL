@@ -3,6 +3,8 @@ package soul.algorithm.undersampling
 import soul.algorithm.Algorithm
 import soul.data.Data
 import soul.util.Utilities._
+import weka.classifiers.trees.J48
+import weka.core.Instances
 
 import scala.util.Random
 

@@ -1,5 +1,6 @@
 package soul.algorithm.oversampling
 
+import breeze.linalg.{DenseMatrix, eigSym}
 import soul.data.Data
 import soul.util.Utilities._
 

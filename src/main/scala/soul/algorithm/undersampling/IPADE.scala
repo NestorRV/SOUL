@@ -3,9 +3,13 @@ package soul.algorithm.undersampling
 import java.io.ByteArrayInputStream
 import java.util
 
+import com.paypal.digraph.parser.{GraphEdge, GraphNode, GraphParser}
 import soul.algorithm.Algorithm
 import soul.data.Data
 import soul.util.Utilities._
+import weka.classifiers.Evaluation
+import weka.classifiers.trees.J48
+import weka.core.{Instance, Instances}
 
 import scala.annotation.switch
 import scala.collection.JavaConversions._

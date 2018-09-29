@@ -4,6 +4,7 @@ import java.util
 import java.util.concurrent.TimeUnit
 
 import soul.data.{Data, FileInfo}
+import weka.core.{Attribute, DenseInstance, Instance, Instances}
 
 import scala.Array.range
 import scala.collection.mutable.ArrayBuffer
