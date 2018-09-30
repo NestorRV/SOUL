@@ -41,7 +41,7 @@ Included algorithms for oversampling:
 
 * **Borderline-SMOTE.** Original paper: "Borderline-SMOTE: A New Over-Sampling Method in Imbalanced Data Sets Learning." by Hui Han, Wen-Yuan Wang, and Bing-Huan Mao.
 
-* **DBSMOTE.** Original paper: "DBSMOTE: Density-Based Synthetic Minority Over-sampling TEchnique" by Chumphol Bunkhumpornpat,  Krung Sinapiromsaran and Chidchanok Lursinsap.
+* **DBSMOTE.** Original paper: "DBSMOTE: Density-Based Synthetic Minority Over-sampling Technique" by Chumphol Bunkhumpornpat,  Krung Sinapiromsaran and Chidchanok Lursinsap.
 
 * **MDO.** Original paper: "To combat multi-class imbalanced problems by means of over-sampling and boosting techniques" by Lida Adbi and Sattar Hashemi.
 
