@@ -7,14 +7,12 @@ import soul.util.Utilities._
 /** ClusterOSS. Original paper: "ClusterOSS: a new undersampling method for soul learning."
   * by Victor H Barella, Eduardo P Costa and André C P L F Carvalho.
   *
-  * @param data          data to work with
-  * @param seed          seed to use. If it is not provided, it will use the system time
-  * @param minorityClass indicates the minority class. If it's set to -1, it will set to the one with less instances
+  * @param data data to work with
+  * @param seed seed to use. If it is not provided, it will use the system time
   * @author Néstor Rodríguez Vico
   */
 class ClusterOSS(private[soul] val data: Data,
-                 override private[soul] val seed: Long = System.currentTimeMillis(),
-                 override private[soul] val minorityClass: Any = -1) extends Algorithm {
+                 override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
 
   /** Undersampling method based in ClusterOSS
     *
@@ -25,10 +23,10 @@ class ClusterOSS(private[soul] val data: Data,
     * @param restarts      number of times to relaunch KMeans core
     * @param minDispersion stop KMeans core if dispersion is lower than this value
     * @param maxIterations number of iterations to be done in KMeans core
-    * @return soul.data structure with all the important information
+    * @return data structure with all the important information
     */
   def compute(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3, numClusters: Int = 15,
-             restarts: Int = 5, minDispersion: Double = 0.0001, maxIterations: Int = 100): Data = {
+              restarts: Int = 5, minDispersion: Double = 0.0001, maxIterations: Int = 100): Data = {
     // Use randomized data 
     val dataToWorkWith: Array[Array[Double]] = (this.index map this.x).toArray
     // and randomized classes to match the randomized data
@@ -79,9 +77,10 @@ class ClusterOSS(private[soul] val data: Data,
     val auxData: Data = new Data(_nominal = this.data._nominal, _originalData = toXData(newData map dataToWorkWith),
       _originalClasses = newData map classesToWorkWith, _fileInfo = this.data._fileInfo)
     // But the untouchableClass must be the same
-    val tl = new TL(auxData, minorityClass = this.untouchableClass)
+    val tl = new TL(auxData)
+    tl.untouchableClass_=(this.untouchableClass)
     val resultTL: Data = tl.compute(file = None, distance = distance)
-    // The final index is the result of applying TomekLink to the content of newData
+    // The final index is the result of applying Tomek Link to the content of newData
     val finalIndex: Array[Int] = (resultTL._index.toList map newData).toArray
 
     // Stop the time

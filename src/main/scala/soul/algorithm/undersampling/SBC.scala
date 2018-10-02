@@ -10,14 +10,12 @@ import scala.util.Random
 /** Undersampling Based on Clustering core. Original paper: "Under-Sampling Approaches for Improving Prediction of the
   * Minority Class in an Imbalanced Dataset" by Show-Jane Yen and Yue-Shi Lee.
   *
-  * @param data          data to work with
-  * @param seed          seed to use. If it is not provided, it will use the system time
-  * @param minorityClass indicates the minority class. If it's set to -1, it will set to the one with less instances
+  * @param data data to work with
+  * @param seed seed to use. If it is not provided, it will use the system time
   * @author Néstor Rodríguez Vico
   */
 class SBC(private[soul] val data: Data,
-          override private[soul] val seed: Long = System.currentTimeMillis(),
-          override private[soul] val minorityClass: Any = -1) extends Algorithm {
+          override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
 
   /** Undersampling method based in SBC
     *
@@ -29,10 +27,10 @@ class SBC(private[soul] val data: Data,
     * @param restarts      number of times to relaunch KMeans core
     * @param minDispersion stop KMeans core if dispersion is lower than this value
     * @param maxIterations number of iterations to be done in KMeans core
-    * @return soul.data structure with all the important information
+    * @return data structure with all the important information
     */
   def compute(file: Option[String] = None, method: String = "random", m: Double = 1.0, k: Int = 3, numClusters: Int = 50,
-             restarts: Int = 1, minDispersion: Double = 0.0001, maxIterations: Int = 200): Data = {
+              restarts: Int = 1, minDispersion: Double = 0.0001, maxIterations: Int = 200): Data = {
     // Use randomized data 
     val dataToWorkWith: Array[Array[Double]] = (this.index map this.x).toArray
     // and randomized classes to match the randomized data

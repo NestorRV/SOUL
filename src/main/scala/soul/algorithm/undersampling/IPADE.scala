@@ -19,24 +19,22 @@ import scala.collection.mutable.ArrayBuffer
 /** Iterative Instance Adjustment for Imbalanced Domains. Original paper: "Addressing soul classification with instance
   * generation techniques: IPADE-ID" by Victoria López, Isaac Triguero, Cristóbal J. Carmona, Salvador García and Francisco Herrera.
   *
-  * @param data          localTrainData to work with
-  * @param seed          seed to use. If it is not provided, it will use the system time
-  * @param minorityClass indicates the minority class. If it's set to -1, it will set to the one with less instances
+  * @param data localTrainData to work with
+  * @param seed seed to use. If it is not provided, it will use the system time
   * @author Néstor Rodríguez Vico
   */
 class IPADE(private[soul] val data: Data,
-            override private[soul] val seed: Long = System.currentTimeMillis(),
-            override private[soul] val minorityClass: Any = -1) extends Algorithm {
+            override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
 
   private[soul] val random: scala.util.Random = new scala.util.Random(this.seed)
 
-  /** Compute Iterative Instance Adjustment for Imbalanced Domains soul.algorithm.undersampling
+  /** Compute Iterative Instance Adjustment for Imbalanced Domains algorithm
     *
     * @param file         file to store the log. If its set to None, log process would not be done
     * @param iterations   number of iterations used in Differential Evolution
     * @param strategy     strategy used in the mutation process of Differential Evolution
     * @param randomChoice whether to choose a random individual or not
-    * @return soul.data structure with all the important information
+    * @return data structure with all the important information
     */
   def compute(file: Option[String] = None, iterations: Int = 100, strategy: Int = 1, randomChoice: Boolean = true): Data = {
     def accuracy(trainData: Array[Array[Double]], trainClasses: Array[Any], testData: Array[Array[Double]], testClasses: Array[Any]): Double = {

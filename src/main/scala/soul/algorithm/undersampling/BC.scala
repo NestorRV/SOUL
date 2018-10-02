@@ -9,14 +9,12 @@ import scala.util.Random
 
 /** Balance Cascade algorithm. Original paper: "Exploratory Undersampling for Class-Imbalance Learning" by Xu-Ying Liu, Jianxin Wu and Zhi-Hua Zhou.
   *
-  * @param data          data to work with
-  * @param seed          seed to use. If it is not provided, it will use the system time
-  * @param minorityClass indicates the minority class. If it's set to -1, it will set to the one with less instances
+  * @param data data to work with
+  * @param seed seed to use. If it is not provided, it will use the system time
   * @author Néstor Rodríguez Vico
   */
 class BC(private[soul] val data: Data,
-         override private[soul] val seed: Long = System.currentTimeMillis(),
-         override private[soul] val minorityClass: Any = -1) extends Algorithm {
+         override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
 
   /** Compute the Balance Cascade core.
     *
@@ -32,7 +30,7 @@ class BC(private[soul] val data: Data,
     */
 
   def compute(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3,
-             nMaxSubsets: Int = 5, nFolds: Int = 5, ratio: Double = 1.0): Data = {
+              nMaxSubsets: Int = 5, nFolds: Int = 5, ratio: Double = 1.0): Data = {
     // Use randomized data
     val dataToWorkWith: Array[Array[Double]] = (this.index map this.x).toArray
     // and randomized classes to match the randomized data

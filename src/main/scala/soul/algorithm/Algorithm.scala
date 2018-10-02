@@ -20,7 +20,13 @@ private[soul] trait Algorithm {
   private[soul] val counter: Map[Any, Int] = this.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
   // Otherwise, minorityClass will be used as the minority one
-  private[soul] val untouchableClass: Any = if (this.minorityClass == -1) this.counter.minBy((c: (Any, Int)) => c._2)._1 else this.minorityClass
+  private[soul] var untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
   private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.y.indices.toList)
+
+  /** Set the untouchableClass
+    *
+    * @param value new untouchableClass
+    */
+  private[soul] def untouchableClass_=(value: Any): Unit = untouchableClass = value
 }

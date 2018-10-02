@@ -10,14 +10,12 @@ import scala.math.min
 /** Class Purity Maximization core. Original paper: "An Unsupervised Learning Approach to Resolving the
   * soul.data Imbalanced Issue in Supervised Learning Problems in Functional Genomics" by Kihoon Yoon and Stephen Kwek.
   *
-  * @param data          data to work with
-  * @param seed          seed to use. If it is not provided, it will use the system time
-  * @param minorityClass indicates the minority class. If it's set to -1, it will set to the one with less instances
+  * @param data data to work with
+  * @param seed seed to use. If it is not provided, it will use the system time
   * @author Néstor Rodríguez Vico
   */
 class CPM(private[soul] val data: Data,
-          override private[soul] val seed: Long = System.currentTimeMillis(),
-          override private[soul] val minorityClass: Any = -1) extends Algorithm {
+          override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
 
   private[soul] val centers: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
   private[soul] var distances: Array[Array[Double]] = _
@@ -26,7 +24,7 @@ class CPM(private[soul] val data: Data,
     *
     * @param file     file to store the log. If its set to None, log process would not be done
     * @param distance distance to use when calling the NNRule core
-    * @return soul.data structure with all the important information
+    * @return data structure with all the important information
     */
   def compute(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN): Data = {
     // Use normalized data for EUCLIDEAN distance and randomized data

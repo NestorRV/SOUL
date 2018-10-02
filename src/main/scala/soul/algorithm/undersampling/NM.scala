@@ -9,17 +9,14 @@ import scala.util.Random
 /** NearMiss. Original paper: "kNN Approach to Unbalanced soul.data Distribution: A Case Study involving Information
   * Extraction" by Jianping Zhang and Inderjeet Mani.
   *
-  * @param data          data to work with
-  * @param seed          seed to use. If it is not provided, it will use the system time
-  * @param minorityClass indicates the minority class. If it's set to -1, it will set to the one with less instances
+  * @param data data to work with
+  * @param seed seed to use. If it is not provided, it will use the system time
   * @author Néstor Rodríguez Vico
   */
 class NM(private[soul] val data: Data,
-         override private[soul] val seed: Long = System.currentTimeMillis(),
-         override private[soul] val minorityClass: Any = -1) extends Algorithm {
+         override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
 
-
-  /** Compute NearMiss soul.algorithm.undersampling (NM rule)
+  /** Compute NearMiss algorithm
     *
     * @param file        file to store the log. If its set to None, log process would not be done
     * @param distance    distance to use when calling the NNRule core
@@ -28,7 +25,7 @@ class NM(private[soul] val data: Data,
     * @param ratio       ratio to know how many majority class examples to preserve. By default it's set to 1 so there
     *                    will be the same minority class examples as majority class examples. It will take 
     *                    numMinorityInstances * ratio
-    * @return soul.data structure with all the important information
+    * @return data structure with all the important information
     */
   def compute(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, version: Int = 1, nNeighbours: Int = 3, ratio: Double = 1.0): Data = {
     // Use normalized data for EUCLIDEAN distance and randomized data

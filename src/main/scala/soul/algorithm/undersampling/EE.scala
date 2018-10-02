@@ -8,14 +8,12 @@ import scala.util.Random
 
 /** Easy Ensemble algorithm. Original paper: "Exploratory Undersampling for Class-Imbalance Learning" by Xu-Ying Liu, Jianxin Wu and Zhi-Hua Zhou.
   *
-  * @param data          data to work with
-  * @param seed          seed to use. If it is not provided, it will use the system time
-  * @param minorityClass indicates the minority class. If it's set to -1, it will set to the one with less instances
+  * @param data data to work with
+  * @param seed seed to use. If it is not provided, it will use the system time
   * @author Néstor Rodríguez Vico
   */
 class EE(private[soul] val data: Data,
-         override private[soul] val seed: Long = System.currentTimeMillis(),
-         override private[soul] val minorityClass: Any = -1) extends Algorithm {
+         override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
 
   /** Compute the Easy Ensemble core.
     *
@@ -24,8 +22,8 @@ class EE(private[soul] val data: Data,
     *                    will be the same minority class examples as majority class examples. It will take 
     *                    numMinorityInstances * ratio
     * @param replacement whether or not to sample randomly with replacement or not. false by default
-    * @param nTimes      times to perform the random soul.algorithm.undersampling
-    * @return soul.data structure with all the important information and index of elements kept
+    * @param nTimes      times to perform the random algorithm
+    * @return data structure with all the important information and index of elements kept
     */
   def compute(file: Option[String] = None, ratio: Double = 1.0, replacement: Boolean = false, nTimes: Int = 5): Data = {
     // Use randomized data

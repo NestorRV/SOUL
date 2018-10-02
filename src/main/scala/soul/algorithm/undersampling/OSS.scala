@@ -20,7 +20,7 @@ class OSS(private[soul] val data: Data,
     *
     * @param file     file to store the log. If its set to None, log process would not be done
     * @param distance distance to use when calling the NNRule core
-    * @return soul.data structure with all the important information
+    * @return data structure with all the important information
     */
   def compute(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN): Data = {
     // Note: the notation used to refers the subsets of data is the used in the original paper.
@@ -61,7 +61,8 @@ class OSS(private[soul] val data: Data,
     val auxData: Data = new Data(_nominal = this.data._nominal, _originalData = toXData(finalC map dataToWorkWith),
       _originalClasses = finalC map classesToWorkWith, _fileInfo = this.data._fileInfo)
     // But the untouchableClass must be the same
-    val tl = new TL(auxData, minorityClass = this.untouchableClass)
+    val tl = new TL(auxData)
+    tl.untouchableClass_=(this.untouchableClass)
     val resultTL: Data = tl.compute(file = None, distance = distance)
     // The final index is the result of applying TomekLink to the content of C
     val finalIndex: Array[Int] = (resultTL._index.toList map finalC).toArray
