@@ -184,8 +184,11 @@ class Reader {
       }
     }
 
+    val attributesValues: mutable.Map[String, String] = collection.mutable.Map[String, String]()
+    attributesValues += ("Class" -> readClasses.distinct.mkString(","))
+
     val fileInfo = new FileInfo(_file = file, _comment = "%", _columnClass = response, _delimiter = delimiter, _missing = missing, _header = headerArray, _relationName = null,
-      _attributes = null, _attributesValues = null)
+      _attributes = null, _attributesValues = attributesValues)
     new Data(_nominal = readNominal.distinct.toArray, _originalData = readData.toArray, _originalClasses = readClasses.toArray, _fileInfo = fileInfo)
   }
 }
