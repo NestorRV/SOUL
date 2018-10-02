@@ -35,12 +35,12 @@ class Mwmote(private[soul] val data: Data) extends Algorithm {
     * @return the closeness factor
     */
 
-  private def Cf(x: Int, y: Int, Nmin: Array[Array[Int]]): Double = {
+  private def Cf(y: (Int, Int), x: Int, Nmin: Array[Array[Int]]): Double = {
     val cut: Double = 5 // values used in the paper
     val CMAX: Double = 2
 
-    if (!Nmin(y).contains(x))
-      f(samples(0).length / computeDistanceOversampling(samples(x), samples(y), distanceType, data._nominal.length == 0, (samples, data._originalClasses)), cut) * CMAX
+    if (!Nmin(y._2).contains(x))
+      f(samples(0).length / computeDistanceOversampling(samples(y._1), samples(x), distanceType, data._nominal.length == 0, (samples, data._originalClasses)), cut) * CMAX
     else
       0.0
   }
@@ -53,8 +53,8 @@ class Mwmote(private[soul] val data: Data) extends Algorithm {
     * @param Simin informative minority set necessary to calculate density factor
     * @return the information weight
     */
-  private def Iw(x: Int, y: Int, Nmin: Array[Array[Int]], Simin: Array[Int]): Double = {
-    val cf = Cf(x, y, Nmin)
+  private def Iw(y: (Int, Int), x: Int, Nmin: Array[Array[Int]], Simin: Array[Int]): Double = {
+    val cf = Cf(y, x, Nmin)
     val df = cf / Simin.map(Cf(y, _, Nmin)).sum
     cf + df
   }
@@ -161,7 +161,7 @@ class Mwmote(private[soul] val data: Data) extends Algorithm {
     // find the informative minority set (union of all Nmin)
     val Simin: Array[Int] = Nmin.flatten.distinct
     // for each sample in Simin compute the selection weight
-    val Sw: Array[Double] = Simin.map(x => Sbmaj.map(y => Iw(y, x, Nmin, Simin)).sum)
+    val Sw: Array[Double] = Simin.map(x => Sbmaj.zipWithIndex.map(y => Iw(y, x, Nmin, Simin)).sum)
     val sumSw: Double = Sw.sum
     // convert each Sw into probability
     val Sp: Array[(Double, Int)] = Sw.map(_ / sumSw).zip(Simin).sortWith(_._1 > _._1)
@@ -190,7 +190,6 @@ class Mwmote(private[soul] val data: Data) extends Algorithm {
         output(i)(atrib) = samples(x)(atrib) + gap * diff
       })
     })
-
 
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
