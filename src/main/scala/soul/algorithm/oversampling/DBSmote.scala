@@ -7,8 +7,11 @@ import soul.util.Utilities._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
-/** DensityBasedSmote algorithm
+
+/** DensityBasedSmote algorithm. Original paper: "DBSMOTE: Density-Based Synthetic Minority Over-sampling Technique" by
+  * Chumphol Bunkhumpornpat, Krung Sinapiromsaran and Chidchanok Lursinsap.
   *
+  * @param data data to work with
   * @author David López Pretel
   */
 class DBSmote(private[soul] val data: Data) extends Algorithm {

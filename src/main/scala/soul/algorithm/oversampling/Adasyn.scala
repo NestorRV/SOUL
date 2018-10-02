@@ -6,11 +6,15 @@ import soul.util.Utilities._
 
 import scala.util.Random
 
-/** Adasyn algorithm
+/** Adasyn algorithm. Original paper: "ADASYN: Adaptive Synthetic Sampling Approach for Imbalanced Learning" by Haibo He,
+  * Yang Bai, Edwardo A. Garcia, and Shutao Li.
   *
+  * @param data data to work with
+  * @param seed seed to use. If it is not provided, it will use the system time
   * @author David López Pretel
   */
-class Adasyn(private[soul] val data: Data) extends Algorithm {
+class Adasyn(private[soul] val data: Data,
+             override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
   /** Compute the Smote algorithm
     *
     * @param file  file to store the log. If its set to None, log process would not be done
@@ -18,10 +22,9 @@ class Adasyn(private[soul] val data: Data) extends Algorithm {
     * @param B     balance level after generation of synthetic data
     * @param k     number of neighbors
     * @param dType the type of distance to use, hvdm or euclidean
-    * @param seed  seed for the random
     * @return synthetic samples generated
     */
-  def compute(file: Option[String] = None, d: Double = 1, B: Double = 1, k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5): Unit = {
+  def compute(file: Option[String] = None, d: Double = 1, B: Double = 1, k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN): Unit = {
     if (B > 1 || B < 0) {
       throw new Exception("B must be between 0 and 1, both included")
     } else if (d > 1 || d <= 0) {
@@ -71,8 +74,7 @@ class Adasyn(private[soul] val data: Data) extends Algorithm {
     // output with a size of sum(Gi) samples
     val output: Array[Array[Double]] = Array.fill(g.sum, samples(0).length)(0.0)
     var newIndex: Int = 0
-    val r: Random.type = scala.util.Random
-    r.setSeed(seed)
+    val r: Random = new Random(this.seed)
     // for each minority class sample, create gi synthetic samples
     minorityClassIndex.zipWithIndex.foreach(xi => {
       (0 until g(xi._2)).foreach(_ => {

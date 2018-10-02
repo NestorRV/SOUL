@@ -6,21 +6,24 @@ import soul.util.Utilities._
 
 import scala.util.Random
 
-/** Borderline-SMOTE algorithm
+/** Borderline-SMOTE algorithm. Original paper: "Borderline-SMOTE: A New Over-Sampling Method in Imbalanced Data Sets
+  * Learning." by Hui Han, Wen-Yuan Wang, and Bing-Huan Mao.
   *
+  * @param data data to work with
+  * @param seed seed to use. If it is not provided, it will use the system time
   * @author David López Pretel
   */
-class BorderlineSmote(private[soul] val data: Data) extends Algorithm {
+class BorderlineSmote(private[soul] val data: Data,
+                      override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
   /** Compute the Smote algorithm
     *
     * @param file  file to store the log. If its set to None, log process would not be done
     * @param m     Number of nearest neighbors
     * @param k     Number of minority class nearest neighbors
     * @param dType the type of distance to use, hvdm or euclidean
-    * @param seed  seed for the random
     * @return synthetic samples generated
     */
-  def compute(file: Option[String] = None, m: Int = 10, k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5): Unit = {
+  def compute(file: Option[String] = None, m: Int = 10, k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN): Unit = {
     if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }
@@ -59,8 +62,7 @@ class BorderlineSmote(private[soul] val data: Data) extends Algorithm {
       }
     }).filterNot(_.forall(_ == None)).map(x => minorityClassIndex(x.get))
 
-    val r: Random.type = scala.util.Random
-    r.setSeed(seed)
+    val r: Random = new Random(this.seed)
     val s: Int = r.nextInt(k) + 1
 
     // output with a size of T*N samples

@@ -7,11 +7,15 @@ import soul.util.Utilities._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
-/** Mwmote algorithm
+/** Mwmote algorithm. Original paper: "MWMOTE—Majority Weighted Minority Oversampling Technique for Imbalanced Data Set
+  * Learning" by Sukarna Barua, Md. Monirul Islam, Xin Yao, Fellow, IEEE, and Kazuyuki Muras.
   *
+  * @param data data to work with
+  * @param seed seed to use. If it is not provided, it will use the system time
   * @author David López Pretel
   */
-class Mwmote(private[soul] val data: Data) extends Algorithm {
+class Mwmote(private[soul] val data: Data,
+             override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
   //data with the samples
   private var samples: Array[Array[Double]] = data._processedData
   private var distanceType: Distances.Distance = Distances.EUCLIDEAN
@@ -122,10 +126,9 @@ class Mwmote(private[soul] val data: Data) extends Algorithm {
     * @param k2    Number of majority neighbors used for constructing informative minority set
     * @param k3    Number of minority neighbors used for constructing informative minority set
     * @param dType the type of distance to use, hvdm or euclidean
-    * @param seed  seed for the random
     * @return synthetic samples generated
     */
-  def compute(file: Option[String] = None, N: Int = 500, k1: Int = 5, k2: Int = 5, k3: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5): Unit = {
+  def compute(file: Option[String] = None, N: Int = 500, k1: Int = 5, k2: Int = 5, k3: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN): Unit = {
     if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }
@@ -176,8 +179,7 @@ class Mwmote(private[soul] val data: Data) extends Algorithm {
     val output: Array[Array[Double]] = Array.fill(N, samples(0).length)(0.0)
 
     val probsSum: Double = Sp.map(_._1).sum
-    val r: Random.type = scala.util.Random
-    r.setSeed(seed)
+    val r: Random = new Random(this.seed)
 
     (0 until N).foreach(i => {
       // select a sample, then select another randomly from the cluster that have this sample

@@ -7,11 +7,15 @@ import soul.util.Utilities._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
-/** Spider2 algorithm
+/** Spider2 algorithm. Original paper: "Learning from Imbalanced Data in Presence of Noisy and Borderline Examples" by
+  * Krystyna Napiera la, Jerzy Stefanowski and Szymon Wilk.
   *
+  * @param data data to work with
+  * @param seed seed to use. If it is not provided, it will use the system time
   * @author David López Pretel
   */
-class Spider2(private[soul] val data: Data) extends Algorithm {
+class Spider2(private[soul] val data: Data,
+              override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
 
   // array with the index of the minority class
   private var minorityClassIndex: Array[Int] = minority(data._originalClasses)
@@ -90,10 +94,9 @@ class Spider2(private[soul] val data: Data) extends Algorithm {
     * @param ampl    amplification option
     * @param k       Number of minority class nearest neighbors
     * @param dType   the type of distance to use, hvdm or euclidean
-    * @param seed    seed for the random
     * @return synthetic samples generated
     */
-  def compute(file: Option[String] = None, relabel: String = "yes", ampl: String = "weak", k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5): Unit = {
+  def compute(file: Option[String] = None, relabel: String = "yes", ampl: String = "weak", k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN): Unit = {
     if (relabel != "no" && relabel != "yes") {
       throw new Exception("relabel must be yes or no.")
     }
@@ -163,8 +166,7 @@ class Spider2(private[soul] val data: Data) extends Algorithm {
       })
     }
 
-    val r: Random.type = scala.util.Random
-    r.setSeed(seed)
+    val r: Random = new Random(this.seed)
     val dataShuffled: Array[Int] = r.shuffle(output.indices.toList).toArray
     // check if the data is nominal or numerical
     if (data._nominal.length == 0) {
