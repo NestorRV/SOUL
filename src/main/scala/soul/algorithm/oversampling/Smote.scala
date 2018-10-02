@@ -13,7 +13,7 @@ import scala.util.Random
   * @param seed seed to use. If it is not provided, it will use the system time
   * @author David López Pretel
   */
-class SMOTE(private[soul] val data: Data,
+class Smote(private[soul] val data: Data,
             override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
   /** Compute the Smote algorithm
     *
