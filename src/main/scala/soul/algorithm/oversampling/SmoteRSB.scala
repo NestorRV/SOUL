@@ -118,7 +118,7 @@ class SmoteRSB(private[soul] val data: Data) extends Algorithm {
       result = Array.range(0, output.length)
     }
 
-    val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
+    val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + result.length).indices.toList).toArray
     // check if the data is nominal or numerical
     if (data._nominal.length == 0) {
       data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(result map output, data._maxAttribs, data._minAttribs) else result map output))
