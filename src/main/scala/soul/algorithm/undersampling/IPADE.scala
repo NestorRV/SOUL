@@ -16,7 +16,7 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-/** Iterative Instance Adjustment for Imbalanced Domains. Original paper: "Addressing soul classification with instance
+/** Iterative Instance Adjustment for Imbalanced Domains. Original paper: "Addressing imbalanced classification with instance
   * generation techniques: IPADE-ID" by Victoria López, Isaac Triguero, Cristóbal J. Carmona, Salvador García and Francisco Herrera.
   *
   * @param data localTrainData to work with

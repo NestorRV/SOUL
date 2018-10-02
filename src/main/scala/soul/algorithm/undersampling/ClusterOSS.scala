@@ -4,7 +4,7 @@ import soul.algorithm.Algorithm
 import soul.data.Data
 import soul.util.Utilities._
 
-/** ClusterOSS. Original paper: "ClusterOSS: a new undersampling method for soul learning."
+/** ClusterOSS. Original paper: "ClusterOSS: a new undersampling method for imbalanced learning."
   * by Victor H Barella, Eduardo P Costa and André C P L F Carvalho.
   *
   * @param data data to work with
@@ -73,7 +73,7 @@ class ClusterOSS(private[soul] val data: Data,
 
     val newData: Array[Int] = misclassified ++ train
 
-    // Construct a soul.data object to be passed to Tomek Link
+    // Construct a data object to be passed to Tomek Link
     val auxData: Data = new Data(_nominal = this.data._nominal, _originalData = toXData(newData map dataToWorkWith),
       _originalClasses = newData map classesToWorkWith, _fileInfo = this.data._fileInfo)
     // But the untouchableClass must be the same

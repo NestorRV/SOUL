@@ -57,7 +57,7 @@ class OSS(private[soul] val data: Data,
     // Add the misclassified instances to C
     val finalC: Array[Int] = (misclassified ++ c).distinct
 
-    // Construct a soul.data object to be passed to Tomek Link
+    // Construct a data object to be passed to Tomek Link
     val auxData: Data = new Data(_nominal = this.data._nominal, _originalData = toXData(finalC map dataToWorkWith),
       _originalClasses = finalC map classesToWorkWith, _fileInfo = this.data._fileInfo)
     // But the untouchableClass must be the same

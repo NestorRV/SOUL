@@ -6,7 +6,7 @@ import soul.util.Utilities._
 
 import scala.util.Random
 
-/** NearMiss. Original paper: "kNN Approach to Unbalanced soul.data Distribution: A Case Study involving Information
+/** NearMiss. Original paper: "kNN Approach to Unbalanced Data Distribution: A Case Study involving Information
   * Extraction" by Jianping Zhang and Inderjeet Mani.
   *
   * @param data data to work with

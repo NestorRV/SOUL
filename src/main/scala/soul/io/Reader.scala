@@ -17,7 +17,7 @@ class Reader {
     *
     * @param file        file containing the data
     * @param columnClass indicates which column represents the class in the file. It it's set to -1, it will take the las column
-    * @return a soul.data object containing all the relevant information
+    * @return a data object containing all the relevant information
     */
   def readArff(file: String, columnClass: Int = -1): Data = {
     val reader: BufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(file)))
@@ -138,7 +138,7 @@ class Reader {
     * @param missing     string indicating a element is missed
     * @param header      indicates if the file contains a header or not
     * @param columnClass indicates which column represents the class in the file. It it's set to -1, it will take the las column
-    * @return a soul.data object containing all the relevant information
+    * @return a data object containing all the relevant information
     */
   def readDelimitedText(file: String, comment: String = "#", delimiter: String = ",", missing: String = "?", header: Boolean = true, columnClass: Int = -1): Data = {
     val reader: BufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(file)))

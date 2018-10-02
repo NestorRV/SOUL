@@ -27,7 +27,7 @@ class BC(private[soul] val data: Data,
     * @param ratio       ratio to know how many majority class examples to preserve. By default it's set to 1 so there
     *                    will be the same minority class examples as majority class examples. It will take 
     *                    numMinorityInstances * ratio
-    * @return array of soul.data structures with all the important information and index of elements kept for each subset
+    * @return array of data structures with all the important information and index of elements kept for each subset
     */
 
   def compute(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3,

@@ -8,7 +8,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.math.min
 
 /** Class Purity Maximization core. Original paper: "An Unsupervised Learning Approach to Resolving the
-  * soul.data Imbalanced Issue in Supervised Learning Problems in Functional Genomics" by Kihoon Yoon and Stephen Kwek.
+  * Data Imbalanced Issue in Supervised Learning Problems in Functional Genomics" by Kihoon Yoon and Stephen Kwek.
   *
   * @param data data to work with
   * @param seed seed to use. If it is not provided, it will use the system time
