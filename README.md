@@ -84,10 +84,10 @@ Now we're going to run an undersampling algorithm:
 import soul.algorithm.undersampling.NCL
 
 val nclCSV = new NCL(csvData)
-val resultCSV: Data = nclCSV.sample(file = Option("mylogCSV.log"))
+val resultCSV: Data = nclCSV.compute(file = Option("mylogCSV.log"))
 
 val nclARFF = new NCL(arffData)
-val resultARFF: Data = nclARFF.sample(file = Option("mylogARFF.log"))
+val resultARFF: Data = nclARFF.compute(file = Option("mylogARFF.log"))
 ```
 
 In this example we've used an undersampling algorithm but it's the same for an oversampling one. All the algorithm's parameters have default values so you don't need to specify any of them.
