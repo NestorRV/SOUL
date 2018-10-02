@@ -8,7 +8,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.math.{abs, sqrt}
 import scala.util.Random
 
-/** Evolutionary Under Sampling. Original paper: "Evolutionary Under-Sampling for Classification with Imbalanced soul.data
+/** Evolutionary Under Sampling. Original paper: "Evolutionary Under-Sampling for Classification with Imbalanced Data
   * Sets: Proposals and Taxonomy" by Salvador Garcia and Francisco Herrera.
   *
   * @param data data to work with

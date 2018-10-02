@@ -4,7 +4,8 @@ import soul.algorithm.Algorithm
 import soul.data.Data
 import soul.util.Utilities._
 
-/** Edited Nearest Neighbour rule. Original paper: "Asymptotic Properties of Nearest Neighbor Rules Using Edited soul.data" by Dennis L. Wilson.
+/** Edited Nearest Neighbour rule. Original paper: "Asymptotic Properties of Nearest Neighbor Rules Using Edited Data"
+  * by Dennis L. Wilson.
   *
   * @param data data to work with
   * @param seed seed to use. If it is not provided, it will use the system time
