@@ -23,10 +23,4 @@ private[soul] trait Algorithm {
   private[soul] var untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
   private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.y.indices.toList)
-
-  /** Set the untouchableClass
-    *
-    * @param value new untouchableClass
-    */
-  private[soul] def untouchableClass_=(value: Any): Unit = untouchableClass = value
 }
