@@ -27,7 +27,8 @@ class NM(private[soul] val data: Data,
     *                    numMinorityInstances * ratio
     * @return data structure with all the important information
     */
-  def compute(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, version: Int = 1, nNeighbours: Int = 3, ratio: Double = 1.0): Data = {
+  def compute(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, version: Int = 1,
+              nNeighbours: Int = 3, ratio: Double = 1.0): Data = {
     // Use normalized data for EUCLIDEAN distance and randomized data
     val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
       (this.index map zeroOneNormalization(this.data)).toArray else
@@ -48,12 +49,14 @@ class NM(private[soul] val data: Data,
 
     val selectedMajElements: Array[Int] = if (version == 1) {
       majElements.map { instance: Int =>
-        val result: (Any, Array[Int]) = nnRule(distances = distances(instance), selectedElements = minElements, labels = classesToWorkWith, k = 3)
+        val result: (Any, Array[Int]) = nnRule(distances = distances(instance), selectedElements = minElements,
+          labels = classesToWorkWith, k = 3)
         (instance, (result._2 map distances(instance)).sum / result._2.length)
       }.sortBy((_: (Int, Double))._2).map((_: (Int, Double))._1)
     } else if (version == 2) {
       majElements.map { instance: Int =>
-        val result: (Any, Array[Int]) = nnRule(distances = distances(instance), selectedElements = minElements, labels = classesToWorkWith, k = 3, which = "farthest")
+        val result: (Any, Array[Int]) = nnRule(distances = distances(instance), selectedElements = minElements,
+          labels = classesToWorkWith, k = 3, which = "farthest")
         (instance, (result._2 map distances(instance)).sum / result._2.length)
       }.sortBy((_: (Int, Double))._2).map((_: (Int, Double))._1)
     } else if (version == 3) {

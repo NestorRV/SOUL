@@ -45,7 +45,8 @@ class MWMOTE(private[soul] val data: Data,
     val CMAX: Double = 2
 
     if (!Nmin(y._2).contains(x))
-      f(samples(0).length / computeDistanceOversampling(samples(y._1), samples(x), distanceType, data._nominal.length == 0, (samples, data._originalClasses)), cut) * CMAX
+      f(samples(0).length / computeDistanceOversampling(samples(y._1), samples(x), distanceType, data._nominal.length == 0,
+        (samples, data._originalClasses)), cut) * CMAX
     else
       0.0
   }
@@ -74,7 +75,8 @@ class MWMOTE(private[soul] val data: Data,
   private def clusterDistance(cluster1: Array[Int], cluster2: Array[Int]): Double = {
     val centroid1: Array[Double] = (cluster1 map samples).transpose.map(_.sum / cluster1.length)
     val centroid2: Array[Double] = (cluster2 map samples).transpose.map(_.sum / cluster2.length)
-    computeDistanceOversampling(centroid1, centroid2, distanceType, data._nominal.length == 0, (Array.concat(cluster1, cluster2) map samples, Array.concat(cluster1, cluster2) map data._originalClasses))
+    computeDistanceOversampling(centroid1, centroid2, distanceType, data._nominal.length == 0,
+      (Array.concat(cluster1, cluster2) map samples, Array.concat(cluster1, cluster2) map data._originalClasses))
   }
 
   /**
@@ -102,7 +104,8 @@ class MWMOTE(private[soul] val data: Data,
     */
   private def cluster(Sminf: Array[Int]): Array[Array[Int]] = {
     val dist: Array[Array[Double]] = Array.fill(Sminf.length, Sminf.length)(9999999.0)
-    Sminf.indices.foreach(i => Sminf.indices.foreach(j => if (i != j) dist(i)(j) = computeDistanceOversampling(samples(Sminf(i)), samples(Sminf(j)), distanceType, data._nominal.length == 0, (Sminf map samples, Sminf map data._originalClasses))))
+    Sminf.indices.foreach(i => Sminf.indices.foreach(j => if (i != j) dist(i)(j) = computeDistanceOversampling(samples(Sminf(i)),
+      samples(Sminf(j)), distanceType, data._nominal.length == 0, (Sminf map samples, Sminf map data._originalClasses))))
 
     val Cp: Double = 3 // used in paper
     val Th: Double = dist.map(_.min).sum / Sminf.length * Cp
@@ -129,7 +132,8 @@ class MWMOTE(private[soul] val data: Data,
     * @param dType the type of distance to use, hvdm or euclidean
     * @return synthetic samples generated
     */
-  def compute(file: Option[String] = None, N: Int = 500, k1: Int = 5, k2: Int = 5, k3: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN): Unit = {
+  def compute(file: Option[String] = None, N: Int = 500, k1: Int = 5, k2: Int = 5, k3: Int = 5,
+              dType: Distances.Distance = Distances.EUCLIDEAN): Unit = {
     if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }
@@ -158,9 +162,11 @@ class MWMOTE(private[soul] val data: Data,
     }).filterNot(_.forall(_ == None)).map(_.get)
 
     //for each sample in Sminf compute the nearest majority set
-    val Sbmaj: Array[Int] = Sminf.flatMap(x => kNeighbors(majorityClassIndex map samples, samples(x), k2, dType, data._nominal.length == 0, (majorityClassIndex map samples, majorityClassIndex map data._originalClasses))).distinct.map(majorityClassIndex(_))
+    val Sbmaj: Array[Int] = Sminf.flatMap(x => kNeighbors(majorityClassIndex map samples, samples(x), k2, dType,
+      data._nominal.length == 0, (majorityClassIndex map samples, majorityClassIndex map data._originalClasses))).distinct.map(majorityClassIndex(_))
     // for each majority example in Sbmaj , compute the nearest minority set
-    val Nmin: Array[Array[Int]] = Sbmaj.map(x => kNeighbors(minorityClassIndex map samples, samples(x), k3, dType, data._nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data._originalClasses)).map(minorityClassIndex(_)))
+    val Nmin: Array[Array[Int]] = Sbmaj.map(x => kNeighbors(minorityClassIndex map samples, samples(x), k3, dType,
+      data._nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data._originalClasses)).map(minorityClassIndex(_)))
 
     // find the informative minority set (union of all Nmin)
     val Simin: Array[Int] = Nmin.flatten.distinct
@@ -197,9 +203,11 @@ class MWMOTE(private[soul] val data: Data,
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
     if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
+      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
     } else {
-      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
+      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
     }
     data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))
 

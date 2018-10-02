@@ -45,8 +45,10 @@ class IHTS(private[soul] val data: Data,
       val j48: J48 = new J48
       j48.setOptions(Array("-U", "-M", "1"))
 
-      val trainInstances: Instances = buildInstances(data = trainIndex map dataToWorkWith, classes = trainIndex map classesToWorkWith, fileInfo = this.data._fileInfo)
-      val testInstances: Instances = buildInstances(data = testIndex map dataToWorkWith, classes = testIndex map classesToWorkWith, fileInfo = this.data._fileInfo)
+      val trainInstances: Instances = buildInstances(data = trainIndex map dataToWorkWith,
+        classes = trainIndex map classesToWorkWith, fileInfo = this.data._fileInfo)
+      val testInstances: Instances = buildInstances(data = testIndex map dataToWorkWith,
+        classes = testIndex map classesToWorkWith, fileInfo = this.data._fileInfo)
 
       j48.buildClassifier(trainInstances)
 

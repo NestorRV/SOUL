@@ -228,8 +228,10 @@ class IPADE(private[soul] val data: Data,
           fi1 = b - (b - a) / ((1 + Math.sqrt(5)) / 5)
           fi2 = 0.1 + (b - a) / ((1 + Math.sqrt(5)) / 5)
 
-          fitness1 = lsff(trainData = trainData, trainClasses = trainClasses, testData = testData, testClasses = testClasses, fi = fi1, strategy = strategy)
-          fitness2 = lsff(trainData = trainData, trainClasses = trainClasses, testData = testData, testClasses = testClasses, fi = fi2, strategy = strategy)
+          fitness1 = lsff(trainData = trainData, trainClasses = trainClasses, testData = testData,
+            testClasses = testClasses, fi = fi1, strategy = strategy)
+          fitness2 = lsff(trainData = trainData, trainClasses = trainClasses, testData = testData,
+            testClasses = testClasses, fi = fi2, strategy = strategy)
 
           if (fitness1 > fitness2) b = fi2 else a = fi1
         }
@@ -249,9 +251,12 @@ class IPADE(private[soul] val data: Data,
         var localScalingFactor: Double = scalingFactor
 
         (0 until iterations).foreach { _: Int =>
-          fitness1 = lsff(trainData = trainData, trainClasses = trainClasses, testData = testData, testClasses = testClasses, fi = localScalingFactor - h, strategy = strategy)
-          fitness2 = lsff(trainData = trainData, trainClasses = trainClasses, testData = testData, testClasses = testClasses, fi = localScalingFactor, strategy = strategy)
-          fitness3 = lsff(trainData = trainData, trainClasses = trainClasses, testData = testData, testClasses = testClasses, fi = localScalingFactor + h, strategy = strategy)
+          fitness1 = lsff(trainData = trainData, trainClasses = trainClasses, testData = testData,
+            testClasses = testClasses, fi = localScalingFactor - h, strategy = strategy)
+          fitness2 = lsff(trainData = trainData, trainClasses = trainClasses, testData = testData,
+            testClasses = testClasses, fi = localScalingFactor, strategy = strategy)
+          fitness3 = lsff(trainData = trainData, trainClasses = trainClasses, testData = testData,
+            testClasses = testClasses, fi = localScalingFactor + h, strategy = strategy)
 
           if (fitness1 >= fitness2 && fitness1 >= fitness3) {
             bestFitness = localScalingFactor - h

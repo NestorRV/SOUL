@@ -26,7 +26,8 @@ class SMOTERSB(private[soul] val data: Data,
     * @param dType   the type of distance to use, hvdm or euclidean
     * @return synthetic samples generated
     */
-  def compute(file: Option[String] = None, percent: Int = 500, k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN): Unit = {
+  def compute(file: Option[String] = None, percent: Int = 500, k: Int = 5,
+              dType: Distances.Distance = Distances.EUCLIDEAN): Unit = {
     if (percent > 100 && percent % 100 != 0) {
       throw new Exception("Percent must be a multiple of 100")
     }
@@ -67,7 +68,8 @@ class SMOTERSB(private[soul] val data: Data,
     val r: Random = new Random(this.seed)
     // for each minority class sample
     minorityClassIndex.zipWithIndex.foreach(i => {
-      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, dType, data._nominal.length == 0, (samples, data._originalClasses)).map(minorityClassIndex(_))
+      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, dType, data._nominal.length == 0,
+        (samples, data._originalClasses)).map(minorityClassIndex(_))
       // calculate populate for the sample
       (0 until N).foreach(_ => {
         val nn: Int = r.nextInt(neighbors.length)
@@ -125,9 +127,11 @@ class SMOTERSB(private[soul] val data: Data,
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + result.length).indices.toList).toArray
     // check if the data is nominal or numerical
     if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(result map output, data._maxAttribs, data._minAttribs) else result map output))
+      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+        zeroOneDenormalization(result map output, data._maxAttribs, data._minAttribs) else result map output))
     } else {
-      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(result map output, data._maxAttribs, data._minAttribs) else result map output), data._nomToNum)
+      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+        zeroOneDenormalization(result map output, data._maxAttribs, data._minAttribs) else result map output), data._nomToNum)
     }
     data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill((result map output).length)(data._minorityClass))
 

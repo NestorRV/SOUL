@@ -28,7 +28,8 @@ class DBSMOTE(private[soul] val data: Data) extends Algorithm {
     */
   private def regionQuery(point: Int, eps: Double): Array[Int] = {
     (minorityClassIndex map samples).indices.map(sample => {
-      if (computeDistanceOversampling(samples(minorityClassIndex(point)), samples(minorityClassIndex(sample)), distanceType, data._nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data._originalClasses)) <= eps) {
+      if (computeDistanceOversampling(samples(minorityClassIndex(point)), samples(minorityClassIndex(sample)), distanceType,
+        data._nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data._originalClasses)) <= eps) {
         Some(sample)
       } else {
         None
@@ -111,7 +112,8 @@ class DBSMOTE(private[soul] val data: Data) extends Algorithm {
   private def buildGraph(cluster: Array[Int], eps: Double, minPts: Int): Array[Array[Boolean]] = {
     val graph: Array[Array[Boolean]] = Array.fill(cluster.length, cluster.length)(false)
     //distance between each par of nodes
-    val distances: Array[Array[Double]] = cluster.map(i => cluster.map(j => computeDistanceOversampling(samples(minorityClassIndex(i)), samples(minorityClassIndex(j)), distanceType, data._nominal.length == 0, (cluster map samples, cluster map data._originalClasses))))
+    val distances: Array[Array[Double]] = cluster.map(i => cluster.map(j => computeDistanceOversampling(samples(minorityClassIndex(i)),
+      samples(minorityClassIndex(j)), distanceType, data._nominal.length == 0, (cluster map samples, cluster map data._originalClasses))))
 
     // number of nodes connected to another which satisfied distance(a,b) <= eps
     val NNq: Array[Int] = distances.map(row => row.map(dist => if (dist <= eps) 1 else 0)).map(_.sum)
@@ -148,7 +150,8 @@ class DBSMOTE(private[soul] val data: Data) extends Algorithm {
     val nodeInfo: Array[(Double, Int, Boolean)] = Array.fill(graph.length)((9999999, -1, false))
     nodeInfo(source) = (0.0, source, false)
 
-    val findMin = (x: ((Double, Int, Boolean), Int), y: ((Double, Int, Boolean), Int)) => if ((x._1._1 < y._1._1 && !x._1._3) || (!x._1._3 && y._1._3)) x else y
+    val findMin = (x: ((Double, Int, Boolean), Int), y: ((Double, Int, Boolean), Int)) =>
+      if ((x._1._1 < y._1._1 && !x._1._3) || (!x._1._3 && y._1._3)) x else y
 
     nodeInfo.indices.foreach(_ => {
       val u: Int = nodeInfo.zipWithIndex.reduceLeft(findMin)._2 //vertex with min distance
@@ -165,7 +168,9 @@ class DBSMOTE(private[soul] val data: Data) extends Algorithm {
       }
       graph(u).indices.foreach(v => {
         if (graph(u)(v) && !nodeInfo(v)._3) {
-          val alt = nodeInfo(u)._1 + computeDistanceOversampling(samples(minorityClassIndex(cluster(u))), samples(minorityClassIndex(cluster(v))), distanceType, data._nominal.length == 0, (cluster map samples, cluster map data._originalClasses))
+          val alt = nodeInfo(u)._1 + computeDistanceOversampling(samples(minorityClassIndex(cluster(u))),
+            samples(minorityClassIndex(cluster(v))), distanceType, data._nominal.length == 0,
+            (cluster map samples, cluster map data._originalClasses))
           if (alt < nodeInfo(v)._1) nodeInfo(v) = (alt, u, nodeInfo(v)._3)
         }
       })
@@ -183,7 +188,8 @@ class DBSMOTE(private[soul] val data: Data) extends Algorithm {
     * @param seed  seed for the random
     * @return synthetic samples generated
     */
-  def compute(file: Option[String] = None, eps: Double = -1, k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5): Unit = {
+  def compute(file: Option[String] = None, eps: Double = -1, k: Int = 5,
+              dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5): Unit = {
     if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }
@@ -200,7 +206,8 @@ class DBSMOTE(private[soul] val data: Data) extends Algorithm {
     //check if the user pass the epsilon parameter
     var eps2 = eps
     if (eps == -1) {
-      eps2 = samples.map(i => samples.map(j => computeDistanceOversampling(i, j, dType, data._nominal.length == 0, (samples, data._originalClasses))).sum).sum / (samples.length * samples.length)
+      eps2 = samples.map(i => samples.map(j => computeDistanceOversampling(i, j, dType, data._nominal.length == 0,
+        (samples, data._originalClasses))).sum).sum / (samples.length * samples.length)
     }
 
     //compute the clusters using dbscan
@@ -221,7 +228,8 @@ class DBSMOTE(private[soul] val data: Data) extends Algorithm {
       var pseudoCentroid: (Int, Double) = (0, 99999999.0)
       //the pseudo-centroid is the sample that is closest to the centroid
       (c map samples).zipWithIndex.foreach(sample => {
-        val distance = computeDistanceOversampling(sample._1, centroid, dType, data._nominal.length == 0, (c map samples, c map data._originalClasses))
+        val distance = computeDistanceOversampling(sample._1, centroid, dType, data._nominal.length == 0,
+          (c map samples, c map data._originalClasses))
         if (distance < pseudoCentroid._2) pseudoCentroid = (sample._2, distance)
       })
 
@@ -248,9 +256,11 @@ class DBSMOTE(private[soul] val data: Data) extends Algorithm {
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
     if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
+      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
     } else {
-      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
+      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
     }
     data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))
 

@@ -25,7 +25,8 @@ class ADASYN(private[soul] val data: Data,
     * @param dType the type of distance to use, hvdm or euclidean
     * @return synthetic samples generated
     */
-  def compute(file: Option[String] = None, d: Double = 1, B: Double = 1, k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN): Unit = {
+  def compute(file: Option[String] = None, d: Double = 1, B: Double = 1, k: Int = 5,
+              dType: Distances.Distance = Distances.EUCLIDEAN): Unit = {
     if (B > 1 || B < 0) {
       throw new Exception("B must be between 0 and 1, both included")
     } else if (d > 1 || d <= 0) {
@@ -94,9 +95,11 @@ class ADASYN(private[soul] val data: Data,
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
     if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
+      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
     } else {
-      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
+      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
     }
     data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))
 

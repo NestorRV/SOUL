@@ -37,7 +37,8 @@ class RU(private[soul] val data: Data,
     val minorityIndex: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label == this.untouchableClass => i }
     // Get the index of the elements in the majority class
     val random: Random = new Random(this.seed)
-    val majorityIndex: Array[Int] = random.shuffle(classesToWorkWith.zipWithIndex.collect { case (label, i) if label != this.untouchableClass => i }.toList).toArray
+    val majorityIndex: Array[Int] = random.shuffle(classesToWorkWith.zipWithIndex.collect { case (label, i)
+      if label != this.untouchableClass => i }.toList).toArray
     val selectedMajorityIndex: Array[Int] = if (!replacement) majorityIndex.take((minorityIndex.length * ratio).toInt) else
       majorityIndex.indices.map((_: Int) => random.nextInt(majorityIndex.length)).toArray map majorityIndex
 

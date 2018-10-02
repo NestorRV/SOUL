@@ -26,7 +26,8 @@ class MDO(private[soul] val data: Data,
     * @param seed  seed for the random
     * @return return the new samples generated
     */
-  def MDO_oversampling(Ti: DenseMatrix[Double], mean: Array[Double], V: DenseVector[Double], Orate: Int, seed: Long): Array[Array[Double]] = {
+  def MDO_oversampling(Ti: DenseMatrix[Double], mean: Array[Double], V: DenseVector[Double], Orate: Int,
+                       seed: Long): Array[Array[Double]] = {
     // check the number of new samples to be created
     var I: Int = Ti.rows
     var N: Int = Orate / I
@@ -122,9 +123,11 @@ class MDO(private[soul] val data: Data,
 
     // check if the data is nominal or numerical
     if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
+      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
     } else {
-      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
+      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
     }
     data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))
 

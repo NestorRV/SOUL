@@ -7,7 +7,8 @@ import soul.util.Utilities._
 
 import scala.util.Random
 
-/** ADOMS algorithm. Original paper: "The Generation Mechanism of Synthetic Minority Class Examples" by Sheng TANG and Si-ping CHEN.
+/** ADOMS algorithm. Original paper: "The Generation Mechanism of Synthetic Minority Class Examples" by Sheng TANG
+  * and Si-ping CHEN.
   *
   * @param data data to work with
   * @param seed seed to use. If it is not provided, it will use the system time
@@ -43,7 +44,8 @@ class ADOMS(private[soul] val data: Data,
     * @param dType   the type of distance to use, hvdm or euclidean
     * @return synthetic samples generated
     */
-  def compute(file: Option[String] = None, percent: Int = 300, k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN): Unit = {
+  def compute(file: Option[String] = None, percent: Int = 300, k: Int = 5,
+              dType: Distances.Distance = Distances.EUCLIDEAN): Unit = {
 
     if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
@@ -73,11 +75,13 @@ class ADOMS(private[soul] val data: Data,
     (0 until percent / 100).foreach(_ => {
       // for each minority class sample
       minorityClassIndex.zipWithIndex.foreach(i => {
-        neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, dType, data._nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data._originalClasses))
+        neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, dType, data._nominal.length == 0,
+          (minorityClassIndex map samples, minorityClassIndex map data._originalClasses))
         // calculate first principal component axis of local data distribution
         val l2: Array[Double] = PCA((neighbors map minorityClassIndex) map samples)
         val n: Int = r.nextInt(neighbors.length)
-        val D: Double = computeDistanceOversampling(samples(i._1), samples(minorityClassIndex(neighbors(n))), dType, data._nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data._originalClasses))
+        val D: Double = computeDistanceOversampling(samples(i._1), samples(minorityClassIndex(neighbors(n))), dType,
+          data._nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data._originalClasses))
         // compute projection of n in l2, M is on l2
         val dotMN: Double = l2.indices.map(j => {
           samples(i._1)(j) - samples(minorityClassIndex(neighbors(n)))(j)
@@ -94,9 +98,11 @@ class ADOMS(private[soul] val data: Data,
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
     if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
+      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
     } else {
-      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
+      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
     }
     data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))
 

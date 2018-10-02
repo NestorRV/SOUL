@@ -46,8 +46,10 @@ class Spider2(private[soul] val data: Data,
     */
   def amplify(x: Int, k: Int): Unit = {
     // compute the neighborhood for the majority and minority class
-    val majNeighbors: Array[Int] = kNeighbors(majorityClassIndex map output, output(x), k, distanceType, data._nominal.length == 0, (output.toArray, data._resultClasses))
-    val minNeighbors: Array[Int] = kNeighbors(minorityClassIndex map output, output(x), k, distanceType, data._nominal.length == 0, (output.toArray, data._resultClasses))
+    val majNeighbors: Array[Int] = kNeighbors(majorityClassIndex map output, output(x), k, distanceType,
+      data._nominal.length == 0, (output.toArray, data._resultClasses))
+    val minNeighbors: Array[Int] = kNeighbors(minorityClassIndex map output, output(x), k, distanceType,
+      data._nominal.length == 0, (output.toArray, data._resultClasses))
     // compute the number of copies to create
     val S: Int = Math.abs(majNeighbors.length - minNeighbors.length) + 1
     // need to know the size of the output to save the index of the elements inserted
@@ -74,7 +76,8 @@ class Spider2(private[soul] val data: Data,
     */
   def correct(x: Int, k: Int, out: Boolean): Boolean = {
     // compute the neighbors
-    val neighbors: Array[Int] = kNeighbors(if (out) samples else output.toArray, if (out) samples(x) else output(x), k, distanceType, data._nominal.length == 0, if (out) (samples, data._originalClasses) else (output.toArray, data._resultClasses))
+    val neighbors: Array[Int] = kNeighbors(if (out) samples else output.toArray, if (out) samples(x) else output(x), k, distanceType,
+      data._nominal.length == 0, if (out) (samples, data._originalClasses) else (output.toArray, data._resultClasses))
     val classes: scala.collection.mutable.Map[Any, Int] = scala.collection.mutable.Map()
     // compute the number of samples for each class in the neighborhood
     neighbors.foreach(neighbor => classes += data._originalClasses(neighbor) -> 0)
@@ -96,7 +99,8 @@ class Spider2(private[soul] val data: Data,
     * @param dType   the type of distance to use, hvdm or euclidean
     * @return synthetic samples generated
     */
-  def compute(file: Option[String] = None, relabel: String = "yes", ampl: String = "weak", k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN): Unit = {
+  def compute(file: Option[String] = None, relabel: String = "yes", ampl: String = "weak", k: Int = 5,
+              dType: Distances.Distance = Distances.EUCLIDEAN): Unit = {
     if (relabel != "no" && relabel != "yes") {
       throw new Exception("relabel must be yes or no.")
     }
@@ -170,9 +174,11 @@ class Spider2(private[soul] val data: Data,
     val dataShuffled: Array[Int] = r.shuffle(output.indices.toList).toArray
     // check if the data is nominal or numerical
     if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(output.toArray, data._maxAttribs, data._minAttribs) else output.toArray)
+      data._resultData = dataShuffled map to2Decimals(if (dType == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output.toArray, data._maxAttribs, data._minAttribs) else output.toArray)
     } else {
-      data._resultData = dataShuffled map toNominal(if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(output.toArray, data._maxAttribs, data._minAttribs) else output.toArray, data._nomToNum)
+      data._resultData = dataShuffled map toNominal(if (dType == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output.toArray, data._maxAttribs, data._minAttribs) else output.toArray, data._nomToNum)
     }
 
     data._resultClasses = dataShuffled map data._resultClasses

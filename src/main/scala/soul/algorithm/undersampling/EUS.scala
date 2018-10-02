@@ -56,7 +56,8 @@ class EUS(private[soul] val data: Data,
       val predicted: Array[Any] = dataToWorkWith.indices.map((e: Int) => nnRule(distances = distances(e),
         selectedElements = index.diff(Array(e)), labels = classesToWorkWith, k = 1)._1).toArray
 
-      val matrix: (Int, Int, Int, Int) = confusionMatrix(originalLabels = index map classesToWorkWith, predictedLabels = predicted, minorityClass = this.untouchableClass)
+      val matrix: (Int, Int, Int, Int) = confusionMatrix(originalLabels = index map classesToWorkWith,
+        predictedLabels = predicted, minorityClass = this.untouchableClass)
 
       val tp: Int = matrix._1
       val fp: Int = matrix._2
@@ -93,7 +94,8 @@ class EUS(private[soul] val data: Data,
       }
 
       if (fitness.isNaN)
-        throw new Exception("Invalid argument: core should be: EBUSGSGM, EBUSMSGM, EBUSGSAUC, EBUSMSAUC, EUSCMGSGM, EUSCMMSGM, EUSCMGSAUC or EUSCMMSAUC")
+        throw new Exception("Invalid argument: core should be: EBUSGSGM, EBUSMSGM, EBUSGSAUC, EBUSMSAUC, EUSCMGSGM, " +
+          "EUSCMMSGM, EUSCMGSAUC or EUSCMMSAUC")
 
       fitness
     }

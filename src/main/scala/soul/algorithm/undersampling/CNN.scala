@@ -57,7 +57,8 @@ class CNN(private[soul] val data: Data,
     }
 
     if (file.isDefined) {
-      this.logger.addMsg("ITERATION %d: GRABBAG SIZE: %d, STORE SIZE: %d.".format(iteration, location.count((z: Int) => z == -1), location.count((z: Int) => z == 1)))
+      this.logger.addMsg("ITERATION %d: GRABBAG SIZE: %d, STORE SIZE: %d.".format(iteration, location.count((z: Int) => z == -1),
+        location.count((z: Int) => z == 1)))
     }
 
     // After a first pass, iterate grabbag until is exhausted:
@@ -79,7 +80,8 @@ class CNN(private[soul] val data: Data,
       }
 
       if (file.isDefined) {
-        this.logger.addMsg("ITERATION %d: GRABBAG SIZE: %d, STORE SIZE: %d.".format(iteration, location.count((z: Int) => z == -1), location.count((z: Int) => z == 1)))
+        this.logger.addMsg("ITERATION %d: GRABBAG SIZE: %d, STORE SIZE: %d.".format(iteration, location.count((z: Int) => z == -1),
+          location.count((z: Int) => z == 1)))
       }
     }
 

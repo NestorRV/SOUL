@@ -24,7 +24,8 @@ class BorderlineSMOTE(private[soul] val data: Data,
     * @param dType the type of distance to use, hvdm or euclidean
     * @return synthetic samples generated
     */
-  def compute(file: Option[String] = None, m: Int = 10, k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN): Unit = {
+  def compute(file: Option[String] = None, m: Int = 10, k: Int = 5,
+              dType: Distances.Distance = Distances.EUCLIDEAN): Unit = {
     if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }
@@ -42,7 +43,8 @@ class BorderlineSMOTE(private[soul] val data: Data,
     data._minorityClass = data._originalClasses(minorityClassIndex(0))
 
     // compute minority class neighbors
-    val minorityClassNeighbors: Array[Array[Int]] = minorityClassIndex.map(node => kNeighbors(samples, node, m, dType, data._nominal.length == 0, (samples, data._originalClasses)))
+    val minorityClassNeighbors: Array[Array[Int]] = minorityClassIndex.map(node => kNeighbors(samples, node, m, dType,
+      data._nominal.length == 0, (samples, data._originalClasses)))
 
     //compute nodes in borderline
     val DangerNodes: Array[Int] = minorityClassNeighbors.map(neighbors => {
@@ -75,7 +77,8 @@ class BorderlineSMOTE(private[soul] val data: Data,
     var newIndex: Int = 0
     // for each minority class sample
     DangerNodes.zipWithIndex.foreach(i => {
-      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, dType, data._nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data._originalClasses)).map(minorityClassIndex(_))
+      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, dType, data._nominal.length == 0,
+        (minorityClassIndex map samples, minorityClassIndex map data._originalClasses)).map(minorityClassIndex(_))
       val sNeighbors: Array[Int] = (0 until s).map(_ => r.nextInt(neighbors.length)).toArray.distinct
       neighbors = sNeighbors map neighbors
       // calculate populate for the sample
@@ -93,9 +96,11 @@ class BorderlineSMOTE(private[soul] val data: Data,
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
     if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
+      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
     } else {
-      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
+      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
     }
     data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))
 

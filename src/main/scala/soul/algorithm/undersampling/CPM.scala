@@ -117,7 +117,8 @@ class CPM(private[soul] val data: Data,
       center1 = pairs(pointer)._1
       center2 = pairs(pointer)._2
 
-      parentCluster.foreach((element: Int) => if (this.distances(element)(center1) < this.distances(element)(center2)) cluster1 += element else cluster2 += element)
+      parentCluster.foreach((element: Int) => if (this.distances(element)(center1) < this.distances(element)(center2))
+        cluster1 += element else cluster2 += element)
 
       if (cluster1.nonEmpty)
         impurity1 = cluster1.count((element: Int) => classes(element) == this.untouchableClass).toDouble / cluster1.length
