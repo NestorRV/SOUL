@@ -1,5 +1,6 @@
 package soul.algorithm.oversampling
 
+import soul.algorithm.Algorithm
 import soul.data.Data
 import soul.util.Utilities._
 
@@ -9,18 +10,22 @@ import scala.util.Random
   *
   * @author David López Pretel
   */
-class SLSmote(private val data: Data) {
+class SLSmote(private[soul] val data: Data) extends Algorithm {
   /** Compute the Smote algorithm
     *
+    * @param file  file to store the log. If its set to None, log process would not be done
     * @param k     Number of nearest neighbors
     * @param dType the type of distance to use, hvdm or euclidean
     * @param seed  seed for the random
     * @return synthetic samples generated
     */
-  def compute(k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5): Unit = {
+  def compute(file: Option[String] = None, k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5): Unit = {
     if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }
+
+    // Start the time
+    val initTime: Long = System.nanoTime()
 
     var samples: Array[Array[Double]] = data._processedData
     if (dType == Distances.EUCLIDEAN) {
@@ -95,5 +100,17 @@ class SLSmote(private val data: Data) {
     }
     data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))
 
+    // Stop the time
+    val finishTime: Long = System.nanoTime()
+
+    this.logger.addMsg("ORIGINAL SIZE: %d".format(data._originalData.length))
+    this.logger.addMsg("NEW DATA SIZE: %d".format(data._resultData.length))
+    this.logger.addMsg("NEW SAMPLES ARE:")
+    dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))
+    // Save the time
+    this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+
+    // Save the log
+    this.logger.storeFile(file.get + "_SLSmote")
   }
 }

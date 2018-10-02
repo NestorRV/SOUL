@@ -1,12 +1,17 @@
 package soul.algorithm.oversampling
 
+import soul.algorithm.Algorithm
 import soul.data.Data
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
-class Mwmote(private val data: Data) {
+/** Mwmote algorithm
+  *
+  * @author David López Pretel
+  */
+class Mwmote(private[soul] val data: Data) extends Algorithm {
   //data with the samples
   private var samples: Array[Array[Double]] = data._processedData
   private var distanceType: Distances.Distance = Distances.EUCLIDEAN
@@ -27,14 +32,14 @@ class Mwmote(private val data: Data) {
     * @param x    index of one node to work with
     * @param y    index of another node to work with
     * @param Nmin neighbors of 'y' necessaries to calculate the closeness factor
-    * @return the closenss factor
+    * @return the closeness factor
     */
 
   private def Cf(x: Int, y: Int, Nmin: Array[Array[Int]]): Double = {
     val cut: Double = 5 // values used in the paper
     val CMAX: Double = 2
 
-    if (!Nmin.contains(x))
+    if (!Nmin(y).contains(x))
       f(samples(0).length / computeDistanceOversampling(samples(x), samples(y), distanceType, data._nominal.length == 0, (samples, data._originalClasses)), cut) * CMAX
     else
       0.0
@@ -111,6 +116,7 @@ class Mwmote(private val data: Data) {
 
   /** Compute the Mwmote algorithm
     *
+    * @param file  file to store the log. If its set to None, log process would not be done
     * @param N     Number of synthetic samples to be generated
     * @param k1    Number of neighbors used for predicting noisy minority class samples
     * @param k2    Number of majority neighbors used for constructing informative minority set
@@ -119,10 +125,13 @@ class Mwmote(private val data: Data) {
     * @param seed  seed for the random
     * @return synthetic samples generated
     */
-  def compute(N: Int = 500, k1: Int = 5, k2: Int = 5, k3: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5): Unit = {
+  def compute(file: Option[String] = None, N: Int = 500, k1: Int = 5, k2: Int = 5, k3: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5): Unit = {
     if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }
+
+    // Start the time
+    val initTime: Long = System.nanoTime()
 
     distanceType = dType
     if (dType == Distances.EUCLIDEAN) {
@@ -191,5 +200,18 @@ class Mwmote(private val data: Data) {
       data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
     }
     data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))
+
+    // Stop the time
+    val finishTime: Long = System.nanoTime()
+
+    this.logger.addMsg("ORIGINAL SIZE: %d".format(data._originalData.length))
+    this.logger.addMsg("NEW DATA SIZE: %d".format(data._resultData.length))
+    this.logger.addMsg("NEW SAMPLES ARE:")
+    dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))
+    // Save the time
+    this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+
+    // Save the log
+    this.logger.storeFile(file.get + "_Mwmote")
   }
 }

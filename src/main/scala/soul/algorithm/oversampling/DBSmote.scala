@@ -1,5 +1,6 @@
 package soul.algorithm.oversampling
 
+import soul.algorithm.Algorithm
 import soul.data.Data
 import soul.util.Utilities._
 
@@ -10,7 +11,7 @@ import scala.util.Random
   *
   * @author David López Pretel
   */
-class DBSmote(private val data: Data) {
+class DBSmote(private[soul] val data: Data) extends Algorithm {
   // the data of the samples
   private var samples: Array[Array[Double]] = data._processedData
   private var distanceType: Distances.Distance = Distances.EUCLIDEAN
@@ -173,16 +174,20 @@ class DBSmote(private val data: Data) {
 
   /** Compute the DensityBasedSmote algorithm
     *
+    * @param file  file to store the log. If its set to None, log process would not be done
     * @param eps   epsilon to indicate the distance that must be between two points
     * @param k     number of neighbors
     * @param dType the type of distance to use, hvdm or euclidean
     * @param seed  seed for the random
     * @return synthetic samples generated
     */
-  def compute(eps: Double = -1, k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5): Unit = {
+  def compute(file: Option[String] = None, eps: Double = -1, k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5): Unit = {
     if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }
+
+    // Start the time
+    val initTime: Long = System.nanoTime()
 
     data._minorityClass = data._originalClasses(minorityClassIndex(0))
     distanceType = dType
@@ -246,5 +251,18 @@ class DBSmote(private val data: Data) {
       data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
     }
     data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))
+
+    // Stop the time
+    val finishTime: Long = System.nanoTime()
+
+    this.logger.addMsg("ORIGINAL SIZE: %d".format(data._originalData.length))
+    this.logger.addMsg("NEW DATA SIZE: %d".format(data._resultData.length))
+    this.logger.addMsg("NEW SAMPLES ARE:")
+    dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))
+    // Save the time
+    this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+
+    // Save the log
+    this.logger.storeFile(file.get + "_DBSmote")
   }
 }

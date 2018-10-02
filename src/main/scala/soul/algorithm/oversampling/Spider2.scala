@@ -1,5 +1,6 @@
 package soul.algorithm.oversampling
 
+import soul.algorithm.Algorithm
 import soul.data.Data
 import soul.util.Utilities._
 
@@ -10,7 +11,7 @@ import scala.util.Random
   *
   * @author David López Pretel
   */
-class Spider2(private val data: Data) {
+class Spider2(private[soul] val data: Data) extends Algorithm {
 
   // array with the index of the minority class
   private var minorityClassIndex: Array[Int] = minority(data._originalClasses)
@@ -84,6 +85,7 @@ class Spider2(private val data: Data) {
 
   /** Compute the Smote algorithm
     *
+    * @param file    file to store the log. If its set to None, log process would not be done
     * @param relabel relabeling option
     * @param ampl    amplification option
     * @param k       Number of minority class nearest neighbors
@@ -91,7 +93,7 @@ class Spider2(private val data: Data) {
     * @param seed    seed for the random
     * @return synthetic samples generated
     */
-  def compute(relabel: String = "yes", ampl: String = "weak", k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5): Unit = {
+  def compute(file: Option[String] = None, relabel: String = "yes", ampl: String = "weak", k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5): Unit = {
     if (relabel != "no" && relabel != "yes") {
       throw new Exception("relabel must be yes or no.")
     }
@@ -102,6 +104,9 @@ class Spider2(private val data: Data) {
     if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }
+
+    // Start the time
+    val initTime: Long = System.nanoTime()
 
     distanceType = dType
     if (dType == Distances.EUCLIDEAN) {
@@ -128,13 +133,13 @@ class Spider2(private val data: Data) {
       // eliminate the samples from the initial set, first we recalculate the index for min and maj class
       var newIndex: Int = 0
       minorityClassIndex = minorityClassIndex.map(minor => {
-        newIndex = minor;
-        RS.foreach(index => if (index < minor) newIndex -= 1);
+        newIndex = minor
+        RS.foreach(index => if (index < minor) newIndex -= 1)
         newIndex
       })
       majorityClassIndex = majorityClassIndex.map(major => {
-        newIndex = major;
-        RS.foreach(index => if (index < major) newIndex -= 1);
+        newIndex = major
+        RS.foreach(index => if (index < major) newIndex -= 1)
         newIndex
       })
       DS = DS.diff(RS)
@@ -169,5 +174,18 @@ class Spider2(private val data: Data) {
     }
 
     data._resultClasses = dataShuffled map data._resultClasses
+
+    // Stop the time
+    val finishTime: Long = System.nanoTime()
+
+    this.logger.addMsg("ORIGINAL SIZE: %d".format(data._originalData.length))
+    this.logger.addMsg("NEW DATA SIZE: %d".format(data._resultData.length))
+    this.logger.addMsg("NEW SAMPLES ARE:")
+    dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))
+    // Save the time
+    this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+
+    // Save the log
+    this.logger.storeFile(file.get + "_Spider2")
   }
 }
