@@ -20,7 +20,7 @@ class IHTS(private[soul] val data: Data,
            override private[soul] val seed: Long = System.currentTimeMillis(),
            override private[soul] val minorityClass: Any = -1) extends Algorithm {
 
-  /** Compute InstanceHardnessThreshold soul.algorithm.undersampling
+  /** Compute InstanceHardnessThreshold algorithm
     *
     * @param file   file to store the log. If its set to None, log process would not be done
     * @param nFolds number of subsets to create when applying cross-validation
