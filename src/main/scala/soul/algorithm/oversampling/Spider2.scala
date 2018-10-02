@@ -165,7 +165,7 @@ class Spider2(private[soul] val data: Data) extends Algorithm {
 
     val r: Random.type = scala.util.Random
     r.setSeed(seed)
-    val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
+    val dataShuffled: Array[Int] = r.shuffle(output.indices.toList).toArray
     // check if the data is nominal or numerical
     if (data._nominal.length == 0) {
       data._resultData = dataShuffled map to2Decimals(if (dType == Distances.EUCLIDEAN) zeroOneDenormalization(output.toArray, data._maxAttribs, data._minAttribs) else output.toArray)
