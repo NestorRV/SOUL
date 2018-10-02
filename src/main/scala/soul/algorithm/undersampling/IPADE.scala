@@ -38,7 +38,7 @@ class IPADE(private[soul] val data: Data,
     * @param randomChoice whether to choose a random individual or not
     * @return soul.data structure with all the important information
     */
-  def sample(file: Option[String] = None, iterations: Int = 100, strategy: Int = 1, randomChoice: Boolean = true): Data = {
+  def compute(file: Option[String] = None, iterations: Int = 100, strategy: Int = 1, randomChoice: Boolean = true): Data = {
     def accuracy(trainData: Array[Array[Double]], trainClasses: Array[Any], testData: Array[Array[Double]], testClasses: Array[Any]): Double = {
       val trainInstances: Instances = buildInstances(data = trainData, classes = trainClasses, fileInfo = this.data._fileInfo)
       val testInstances: Instances = buildInstances(data = testData, classes = testClasses, fileInfo = this.data._fileInfo)

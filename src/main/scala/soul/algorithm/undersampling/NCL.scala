@@ -24,7 +24,7 @@ class NCL(private[soul] val data: Data,
     *                  greater than data.size * threshold
     * @return soul.data structure with all the important information and index of elements kept
     */
-  def sample(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3, threshold: Double = 0.5): Data = {
+  def compute(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3, threshold: Double = 0.5): Data = {
     // Note: the notation used to refers the subsets of data is the used in the original paper.
 
     // Use normalized data for EUCLIDEAN distance and randomized data
@@ -43,7 +43,7 @@ class NCL(private[soul] val data: Data,
     val distancesTime: Long = System.nanoTime() - initDistancesTime
 
     val enn = new ENN(this.data)
-    val resultENN: Data = enn.sample(file = None, distance = distance, k = k)
+    val resultENN: Data = enn.compute(file = None, distance = distance, k = k)
     val indexA1: Array[Int] = classesToWorkWith.indices.diff(resultENN._index.toList).toArray
 
     val minorityClassIndex: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (c, i) if c == this.untouchableClass => i }

@@ -31,7 +31,7 @@ class SBC(private[soul] val data: Data,
     * @param maxIterations number of iterations to be done in KMeans core
     * @return soul.data structure with all the important information
     */
-  def sample(file: Option[String] = None, method: String = "random", m: Double = 1.0, k: Int = 3, numClusters: Int = 50,
+  def compute(file: Option[String] = None, method: String = "random", m: Double = 1.0, k: Int = 3, numClusters: Int = 50,
              restarts: Int = 1, minDispersion: Double = 0.0001, maxIterations: Int = 200): Data = {
     // Use randomized data 
     val dataToWorkWith: Array[Array[Double]] = (this.index map this.x).toArray

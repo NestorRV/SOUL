@@ -28,7 +28,7 @@ class CPM(private[soul] val data: Data,
     * @param distance distance to use when calling the NNRule core
     * @return soul.data structure with all the important information
     */
-  def sample(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN): Data = {
+  def compute(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN): Data = {
     // Use normalized data for EUCLIDEAN distance and randomized data
     val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
       (this.index map zeroOneNormalization(this.data)).toArray else

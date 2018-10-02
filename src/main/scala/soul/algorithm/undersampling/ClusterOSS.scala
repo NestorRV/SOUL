@@ -27,7 +27,7 @@ class ClusterOSS(private[soul] val data: Data,
     * @param maxIterations number of iterations to be done in KMeans core
     * @return soul.data structure with all the important information
     */
-  def sample(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3, numClusters: Int = 15,
+  def compute(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3, numClusters: Int = 15,
              restarts: Int = 5, minDispersion: Double = 0.0001, maxIterations: Int = 100): Data = {
     // Use randomized data 
     val dataToWorkWith: Array[Array[Double]] = (this.index map this.x).toArray
@@ -80,7 +80,7 @@ class ClusterOSS(private[soul] val data: Data,
       _originalClasses = newData map classesToWorkWith, _fileInfo = this.data._fileInfo)
     // But the untouchableClass must be the same
     val tl = new TL(auxData, minorityClass = this.untouchableClass)
-    val resultTL: Data = tl.sample(file = None, distance = distance)
+    val resultTL: Data = tl.compute(file = None, distance = distance)
     // The final index is the result of applying TomekLink to the content of newData
     val finalIndex: Array[Int] = (resultTL._index.toList map newData).toArray
 

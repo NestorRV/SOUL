@@ -27,7 +27,7 @@ class EE(private[soul] val data: Data,
     * @param nTimes      times to perform the random soul.algorithm.undersampling
     * @return soul.data structure with all the important information and index of elements kept
     */
-  def sample(file: Option[String] = None, ratio: Double = 1.0, replacement: Boolean = false, nTimes: Int = 5): Data = {
+  def compute(file: Option[String] = None, ratio: Double = 1.0, replacement: Boolean = false, nTimes: Int = 5): Data = {
     // Use randomized data
     val dataToWorkWith: Array[Array[Double]] = (this.index map this.x).toArray
     // and randomized classes to match the randomized data

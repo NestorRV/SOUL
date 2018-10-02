@@ -33,7 +33,7 @@ class EUS(private[soul] val data: Data,
     * @param prob0to1       probability of changing a gen from 0 to 1 (used in reinitialization)
     * @return soul.data structure with all the important information
     */
-  def sample(file: Option[String] = None, populationSize: Int = 50, maxEvaluations: Int = 1000,
+  def compute(file: Option[String] = None, populationSize: Int = 50, maxEvaluations: Int = 1000,
              algorithm: String = "EBUSMSGM", distance: Distances.Distance = Distances.EUCLIDEAN, probHUX: Double = 0.25,
              recombination: Double = 0.35, prob0to1: Double = 0.05): Data = {
     // Use randomized data

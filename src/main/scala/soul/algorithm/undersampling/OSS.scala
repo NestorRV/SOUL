@@ -22,7 +22,7 @@ class OSS(private[soul] val data: Data,
     * @param distance distance to use when calling the NNRule core
     * @return soul.data structure with all the important information
     */
-  def sample(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN): Data = {
+  def compute(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN): Data = {
     // Note: the notation used to refers the subsets of data is the used in the original paper.
 
     // Use normalized data for EUCLIDEAN distance and randomized data
@@ -62,7 +62,7 @@ class OSS(private[soul] val data: Data,
       _originalClasses = finalC map classesToWorkWith, _fileInfo = this.data._fileInfo)
     // But the untouchableClass must be the same
     val tl = new TL(auxData, minorityClass = this.untouchableClass)
-    val resultTL: Data = tl.sample(file = None, distance = distance)
+    val resultTL: Data = tl.compute(file = None, distance = distance)
     // The final index is the result of applying TomekLink to the content of C
     val finalIndex: Array[Int] = (resultTL._index.toList map finalC).toArray
 

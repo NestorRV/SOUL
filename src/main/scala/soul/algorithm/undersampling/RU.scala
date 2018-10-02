@@ -26,7 +26,7 @@ class RU(private[soul] val data: Data,
     * @param replacement whether or not to sample randomly with replacement or not. false by default
     * @return soul.data structure with all the important information and index of elements kept
     */
-  def sample(file: Option[String] = None, ratio: Double = 1.0, replacement: Boolean = false): Data = {
+  def compute(file: Option[String] = None, ratio: Double = 1.0, replacement: Boolean = false): Data = {
     // Use randomized data 
     val dataToWorkWith: Array[Array[Double]] = (this.index map this.x).toArray
     // and randomized classes to match the randomized data

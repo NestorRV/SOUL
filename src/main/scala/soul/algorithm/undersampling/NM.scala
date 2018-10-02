@@ -30,7 +30,7 @@ class NM(private[soul] val data: Data,
     *                    numMinorityInstances * ratio
     * @return soul.data structure with all the important information
     */
-  def sample(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, version: Int = 1, nNeighbours: Int = 3, ratio: Double = 1.0): Data = {
+  def compute(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, version: Int = 1, nNeighbours: Int = 3, ratio: Double = 1.0): Data = {
     // Use normalized data for EUCLIDEAN distance and randomized data
     val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
       (this.index map zeroOneNormalization(this.data)).toArray else

@@ -31,7 +31,7 @@ class BC(private[soul] val data: Data,
     * @return array of soul.data structures with all the important information and index of elements kept for each subset
     */
 
-  def sample(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3,
+  def compute(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3,
              nMaxSubsets: Int = 5, nFolds: Int = 5, ratio: Double = 1.0): Data = {
     // Use randomized data
     val dataToWorkWith: Array[Array[Double]] = (this.index map this.x).toArray

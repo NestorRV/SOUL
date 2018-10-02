@@ -26,7 +26,7 @@ class IHTS(private[soul] val data: Data,
     * @param nFolds number of subsets to create when applying cross-validation
     * @return soul.data structure with all the important information
     */
-  def sample(file: Option[String] = None, nFolds: Int = 5): Data = {
+  def compute(file: Option[String] = None, nFolds: Int = 5): Data = {
     // Use randomized data
     val dataToWorkWith: Array[Array[Double]] = (this.index map this.x).toArray
     // and randomized classes to match the randomized data
