@@ -7,15 +7,14 @@ import soul.util.Utilities._
 
 import scala.util.Random
 
-
-/** Mdo algorithm. Original paper: "To combat multi-class imbalanced problems by means of over-sampling and boosting
+/** MDO algorithm. Original paper: "To combat multi-class imbalanced problems by means of over-sampling and boosting
   * techniques" by Lida Adbi and Sattar Hashemi.
   *
   * @param data data to work with
   * @param seed seed to use. If it is not provided, it will use the system time
   * @author David López Pretel
   */
-class Mdo(private[soul] val data: Data,
+class MDO(private[soul] val data: Data,
           override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
 
   /** create the new samples for MDO algorithm

@@ -6,16 +6,17 @@ import soul.util.Utilities._
 
 import scala.util.Random
 
-/** Adasyn algorithm. Original paper: "ADASYN: Adaptive Synthetic Sampling Approach for Imbalanced Learning" by Haibo He,
+/** ADASYN algorithm. Original paper: "ADASYN: Adaptive Synthetic Sampling Approach for Imbalanced Learning" by Haibo He,
   * Yang Bai, Edwardo A. Garcia, and Shutao Li.
   *
   * @param data data to work with
   * @param seed seed to use. If it is not provided, it will use the system time
   * @author David López Pretel
   */
-class Adasyn(private[soul] val data: Data,
+class ADASYN(private[soul] val data: Data,
              override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
-  /** Compute the Smote algorithm
+
+  /** Compute the ADASYN algorithm
     *
     * @param file  file to store the log. If its set to None, log process would not be done
     * @param d     preset threshold for the maximum tolerated degree of class imbalance radio

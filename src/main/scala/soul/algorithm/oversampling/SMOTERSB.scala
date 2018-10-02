@@ -7,7 +7,7 @@ import soul.util.Utilities._
 import scala.Array._
 import scala.util.Random
 
-/** SmoteRSB algorithm. Original paper: "kNN Approach to Unbalanced Data Distribution: SMOTE-RSB: a hybrid preprocessing
+/** SMOTERSB algorithm. Original paper: "kNN Approach to Unbalanced Data Distribution: SMOTE-RSB: a hybrid preprocessing
   * approach based on oversampling and undersampling for high imbalanced data-sets using SMOTE and rough sets theory"
   * by Enislay Ramentol, Yailé Caballero, Rafael Bello and Francisco Herrera.
   *
@@ -15,9 +15,10 @@ import scala.util.Random
   * @param seed seed to use. If it is not provided, it will use the system time
   * @author David López Pretel
   */
-class SmoteRSB(private[soul] val data: Data,
+class SMOTERSB(private[soul] val data: Data,
                override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
-  /** Compute the Smote algorithm
+
+  /** Compute the SMOTERSB algorithm
     *
     * @param file    file to store the log. If its set to None, log process would not be done
     * @param percent amount of Smote N%

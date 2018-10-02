@@ -7,13 +7,13 @@ import soul.util.Utilities._
 
 import scala.util.Random
 
-/** Adoms algorithm. Original paper: "The Generation Mechanism of Synthetic Minority Class Examples" by Sheng TANG and Si-ping CHEN.
+/** ADOMS algorithm. Original paper: "The Generation Mechanism of Synthetic Minority Class Examples" by Sheng TANG and Si-ping CHEN.
   *
   * @param data data to work with
   * @param seed seed to use. If it is not provided, it will use the system time
   * @author David López Pretel
   */
-class Adoms(private[soul] val data: Data,
+class ADOMS(private[soul] val data: Data,
             override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
 
   /** Compute the first principal component axis
@@ -35,11 +35,10 @@ class Adoms(private[soul] val data: Data,
     eigen.eigenvectors(0, ::).t.toArray
   }
 
-
-  /** Compute the Smote algorithm
+  /** Compute the ADOMS algorithm
     *
     * @param file    file to store the log. If its set to None, log process would not be done
-    * @param percent Amount of samples N%
+    * @param percent amount of samples N%
     * @param k       number of neighbors
     * @param dType   the type of distance to use, hvdm or euclidean
     * @return synthetic samples generated

@@ -13,13 +13,14 @@ import scala.util.Random
   * @param seed seed to use. If it is not provided, it will use the system time
   * @author David López Pretel
   */
-class Smote(private[soul] val data: Data,
+class SMOTE(private[soul] val data: Data,
             override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
-  /** Compute the Smote algorithm
+
+  /** Compute the SMOTE algorithm
     *
     * @param file    file to store the log. If its set to None, log process would not be done
-    * @param percent Amount of Smote N%
-    * @param k       Number of minority class nearest neighbors
+    * @param percent amount of SMOTE N%
+    * @param k       number of minority class nearest neighbors
     * @param dType   the type of distance to use, hvdm or euclidean
     * @return synthetic samples generated
     */

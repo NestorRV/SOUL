@@ -6,20 +6,21 @@ import soul.util.Utilities._
 
 import scala.util.Random
 
-/** SmoteTL algorithm. Original paper: "A Study of the Behavior of Several Methods for Balancing Machine Learning
+/** SMOTEENN algorithm. Original paper: "A Study of the Behavior of Several Methods for Balancing Machine Learning
   * Training Data" by Gustavo E. A. P. A. Batista, Ronaldo C. Prati and Maria Carolina Monard.
   *
   * @param data data to work with
   * @param seed seed to use. If it is not provided, it will use the system time
   * @author David López Pretel
   */
-class SmoteTL(private[soul] val data: Data,
-              override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
-  /** Compute the Smote algorithm
+class SMOTEENN(private[soul] val data: Data,
+               override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
+
+  /** Compute the SMOTEENN algorithm
     *
     * @param file    file to store the log. If its set to None, log process would not be done
-    * @param percent Amount of Smote N%
-    * @param k       Number of minority class nearest neighbors
+    * @param percent amount of Smote N%
+    * @param k       number of minority class nearest neighbors
     * @param dType   the type of distance to use, hvdm or euclidean
     * @return synthetic samples generated
     */
@@ -32,13 +33,13 @@ class SmoteTL(private[soul] val data: Data,
       throw new Exception("The distance must be euclidean or hvdm")
     }
 
-    // Start the time
-    val initTime: Long = System.nanoTime()
-
     var samples: Array[Array[Double]] = data._processedData
     if (dType == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
     }
+
+    // Start the time
+    val initTime: Long = System.nanoTime()
 
     // compute minority class
     val minorityClassIndex: Array[Int] = minority(data._originalClasses)
@@ -80,33 +81,27 @@ class SmoteTL(private[soul] val data: Data,
 
     val result: Array[Array[Double]] = Array.concat(samples, output)
     val resultClasses: Array[Any] = Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))
-    // The following code correspond to TL and it has been made by Néstor Rodríguez Vico
+    // The following code correspond to ENN and it has been made by Néstor Rodríguez Vico
 
     val shuffle: List[Int] = r.shuffle(resultClasses.indices.toList)
 
     val dataToWorkWith: Array[Array[Double]] = (shuffle map result).toArray
     // and randomized classes to match the randomized data
     val classesToWorkWith: Array[Any] = (shuffle map resultClasses).toArray
+
     // Distances among the elements
     val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, Distances.EUCLIDEAN, this.data._nominal, resultClasses)
 
-    // Take the index of the elements that have a different class
-    val candidates: Map[Any, Array[Int]] = classesToWorkWith.distinct.map { c: Any =>
-      c -> classesToWorkWith.zipWithIndex.collect { case (a, b) if a != c => b }
-    }.toMap
-
-    // Look for the nearest neighbour in the rest of the classes
-    val nearestNeighbour: Array[Int] = distances.zipWithIndex.map((row: (Array[Double], Int)) => row._1.indexOf((candidates(classesToWorkWith(row._2)) map row._1).min))
-
-    // For each instance, I: If my nearest neighbour is J and the nearest neighbour of J it's me, I, I and J form a Tomek link
-    val tomekLinks: Array[(Int, Int)] = nearestNeighbour.zipWithIndex.filter((pair: (Int, Int)) => nearestNeighbour(pair._1) == pair._2)
-
-    // Instances that form a Tomek link are going to be removed
-    val targetInstances: Array[Int] = tomekLinks.flatMap((x: (Int, Int)) => List(x._1, x._2)).distinct
-    // but the user can choose which of them should be removed
-    val removedInstances: Array[Int] = targetInstances
-    // Get the final index
-    val finalIndex: Array[Int] = dataToWorkWith.indices.diff(removedInstances).toArray
+    val finalIndex: Array[Int] = classesToWorkWith.distinct.flatMap { targetClass: Any =>
+      if (targetClass != data._minorityClass) {
+        val sameClassIndex: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (c, i) if c == targetClass => i }
+        boolToIndex(sameClassIndex.map { i: Int =>
+          nnRule(distances = distances(i), selectedElements = sameClassIndex.indices.diff(List(i)).toArray, labels = classesToWorkWith, k = k)._1
+        }.map((c: Any) => targetClass == c)) map sameClassIndex
+      } else {
+        classesToWorkWith.zipWithIndex.collect { case (c, i) if c == targetClass => i }
+      }
+    }
 
     // check if the data is nominal or numerical
     if (data._nomToNum(0).isEmpty) {
@@ -128,7 +123,7 @@ class SmoteTL(private[soul] val data: Data,
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
 
       // Save the log
-      this.logger.storeFile(file.get + "_SmoteTL")
+      this.logger.storeFile(file.get + "_SmoteENN")
     }
   }
 }

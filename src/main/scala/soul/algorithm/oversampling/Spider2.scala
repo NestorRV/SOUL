@@ -41,7 +41,7 @@ class Spider2(private[soul] val data: Data,
   /** amplifies example x by creating its n-copies
     *
     * @param x index of the element
-    * @param k Number of neighbors
+    * @param k number of neighbors
     * @return x amplified
     */
   def amplify(x: Int, k: Int): Unit = {
@@ -68,7 +68,7 @@ class Spider2(private[soul] val data: Data,
     * or false for correct and incorrect classification respectively
     *
     * @param x   index of the element
-    * @param k   Number of minority class nearest neighbors
+    * @param k   number of minority class nearest neighbors
     * @param out indicate if use the output or the input data, true = input data
     * @return true or false
     */
@@ -92,7 +92,7 @@ class Spider2(private[soul] val data: Data,
     * @param file    file to store the log. If its set to None, log process would not be done
     * @param relabel relabeling option
     * @param ampl    amplification option
-    * @param k       Number of minority class nearest neighbors
+    * @param k       number of minority class nearest neighbors
     * @param dType   the type of distance to use, hvdm or euclidean
     * @return synthetic samples generated
     */

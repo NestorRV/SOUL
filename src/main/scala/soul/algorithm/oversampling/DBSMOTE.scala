@@ -7,14 +7,13 @@ import soul.util.Utilities._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
-
-/** DensityBasedSmote algorithm. Original paper: "DBSMOTE: Density-Based Synthetic Minority Over-sampling Technique" by
+/** DBSMOTE algorithm. Original paper: "DBSMOTE: Density-Based Synthetic Minority Over-sampling Technique" by
   * Chumphol Bunkhumpornpat, Krung Sinapiromsaran and Chidchanok Lursinsap.
   *
   * @param data data to work with
   * @author David López Pretel
   */
-class DBSmote(private[soul] val data: Data) extends Algorithm {
+class DBSMOTE(private[soul] val data: Data) extends Algorithm {
   // the data of the samples
   private var samples: Array[Array[Double]] = data._processedData
   private var distanceType: Distances.Distance = Distances.EUCLIDEAN
@@ -40,7 +39,7 @@ class DBSmote(private[soul] val data: Data) extends Algorithm {
   /** expand the cluster for a point (used in DBScan algorithm)
     *
     * @param point      the point to get the cluster
-    * @param clusterId  Id to represent each cluster
+    * @param clusterId  id to represent each cluster
     * @param clusterIds array of Ids which represent where must be each point
     * @param eps        epsilon to indicate the distance that must be between two points
     * @return cluster generated
