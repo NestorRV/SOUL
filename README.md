@@ -59,6 +59,12 @@ Included algorithms for oversampling:
 
 ### How-to use it
 
+If you are going to use this library from another `sbt` project, you just need to clone the original repository, in the root folder of the cloned repository execute `sbt publishLocal` and add the following dependendy to the `build.sbt` file of your project:
+
+```scala
+libraryDependencies += "com.github.soul" %% "soul" % "1.0.0"
+```
+
 To read a data file you only need to do this:
 
 ```scala
