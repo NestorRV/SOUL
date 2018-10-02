@@ -88,14 +88,16 @@ class Smote(private[soul] val data: Data) extends Algorithm {
     // Stop the time
     val finishTime: Long = System.nanoTime()
 
-    this.logger.addMsg("ORIGINAL SIZE: %d".format(data._originalData.length))
-    this.logger.addMsg("NEW DATA SIZE: %d".format(data._resultData.length))
-    this.logger.addMsg("NEW SAMPLES ARE:")
-    dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))
-    // Save the time
-    this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+    if (file.isDefined) {
+      this.logger.addMsg("ORIGINAL SIZE: %d".format(data._originalData.length))
+      this.logger.addMsg("NEW DATA SIZE: %d".format(data._resultData.length))
+      this.logger.addMsg("NEW SAMPLES ARE:")
+      dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))
+      // Save the time
+      this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
 
-    // Save the log
-    this.logger.storeFile(file.get + "_Smote")
+      // Save the log
+      this.logger.storeFile(file.get + "_Smote")
+    }
   }
 }
