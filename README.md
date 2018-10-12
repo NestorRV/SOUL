@@ -69,6 +69,7 @@ To read a data file you only need to do this:
 
 ```scala
 import soul.io.Reader
+import soul.data.Data
 
 val reader = new Reader
 
@@ -82,6 +83,7 @@ Now we're going to run an undersampling algorithm:
 
 ```scala
 import soul.algorithm.undersampling.NCL
+import soul.data.Data
 
 val nclCSV = new NCL(csvData)
 val resultCSV: Data = nclCSV.compute(file = Option("mylogCSV.log"))
