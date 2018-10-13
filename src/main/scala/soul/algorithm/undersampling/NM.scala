@@ -97,7 +97,7 @@ class NM(private[soul] val data: Data,
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
 
       // Save the log
-      this.logger.storeFile(file.get + "_NM")
+      this.logger.storeFile(file.get)
     }
 
     this.data

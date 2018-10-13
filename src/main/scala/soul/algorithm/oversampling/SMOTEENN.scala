@@ -125,7 +125,7 @@ class SMOTEENN(private[soul] val data: Data,
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
 
       // Save the log
-      this.logger.storeFile(file.get + "_SmoteENN")
+      this.logger.storeFile(file.get)
     }
   }
 }

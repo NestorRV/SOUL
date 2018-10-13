@@ -96,7 +96,7 @@ class TL(private[soul] val data: Data,
       this.logger.addMsg("REMOVED INSTANCES: %s".format(ratio))
 
       // Save the log
-      this.logger.storeFile(file.get + "_TL")
+      this.logger.storeFile(file.get)
     }
 
     this.data

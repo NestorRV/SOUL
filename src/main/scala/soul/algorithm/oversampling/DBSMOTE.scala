@@ -276,7 +276,7 @@ class DBSMOTE(private[soul] val data: Data) extends Algorithm {
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
 
       // Save the log
-      this.logger.storeFile(file.get + "_DBSmote")
+      this.logger.storeFile(file.get)
     }
   }
 }
