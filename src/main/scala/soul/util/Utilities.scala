@@ -105,30 +105,31 @@ object Utilities {
     * @return matrix array with the distances
     */
   def computeDistances(data: Array[Array[Double]], distance: Distances.Distance, nominal: Array[Int], classes: Array[Any]): Array[Array[Double]] = {
-    val attributesCounter: Array[Map[Double, Int]] = if (distance == Distances.HVDM) data.transpose.map((column: Array[Double]) =>
-      column.groupBy(identity).mapValues((_: Array[Double]).length)) else _
-    val attributesClassesCounter: Array[Map[Double, Map[Any, Int]]] = if (distance == Distances.HVDM) data.transpose.map((attribute: Array[Double]) =>
-      occurrencesByValueAndClass(attribute, classes)) else _
-    val sds: Array[Double] = if (distance == Distances.HVDM) data.transpose.map((column: Array[Double]) =>
-      standardDeviation(column)) else _
-
     val distances: Array[Array[Double]] = Array.fill[Array[Double]](data.length)(new Array[Double](data.length))
 
-    data.indices.par.foreach { i: Int =>
-      data.indices.par.foreach { j: Int =>
-        if (j >= i) {
-          if (distance == Distances.HVDM) {
-            distances(i)(j) = hvdm(data(i), data(j), nominal, sds, attributesCounter, attributesClassesCounter)
-            distances(j)(i) = distances(i)(j)
-          }
-          else if (distance == Distances.EUCLIDEAN && nominal.length == 0) {
-            distances(i)(j) = euclideanDistance(data(i), data(j))
-            distances(j)(i) = distances(i)(j)
-          }
-          else {
-            distances(i)(j) = euclideanNominalDistance(data(i), data(j), nominal)
-            distances(j)(i) = distances(i)(j)
-          }
+    if (distance == Distances.HVDM) {
+      val attributesCounter: Array[Map[Double, Int]] = data.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length))
+      val attributesClassesCounter: Array[Map[Double, Map[Any, Int]]] = data.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, classes))
+      val sds: Array[Double] = data.transpose.map((column: Array[Double]) => standardDeviation(column))
+
+      data.indices.par.foreach { i: Int =>
+        data.indices.drop(i).par.foreach { j: Int =>
+          distances(i)(j) = hvdm(data(i), data(j), nominal, sds, attributesCounter, attributesClassesCounter)
+          distances(j)(i) = distances(i)(j)
+        }
+      }
+    } else if (distance == Distances.EUCLIDEAN && nominal.length == 0) {
+      data.indices.par.foreach { i: Int =>
+        data.indices.drop(i).par.foreach { j: Int =>
+          distances(i)(j) = euclideanDistance(data(i), data(j))
+          distances(j)(i) = distances(i)(j)
+        }
+      }
+    } else {
+      data.indices.par.foreach { i: Int =>
+        data.indices.drop(i).par.foreach { j: Int =>
+          distances(i)(j) = euclideanNominalDistance(data(i), data(j), nominal)
+          distances(j)(i) = distances(i)(j)
         }
       }
     }
