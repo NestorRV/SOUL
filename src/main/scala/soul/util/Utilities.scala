@@ -105,9 +105,12 @@ object Utilities {
     * @return matrix array with the distances
     */
   def computeDistances(data: Array[Array[Double]], distance: Distances.Distance, nominal: Array[Int], classes: Array[Any]): Array[Array[Double]] = {
-    val attributesCounter: Array[Map[Double, Int]] = data.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length))
-    val attributesClassesCounter: Array[Map[Double, Map[Any, Int]]] = data.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, classes))
-    val sds: Array[Double] = data.transpose.map((column: Array[Double]) => standardDeviation(column))
+    val attributesCounter: Array[Map[Double, Int]] = if (distance == Distances.HVDM) data.transpose.map((column: Array[Double]) =>
+      column.groupBy(identity).mapValues((_: Array[Double]).length)) else _
+    val attributesClassesCounter: Array[Map[Double, Map[Any, Int]]] = if (distance == Distances.HVDM) data.transpose.map((attribute: Array[Double]) =>
+      occurrencesByValueAndClass(attribute, classes)) else _
+    val sds: Array[Double] = if (distance == Distances.HVDM) data.transpose.map((column: Array[Double]) =>
+      standardDeviation(column)) else _
 
     val distances: Array[Array[Double]] = Array.fill[Array[Double]](data.length)(new Array[Double](data.length))
 
