@@ -199,25 +199,25 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
 
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
-    if (data.fileInfo.nominal.length == 0) {
-      data.resultData = dataShuffled map to2Decimals(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
+    val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
+      dataShuffled map to2Decimals(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
     } else {
-      data.resultData = dataShuffled map toNominal(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
+      dataShuffled map toNominal(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), nomToNum)
-    }
-    data.resultClasses = dataShuffled map Array.concat(data.y, Array.fill(output.length)(minorityClass))
+    }, dataShuffled map Array.concat(data.y, Array.fill(output.length)(minorityClass)),
+      Some(dataShuffled.zipWithIndex.collect { case (c, i) if c >= samples.length => i }), data.fileInfo)
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
       logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
-      logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
+      logger.addMsg("NEW DATA SIZE: %d".format(newData.x.length))
       logger.addMsg("NEW SAMPLES ARE:")
       dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) logger.addMsg("%d".format(index._2)))
       logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
       logger.storeFile(file.get)
     }
 
-    data
+    newData
   }
 }

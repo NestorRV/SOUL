@@ -30,14 +30,14 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
   // Otherwise, minorityClass will be used as the minority one
   private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
+  private[soul] val randomIndex: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
   // Data without NA values and with nominal values transformed to numeric values
   private[soul] val (processedData, _) = processData(data)
   // Use randomized data
   val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
-    (index map zeroOneNormalization(data, processedData)).toArray else (index map processedData).toArray
+    (randomIndex map zeroOneNormalization(data, processedData)).toArray else (randomIndex map processedData).toArray
   // and randomized classes to match the randomized data
-  val classesToWorkWith: Array[Any] = (index map data.y).toArray
+  val classesToWorkWith: Array[Any] = (randomIndex map data.y).toArray
   // Distances among the elements
   val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, data.fileInfo.nominal, data.y)
 
@@ -74,21 +74,20 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
 
     // if the label matches (it is well classified) the element is useful
     val misclassified: Array[Int] = calculatedLabels.collect { case (i, label) if label != classesToWorkWith(i) => i }
-    val newData: Array[Int] = misclassified ++ train
+    val newDataIndex: Array[Int] = misclassified ++ train
 
     // Construct a data object to be passed to Tomek Link
-    val auxData: Data = new Data(x = toXData(newData map dataToWorkWith),
-      y = newData map classesToWorkWith, fileInfo = data.fileInfo)
-    val tl = new TL(auxData, file = None, distance = distance, dists = Some((newData map distances).map(newData map _)))
+    val auxData: Data = new Data(x = toXData(newDataIndex map dataToWorkWith),
+      y = newDataIndex map classesToWorkWith, fileInfo = data.fileInfo)
+    val tl = new TL(auxData, file = None, distance = distance, dists = Some((newDataIndex map distances).map(newDataIndex map _)))
     tl.untouchableClass_=(untouchableClass)
     val resultTL: Data = tl.compute()
-    // The final index is the result of applying Tomek Link to the content of newData
-    val finalIndex: Array[Int] = (resultTL.index.toList map newData).toArray
+    // The final randomIndex is the result of applying Tomek Link to the content of newDataIndex
+    val finalIndex: Array[Int] = (resultTL.index.get.toList map newDataIndex).toArray
     val finishTime: Long = System.nanoTime()
 
-    data.index = (finalIndex map index).sorted
-    data.resultData = data.index map data.x
-    data.resultClasses = data.index map data.y
+    val index: Array[Int] = (finalIndex map randomIndex).sorted
+    val newData: Data = new Data(index map data.x, index map data.y, Some(index), data.fileInfo)
 
     if (file.isDefined) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
@@ -101,6 +100,6 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
       logger.storeFile(file.get)
     }
 
-    data
+    newData
   }
 }

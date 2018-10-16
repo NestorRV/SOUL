@@ -31,7 +31,7 @@ class Writer {
 
     pr.write("@data\n")
 
-    for (row <- data.resultData zip data.resultClasses) {
+    for (row <- data.x zip data.y) {
       val naIndex: Array[Int] = row._1.zipWithIndex.filter((_: (Any, Int))._1 == "soul_NA").map((_: (Any, Int))._2)
       val newRow: Array[Any] = row._1.clone()
       for (index <- naIndex) {
@@ -57,7 +57,7 @@ class Writer {
     if (data.fileInfo._header != null)
       pr.write(data.fileInfo._header.mkString(delimiter) + "\n")
 
-    for (row <- data.resultData zip data.resultClasses) {
+    for (row <- data.x zip data.y) {
       val naIndex: Array[Int] = row._1.zipWithIndex.filter((_: (Any, Int))._1 == "soul_NA").map((_: (Any, Int))._2)
       val newRow: Array[Any] = row._1.clone()
       for (index <- naIndex) {

@@ -105,23 +105,23 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
     }
 
     // check if the data is nominal or numerical
-    if (nomToNum(0).isEmpty) {
-      data.resultData = to2Decimals(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs))
+    val newData: Data = new Data(if (nomToNum(0).isEmpty) {
+      to2Decimals(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs))
     } else {
-      data.resultData = toNominal(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs), nomToNum)
-    }
-    data.resultClasses = (finalIndex map shuffle).sorted map resultClasses
+      toNominal(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs), nomToNum)
+    }, (finalIndex map shuffle).sorted map resultClasses,
+      Some(shuffle.zipWithIndex.collect { case (c, i) if c >= samples.length => i }.toArray), data.fileInfo)
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
       logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
-      logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
+      logger.addMsg("NEW DATA SIZE: %d".format(newData.x.length))
       logger.addMsg("NEW SAMPLES ARE:")
       shuffle.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) logger.addMsg("%d".format(index._2)))
       logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
       logger.storeFile(file.get)
     }
 
-    data
+    newData
   }
 }

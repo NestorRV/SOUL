@@ -40,13 +40,13 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
   // Otherwise, minorityClass will be used as the minority one
   private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = random.shuffle(data.y.indices.toList)
+  private[soul] val randomIndex: List[Int] = random.shuffle(data.y.indices.toList)
   // Data without NA values and with nominal values transformed to numeric values
   private[soul] val (processedData, _) = processData(data)
   // Use normalized localTrainData and randomized localTrainData
-  val dataToWorkWith: Array[Array[Double]] = (index map zeroOneNormalization(data, processedData)).toArray
+  val dataToWorkWith: Array[Array[Double]] = (randomIndex map zeroOneNormalization(data, processedData)).toArray
   // and randomized localTrainClasses to match the randomized localTrainData
-  val classesToWorkWith: Array[Any] = (index map data.y).toArray
+  val classesToWorkWith: Array[Any] = (randomIndex map data.y).toArray
 
 
   /** Compute Iterative Instance Adjustment for Imbalanced Domains algorithm
@@ -475,9 +475,7 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
 
     val finishTime: Long = System.nanoTime()
 
-    data.resultData = population.map((row: Array[Double]) => row.map((e: Double) => e.asInstanceOf[Any]))
-    data.resultClasses = classes
-    data.index = null
+    val newData: Data = new Data(population.map((row: Array[Double]) => row.map((e: Double) => e.asInstanceOf[Any])), classes, None, data.fileInfo)
 
     if (file.isDefined) {
       val newCounter: Map[Any, Int] = classes.groupBy(identity).mapValues((_: Array[Any]).length)
@@ -490,6 +488,6 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
       logger.storeFile(file.get)
     }
 
-    data
+    newData
   }
 }

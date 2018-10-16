@@ -37,6 +37,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
   // the samples computed by the algorithm
   private val output: ArrayBuffer[Array[Double]] = ArrayBuffer()
   private var samples: Array[Array[Double]] = processedData
+  private var resultClasses: Array[Any] = _
 
   /**
     * @param c array of index of samples that belongs to a determined class
@@ -58,29 +59,29 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
   def amplify(x: Int, k: Int): Unit = {
     // compute the neighborhood for the majority and minority class
     val majNeighbors: Array[Int] = kNeighbors(majorityClassIndex map output, output(x), k, distance,
-      data.fileInfo.nominal.length == 0, (output.toArray, data.resultClasses))
+      data.fileInfo.nominal.length == 0, (output.toArray, resultClasses))
     val minNeighbors: Array[Int] = kNeighbors(minorityClassIndex map output, output(x), k, distance,
-      data.fileInfo.nominal.length == 0, (output.toArray, data.resultClasses))
+      data.fileInfo.nominal.length == 0, (output.toArray, resultClasses))
     // compute the number of copies to create
     val S: Int = Math.abs(majNeighbors.length - minNeighbors.length) + 1
-    // need to know the size of the output to save the index of the elements inserted
+    // need to know the size of the output to save the randomIndex of the elements inserted
     val outputSize: Int = output.length
     (0 until S).foreach(_ => {
       output ++= Traversable(output(x))
     })
     // add n copies to the output
-    if (data.resultClasses(x) == minorityClass) {
+    if (resultClasses(x) == minorityClass) {
       minorityClassIndex = minorityClassIndex ++ (outputSize until outputSize + S)
     } else {
       majorityClassIndex = majorityClassIndex ++ (outputSize until outputSize + S)
     }
-    data.resultClasses = data.resultClasses ++ Array.fill(S)(data.resultClasses(x))
+    resultClasses = resultClasses ++ Array.fill(S)(resultClasses(x))
   }
 
   /** classifies example x using its k-nearest neighbors and returns true
     * or false for correct and incorrect classification respectively
     *
-    * @param x   index of the element
+    * @param x   randomIndex of the element
     * @param k   number of minority class nearest neighbors
     * @param out indicate if use the output or the input data, true = input data
     * @return true or false
@@ -88,7 +89,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
   def correct(x: Int, k: Int, out: Boolean): Boolean = {
     // compute the neighbors
     val neighbors: Array[Int] = kNeighbors(if (out) samples else output.toArray, if (out) samples(x) else output(x), k, distance,
-      data.fileInfo.nominal.length == 0, if (out) (samples, data.y) else (output.toArray, data.resultClasses))
+      data.fileInfo.nominal.length == 0, if (out) (samples, data.y) else (output.toArray, resultClasses))
     val classes: scala.collection.mutable.Map[Any, Int] = scala.collection.mutable.Map()
     // compute the number of samples for each class in the neighborhood
     neighbors.foreach(neighbor => classes += data.y(neighbor) -> 0)
@@ -119,7 +120,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
       samples = zeroOneNormalization(data, processedData)
     }
 
-    // array with the index of each sample
+    // array with the randomIndex of each sample
     var DS: Array[Int] = Array.range(0, samples.length)
     // at the beginning there are not safe samples
     var safeSamples: Array[Boolean] = Array.fill(samples.length)(false)
@@ -132,11 +133,11 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
     if (relabel == "yes") {
       //add the RS samples to the minority set
       minorityClassIndex = minorityClassIndex ++ RS
-      data.resultClasses = data.y
-      RS.foreach(data.resultClasses(_) = minorityClass)
+      resultClasses = data.y
+      RS.foreach(resultClasses(_) = minorityClass)
     } else {
 
-      // eliminate the samples from the initial set, first we recalculate the index for min and maj class
+      // eliminate the samples from the initial set, first we recalculate the randomIndex for min and maj class
       var newIndex: Int = 0
       minorityClassIndex = minorityClassIndex.map(minor => {
         newIndex = minor
@@ -150,7 +151,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
       })
       DS = DS.diff(RS)
       safeSamples = DS map safeSamples
-      data.resultClasses = DS map data.y
+      resultClasses = DS map data.y
     }
 
     // the output is DS if ampl is not weak or strong
@@ -172,27 +173,25 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
     val r: Random = new Random(seed)
     val dataShuffled: Array[Int] = r.shuffle(output.indices.toList).toArray
     // check if the data is nominal or numerical
-    if (data.fileInfo.nominal.length == 0) {
-      data.resultData = dataShuffled map to2Decimals(if (distance == Distances.EUCLIDEAN)
+    val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
+      dataShuffled map to2Decimals(if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray)
     } else {
-      data.resultData = dataShuffled map toNominal(if (distance == Distances.EUCLIDEAN)
+      dataShuffled map toNominal(if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray, nomToNum)
-    }
-
-    data.resultClasses = dataShuffled map data.resultClasses
+    }, dataShuffled map resultClasses, Some(dataShuffled.zipWithIndex.collect { case (c, i) if c >= samples.length => i }), data.fileInfo)
 
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
       logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
-      logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
+      logger.addMsg("NEW DATA SIZE: %d".format(newData.x.length))
       logger.addMsg("NEW SAMPLES ARE:")
       dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) logger.addMsg("%d".format(index._2)))
       logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
       logger.storeFile(file.get)
     }
 
-    data
+    newData
   }
 }

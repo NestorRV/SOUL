@@ -24,14 +24,14 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // Otherwise, minorityClass will be used as the minority one
   private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
+  private[soul] val randomIndex: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
   // Data without NA values and with nominal values transformed to numeric values
   private[soul] val (processedData, _) = processData(data)
   // Use normalized data for EUCLIDEAN distance and randomized data
   val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
-    (index map zeroOneNormalization(data, processedData)).toArray else (index map processedData).toArray
+    (randomIndex map zeroOneNormalization(data, processedData)).toArray else (randomIndex map processedData).toArray
   // and randomized classes to match the randomized data
-  val classesToWorkWith: Array[Any] = (index map data.y).toArray
+  val classesToWorkWith: Array[Any] = (randomIndex map data.y).toArray
   // Distances among the elements
   val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, data.fileInfo.nominal, data.y)
 
@@ -95,9 +95,8 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val storeIndex: Array[Int] = location.zipWithIndex.filter((x: (Int, Int)) => x._1 == 1).collect { case (_, a) => a }
     val finishTime: Long = System.nanoTime()
 
-    data.index = (storeIndex map index).sorted
-    data.resultData = data.index map data.x
-    data.resultClasses = data.index map data.y
+    val index: Array[Int] = (storeIndex map randomIndex).sorted
+    val newData: Data = new Data(index map data.x, index map data.y, Some(index), data.fileInfo)
 
     if (file.isDefined) {
       val newCounter: Map[Any, Int] = (storeIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
@@ -109,6 +108,6 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       logger.storeFile(file.get)
     }
 
-    data
+    newData
   }
 }
