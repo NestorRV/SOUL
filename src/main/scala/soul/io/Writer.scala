@@ -18,20 +18,20 @@ class Writer {
     */
   def writeArff(file: String, data: Data): Unit = {
     val pr = new PrintWriter(new File(file))
-    pr.write("@relation %s\n".format(data._fileInfo._relationName))
+    pr.write("@relation %s\n".format(data.fileInfo._relationName))
 
-    if (data._fileInfo._attributes == null || data._fileInfo._attributesValues == null)
+    if (data.fileInfo._attributes == null || data.fileInfo._attributesValues == null)
       throw new Exception("Unable to write arff: missing information")
 
-    val orderedAttributes: Map[Int, String] = ListMap(data._fileInfo._attributes.toSeq.sortBy((_: (Int, String))._1): _*)
+    val orderedAttributes: Map[Int, String] = ListMap(data.fileInfo._attributes.toSeq.sortBy((_: (Int, String))._1): _*)
 
     for (attribute <- orderedAttributes) {
-      pr.write("@attribute %s %s\n".format(attribute._2, data._fileInfo._attributesValues(attribute._2)))
+      pr.write("@attribute %s %s\n".format(attribute._2, data.fileInfo._attributesValues(attribute._2)))
     }
 
     pr.write("@data\n")
 
-    for (row <- data._resultData zip data._resultClasses) {
+    for (row <- data.resultData zip data.resultClasses) {
       val naIndex: Array[Int] = row._1.zipWithIndex.filter((_: (Any, Int))._1 == "soul_NA").map((_: (Any, Int))._2)
       val newRow: Array[Any] = row._1.clone()
       for (index <- naIndex) {
@@ -50,14 +50,14 @@ class Writer {
     * @param data data to save to the file
     */
   def writeDelimitedText(file: String, data: Data): Unit = {
-    val delimiter: String = if (data._fileInfo._delimiter == null) "," else data._fileInfo._delimiter
-    val missing: String = if (data._fileInfo._missing == null) "?" else data._fileInfo._delimiter
+    val delimiter: String = if (data.fileInfo._delimiter == null) "," else data.fileInfo._delimiter
+    val missing: String = if (data.fileInfo._missing == null) "?" else data.fileInfo._delimiter
 
     val pr = new PrintWriter(new File(file))
-    if (data._fileInfo._header != null)
-      pr.write(data._fileInfo._header.mkString(delimiter) + "\n")
+    if (data.fileInfo._header != null)
+      pr.write(data.fileInfo._header.mkString(delimiter) + "\n")
 
-    for (row <- data._resultData zip data._resultClasses) {
+    for (row <- data.resultData zip data.resultClasses) {
       val naIndex: Array[Int] = row._1.zipWithIndex.filter((_: (Any, Int))._1 == "soul_NA").map((_: (Any, Int))._2)
       val newRow: Array[Any] = row._1.clone()
       for (index <- naIndex) {

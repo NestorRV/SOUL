@@ -29,7 +29,7 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
   private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.originalClasses.indices.toList)
 
   //data with the samples
-  private var samples: Array[Array[Double]] = data._processedData
+  private var samples: Array[Array[Double]] = data.processedData
 
   /** cut-off function
     *
@@ -55,8 +55,8 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
     val CMAX: Double = 2
 
     if (!Nmin(y._2).contains(x))
-      f(samples(0).length / computeDistanceOversampling(samples(y._1), samples(x), distance, data._nominal.length == 0,
-        (samples, data._originalClasses)), cut) * CMAX
+      f(samples(0).length / computeDistanceOversampling(samples(y._1), samples(x), distance, data.nominal.length == 0,
+        (samples, data.originalClasses)), cut) * CMAX
     else
       0.0
   }
@@ -85,8 +85,8 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
   private def clusterDistance(cluster1: Array[Int], cluster2: Array[Int]): Double = {
     val centroid1: Array[Double] = (cluster1 map samples).transpose.map(_.sum / cluster1.length)
     val centroid2: Array[Double] = (cluster2 map samples).transpose.map(_.sum / cluster2.length)
-    computeDistanceOversampling(centroid1, centroid2, distance, data._nominal.length == 0,
-      (Array.concat(cluster1, cluster2) map samples, Array.concat(cluster1, cluster2) map data._originalClasses))
+    computeDistanceOversampling(centroid1, centroid2, distance, data.nominal.length == 0,
+      (Array.concat(cluster1, cluster2) map samples, Array.concat(cluster1, cluster2) map data.originalClasses))
   }
 
   /**
@@ -115,7 +115,7 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
   private def cluster(Sminf: Array[Int]): Array[Array[Int]] = {
     val dist: Array[Array[Double]] = Array.fill(Sminf.length, Sminf.length)(9999999.0)
     Sminf.indices.foreach(i => Sminf.indices.foreach(j => if (i != j) dist(i)(j) = computeDistanceOversampling(samples(Sminf(i)),
-      samples(Sminf(j)), distance, data._nominal.length == 0, (Sminf map samples, Sminf map data._originalClasses))))
+      samples(Sminf(j)), distance, data.nominal.length == 0, (Sminf map samples, Sminf map data.originalClasses))))
 
     val Cp: Double = 3 // used in paper
     val Th: Double = dist.map(_.min).sum / Sminf.length * Cp
@@ -144,15 +144,15 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
       samples = zeroOneNormalization(data)
     }
     // compute minority class
-    val minorityClassIndex: Array[Int] = minority(data._originalClasses)
-    data._minorityClass = data._originalClasses(minorityClassIndex(0))
+    val minorityClassIndex: Array[Int] = minority(data.originalClasses)
+    data.minorityClass = data.originalClasses(minorityClassIndex(0))
     // compute majority class
     val majorityClassIndex: Array[Int] = samples.indices.diff(minorityClassIndex.toList).toArray
 
     // construct the filtered minority set
     val Sminf: Array[Int] = minorityClassIndex.map(index => {
-      val neighbors = kNeighbors(samples, index, k1, distance, data._nominal.length == 0, (samples, data._originalClasses))
-      if (neighbors map data._originalClasses contains data._originalClasses(minorityClassIndex(0))) {
+      val neighbors = kNeighbors(samples, index, k1, distance, data.nominal.length == 0, (samples, data.originalClasses))
+      if (neighbors map data.originalClasses contains data.originalClasses(minorityClassIndex(0))) {
         Some(index)
       } else {
         None
@@ -161,10 +161,10 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
 
     //for each sample in Sminf compute the nearest majority set
     val Sbmaj: Array[Int] = Sminf.flatMap(x => kNeighbors(majorityClassIndex map samples, samples(x), k2, distance,
-      data._nominal.length == 0, (majorityClassIndex map samples, majorityClassIndex map data._originalClasses))).distinct.map(majorityClassIndex(_))
+      data.nominal.length == 0, (majorityClassIndex map samples, majorityClassIndex map data.originalClasses))).distinct.map(majorityClassIndex(_))
     // for each majority example in Sbmaj , compute the nearest minority set
     val Nmin: Array[Array[Int]] = Sbmaj.map(x => kNeighbors(minorityClassIndex map samples, samples(x), k3, distance,
-      data._nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data._originalClasses)).map(minorityClassIndex(_)))
+      data.nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data.originalClasses)).map(minorityClassIndex(_)))
 
     // find the informative minority set (union of all Nmin)
     val Simin: Array[Int] = Nmin.flatten.distinct
@@ -200,21 +200,21 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
 
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
-    if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
+    if (data.nominal.length == 0) {
+      data.resultData = dataShuffled map to2Decimals(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output))
     } else {
-      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
+      data.resultData = dataShuffled map toNominal(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output), data.nomToNum)
     }
-    data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))
+    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(data.minorityClass))
 
     // Stop the time
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(data._originalData.length))
-      this.logger.addMsg("NEW DATA SIZE: %d".format(data._resultData.length))
+      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.originalData.length))
+      this.logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
       this.logger.addMsg("NEW SAMPLES ARE:")
       dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))
       // Save the time

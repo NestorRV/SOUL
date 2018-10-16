@@ -127,7 +127,7 @@ class Reader {
 
     val fileInfo = new FileInfo(_file = file, _comment = "%", _columnClass = response, _delimiter = null, _missing = "?", _header = null,
       _relationName = relationName, _attributes = attributes, _attributesValues = attributesValues)
-    new Data(_nominal = readNominal.distinct.toArray, _originalData = finalData.toArray, _originalClasses = readClasses.toArray, _fileInfo = fileInfo)
+    new Data(nominal = readNominal.distinct.toArray, originalData = finalData.toArray, originalClasses = readClasses.toArray, fileInfo = fileInfo)
   }
 
   /** Parse a delimited text data file
@@ -189,6 +189,6 @@ class Reader {
 
     val fileInfo = new FileInfo(_file = file, _comment = "%", _columnClass = response, _delimiter = delimiter, _missing = missing, _header = headerArray, _relationName = null,
       _attributes = null, _attributesValues = attributesValues)
-    new Data(_nominal = readNominal.distinct.toArray, _originalData = readData.toArray, _originalClasses = readClasses.toArray, _fileInfo = fileInfo)
+    new Data(nominal = readNominal.distinct.toArray, originalData = readData.toArray, originalClasses = readClasses.toArray, fileInfo = fileInfo)
   }
 }

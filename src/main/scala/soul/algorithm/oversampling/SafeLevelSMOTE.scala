@@ -32,13 +32,13 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
     // Start the time
     val initTime: Long = System.nanoTime()
 
-    var samples: Array[Array[Double]] = data._processedData
+    var samples: Array[Array[Double]] = data.processedData
     if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
     }
     // compute minority class
-    val minorityClassIndex: Array[Int] = minority(data._originalClasses)
-    data._minorityClass = data._originalClasses(minorityClassIndex(0))
+    val minorityClassIndex: Array[Int] = minority(data.originalClasses)
+    data.minorityClass = data.originalClasses(minorityClassIndex(0))
 
     // output with a size of |D|-t samples
     val output: Array[Array[Double]] = Array.fill(minorityClassIndex.length, samples(0).length)(0.0)
@@ -53,18 +53,18 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
     // for each minority class sample
     minorityClassIndex.foreach(i => {
       // compute k neighbors from p and save number of positive instances
-      neighbors = kNeighbors(samples, i, k, distance, data._nominal.length == 0, (samples, data._originalClasses))
+      neighbors = kNeighbors(samples, i, k, distance, data.nominal.length == 0, (samples, data.originalClasses))
       val n: Int = neighbors(r.nextInt(neighbors.length))
       val slp: Int = neighbors.map(neighbor => {
-        if (data._originalClasses(neighbor) == data._minorityClass) {
+        if (data.originalClasses(neighbor) == data.minorityClass) {
           1
         } else {
           0
         }
       }).sum
       // compute k neighbors from n and save number of positive instances
-      val sln: Int = kNeighbors(samples, n, k, distance, data._nominal.length == 0, (samples, data._originalClasses)).map(neighbor => {
-        if (data._originalClasses(neighbor) == data._minorityClass) {
+      val sln: Int = kNeighbors(samples, n, k, distance, data.nominal.length == 0, (samples, data.originalClasses)).map(neighbor => {
+        if (data.originalClasses(neighbor) == data.minorityClass) {
           1
         } else {
           0
@@ -98,21 +98,21 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
 
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
-    if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
+    if (data.nominal.length == 0) {
+      data.resultData = dataShuffled map to2Decimals(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output))
     } else {
-      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
+      data.resultData = dataShuffled map toNominal(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output), data.nomToNum)
     }
-    data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))
+    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(data.minorityClass))
 
     // Stop the time
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(data._originalData.length))
-      this.logger.addMsg("NEW DATA SIZE: %d".format(data._resultData.length))
+      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.originalData.length))
+      this.logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
       this.logger.addMsg("NEW SAMPLES ARE:")
       dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))
       // Save the time

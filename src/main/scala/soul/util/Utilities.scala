@@ -512,9 +512,9 @@ object Utilities {
     * @return matrix of doubles containing the data
     */
   def processData(data: Data): (Array[Array[Double]], Array[mutable.Map[Double, Any]]) = {
-    val nomToNum: Array[mutable.Map[Double, Any]] = Array.fill(data._originalData(0).length)(mutable.Map[Double, Any]())
+    val nomToNum: Array[mutable.Map[Double, Any]] = Array.fill(data.originalData(0).length)(mutable.Map[Double, Any]())
     var nomToNumIndex = 0
-    val processedData: Array[Array[Double]] = data._originalData.transpose.zipWithIndex.map { column: (Array[Any], Int) =>
+    val processedData: Array[Array[Double]] = data.originalData.transpose.zipWithIndex.map { column: (Array[Any], Int) =>
       // let's look for the NA values
       val naIndex: Array[Int] = column._1.zipWithIndex.filter((_: (Any, Int))._1 == "soul_NA").map((_: (Any, Int))._2)
       // If they exist
@@ -522,7 +522,7 @@ object Utilities {
         // Take the index of the elements that are not NA
         val nonNAIndex: Array[Int] = column._1.zipWithIndex.filter((_: (Any, Int))._1 != "soul_NA").map((_: (Any, Int))._2)
         // If the column is not a nominal value
-        if (!data._nominal.contains(column._2)) {
+        if (!data.nominal.contains(column._2)) {
           // compute the mean of the present values
           val arrayDouble: Array[Double] = (nonNAIndex map column._1).map((_: Any).asInstanceOf[Double])
           val mean: Double = arrayDouble.sum / arrayDouble.length
@@ -553,7 +553,7 @@ object Utilities {
       } else {
         // If there is no NA values
         // If the column is not a nominal value
-        if (data._nominal.contains(column._2)) {
+        if (data.nominal.contains(column._2)) {
           val array: Array[Any] = column._1.clone()
           // we change them to numerical values (0, 1, 2, ..., N)
           val uniqueValues: Array[Any] = array.distinct
@@ -643,13 +643,13 @@ object Utilities {
     * @return normalized data
     */
   def zeroOneNormalization(d: Data): Array[Array[Double]] = {
-    val maxV: Array[Double] = d._processedData.transpose.map((col: Array[Double]) => col.max)
-    val minV: Array[Double] = d._processedData.transpose.map((col: Array[Double]) => col.min)
-    d._maxAttribs = maxV
-    d._minAttribs = minV
-    val result: Array[Array[Double]] = d._processedData.transpose.clone()
+    val maxV: Array[Double] = d.processedData.transpose.map((col: Array[Double]) => col.max)
+    val minV: Array[Double] = d.processedData.transpose.map((col: Array[Double]) => col.min)
+    d.maxAttribs = maxV
+    d.minAttribs = minV
+    val result: Array[Array[Double]] = d.processedData.transpose.clone()
 
-    d._processedData.transpose.indices.diff(d._nominal).par.foreach { index: Int =>
+    d.processedData.transpose.indices.diff(d.nominal).par.foreach { index: Int =>
       val aux: Array[Double] = result(index).map((element: Double) => (element - minV(index)).toFloat / (maxV(index) - minV(index)))
       result(index) = if (aux.count((_: Double).isNaN) == 0) aux else Array.fill[Double](aux.length)(0.0)
     }

@@ -18,8 +18,8 @@ class ENN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
 
   private[soul] val minorityClass: Any = -1
   // Remove NA values and change nominal values to numeric values
-  private[soul] val x: Array[Array[Double]] = this.data._processedData
-  private[soul] val y: Array[Any] = data._originalClasses
+  private[soul] val x: Array[Array[Double]] = this.data.processedData
+  private[soul] val y: Array[Any] = data.originalClasses
   // Logger object to log the execution of the algorithms
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
@@ -35,7 +35,7 @@ class ENN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // and randomized classes to match the randomized data
   val classesToWorkWith: Array[Any] = (this.index map this.y).toArray
   // Distances among the elements
-  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data._nominal, this.y)
+  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.nominal, this.y)
 
 
   /** Compute the Edited Nearest Neighbour rule (ENN rule)
@@ -60,9 +60,9 @@ class ENN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     // Stop the time
     val finishTime: Long = System.nanoTime()
 
-    this.data._resultData = (finalIndex map this.index).sorted map this.data._originalData
-    this.data._resultClasses = (finalIndex map this.index).sorted map this.data._originalClasses
-    this.data._index = (finalIndex map this.index).sorted
+    this.data.resultData = (finalIndex map this.index).sorted map this.data.originalData
+    this.data.resultClasses = (finalIndex map this.index).sorted map this.data.originalClasses
+    this.data.index = (finalIndex map this.index).sorted
 
     if (file.isDefined) {
       // Recount of classes

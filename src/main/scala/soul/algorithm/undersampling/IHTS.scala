@@ -22,8 +22,8 @@ class IHTS(private[soul] val data: Data, private[soul] val seed: Long = System.c
 
   private[soul] val minorityClass: Any = -1
   // Remove NA values and change nominal values to numeric values
-  private[soul] val x: Array[Array[Double]] = this.data._processedData
-  private[soul] val y: Array[Any] = data._originalClasses
+  private[soul] val x: Array[Array[Double]] = this.data.processedData
+  private[soul] val y: Array[Any] = data.originalClasses
   // Logger object to log the execution of the algorithms
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
@@ -58,9 +58,9 @@ class IHTS(private[soul] val data: Data, private[soul] val seed: Long = System.c
       j48.setOptions(Array("-U", "-M", "1"))
 
       val trainInstances: Instances = buildInstances(data = trainIndex map dataToWorkWith,
-        classes = trainIndex map classesToWorkWith, fileInfo = this.data._fileInfo)
+        classes = trainIndex map classesToWorkWith, fileInfo = this.data.fileInfo)
       val testInstances: Instances = buildInstances(data = testIndex map dataToWorkWith,
-        classes = testIndex map classesToWorkWith, fileInfo = this.data._fileInfo)
+        classes = testIndex map classesToWorkWith, fileInfo = this.data.fileInfo)
 
       j48.buildClassifier(trainInstances)
 
@@ -90,9 +90,9 @@ class IHTS(private[soul] val data: Data, private[soul] val seed: Long = System.c
     // Stop the time
     val finishTime: Long = System.nanoTime()
 
-    this.data._resultData = (finalIndex map this.index).sorted map this.data._originalData
-    this.data._resultClasses = (finalIndex map this.index).sorted map this.data._originalClasses
-    this.data._index = (finalIndex map this.index).sorted
+    this.data.resultData = (finalIndex map this.index).sorted map this.data.originalData
+    this.data.resultClasses = (finalIndex map this.index).sorted map this.data.originalClasses
+    this.data.index = (finalIndex map this.index).sorted
 
     if (file.isDefined) {
       // Recount of classes

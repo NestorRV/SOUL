@@ -34,7 +34,7 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
       throw new Exception("Percent must be a multiple of 100")
     }
 
-    var samples: Array[Array[Double]] = data._processedData
+    var samples: Array[Array[Double]] = data.processedData
     if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
     }
@@ -43,8 +43,8 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
     val initTime: Long = System.nanoTime()
 
     // compute minority class
-    val minorityClassIndex: Array[Int] = minority(data._originalClasses)
-    data._minorityClass = data._originalClasses(minorityClassIndex(0))
+    val minorityClassIndex: Array[Int] = minority(data.originalClasses)
+    data.minorityClass = data.originalClasses(minorityClassIndex(0))
 
     // check if the percent is correct
     var T: Int = minorityClassIndex.length
@@ -66,8 +66,8 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
     val r: Random = new Random(this.seed)
     // for each minority class sample
     minorityClassIndex.zipWithIndex.foreach(i => {
-      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data._nominal.length == 0,
-        (samples, data._originalClasses)).map(minorityClassIndex(_))
+      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.nominal.length == 0,
+        (samples, data.originalClasses)).map(minorityClassIndex(_))
       // compute populate for the sample
       (0 until N).foreach(_ => {
         val nn: Int = r.nextInt(neighbors.length)
@@ -84,20 +84,20 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
 
     // check if the data is nominal or numerical
-    if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
+    if (data.nominal.length == 0) {
+      data.resultData = dataShuffled map to2Decimals(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output))
     } else {
-      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
+      data.resultData = dataShuffled map toNominal(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output), data.nomToNum)
     }
-    data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))
+    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(data.minorityClass))
     // Stop the time
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(data._originalData.length))
-      this.logger.addMsg("NEW DATA SIZE: %d".format(data._resultData.length))
+      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.originalData.length))
+      this.logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
       this.logger.addMsg("NEW SAMPLES ARE:")
       dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))
       // Save the time

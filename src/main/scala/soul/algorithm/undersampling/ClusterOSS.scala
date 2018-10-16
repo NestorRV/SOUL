@@ -23,8 +23,8 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
 
   private[soul] val minorityClass: Any = -1
   // Remove NA values and change nominal values to numeric values
-  private[soul] val x: Array[Array[Double]] = this.data._processedData
-  private[soul] val y: Array[Any] = data._originalClasses
+  private[soul] val x: Array[Array[Double]] = this.data.processedData
+  private[soul] val y: Array[Any] = data.originalClasses
   // Logger object to log the execution of the algorithms
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
@@ -40,7 +40,7 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
   // and randomized classes to match the randomized data
   val classesToWorkWith: Array[Any] = (this.index map this.y).toArray
   // Distances among the elements
-  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data._nominal, this.y)
+  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.nominal, this.y)
 
   /** Undersampling method based in ClusterOSS
     *
@@ -52,17 +52,17 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
 
     val majElements: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label != this.untouchableClass => i }
 
-    val (_, centroids, assignment) = kMeans(data = majElements map dataToWorkWith, nominal = this.data._nominal,
+    val (_, centroids, assignment) = kMeans(data = majElements map dataToWorkWith, nominal = this.data.nominal,
       numClusters = numClusters, restarts = restarts, minDispersion = minDispersion, maxIterations = maxIterations, seed = this.seed)
 
     val kMeansTime: Long = System.nanoTime() - initTime
 
     val result: (Array[Int], Array[Array[Int]]) = assignment.par.map { cluster: (Int, Array[Int]) =>
       val distances: Array[(Int, Double)] = cluster._2.map { instance: Int =>
-        if (this.data._nominal.length == 0)
+        if (this.data.nominal.length == 0)
           (instance, euclideanDistance(dataToWorkWith(instance), centroids(cluster._1)))
         else
-          (instance, euclideanNominalDistance(dataToWorkWith(instance), centroids(cluster._1), this.data._nominal))
+          (instance, euclideanNominalDistance(dataToWorkWith(instance), centroids(cluster._1), this.data.nominal))
       }
 
       val closestInstance: Int = if (distances.isEmpty) -1 else distances.minBy((_: (Int, Double))._2)._1
@@ -84,21 +84,21 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
     val newData: Array[Int] = misclassified ++ train
 
     // Construct a data object to be passed to Tomek Link
-    val auxData: Data = new Data(_nominal = this.data._nominal, _originalData = toXData(newData map dataToWorkWith),
-      _originalClasses = newData map classesToWorkWith, _fileInfo = this.data._fileInfo)
+    val auxData: Data = new Data(nominal = this.data.nominal, originalData = toXData(newData map dataToWorkWith),
+      originalClasses = newData map classesToWorkWith, fileInfo = this.data.fileInfo)
     // But the untouchableClass must be the same
     val tl = new TL(auxData, file = None, distance = distance)
     tl.untouchableClass_=(this.untouchableClass)
     val resultTL: Data = tl.compute()
     // The final index is the result of applying Tomek Link to the content of newData
-    val finalIndex: Array[Int] = (resultTL._index.toList map newData).toArray
+    val finalIndex: Array[Int] = (resultTL.index.toList map newData).toArray
 
     // Stop the time
     val finishTime: Long = System.nanoTime()
 
-    this.data._resultData = (finalIndex map this.index).sorted map this.data._originalData
-    this.data._resultClasses = (finalIndex map this.index).sorted map this.data._originalClasses
-    this.data._index = (finalIndex map this.index).sorted
+    this.data.resultData = (finalIndex map this.index).sorted map this.data.originalData
+    this.data.resultClasses = (finalIndex map this.index).sorted map this.data.originalClasses
+    this.data.index = (finalIndex map this.index).sorted
 
     if (file.isDefined) {
       // Recount of classes

@@ -33,8 +33,8 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
   private[soul] val random: scala.util.Random = new scala.util.Random(this.seed)
   private[soul] val minorityClass: Any = -1
   // Remove NA values and change nominal values to numeric values
-  private[soul] val x: Array[Array[Double]] = this.data._processedData
-  private[soul] val y: Array[Any] = data._originalClasses
+  private[soul] val x: Array[Array[Double]] = this.data.processedData
+  private[soul] val y: Array[Any] = data.originalClasses
   // Logger object to log the execution of the algorithms
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
@@ -56,8 +56,8 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
     */
   def compute(): Data = {
     def accuracy(trainData: Array[Array[Double]], trainClasses: Array[Any], testData: Array[Array[Double]], testClasses: Array[Any]): Double = {
-      val trainInstances: Instances = buildInstances(data = trainData, classes = trainClasses, fileInfo = this.data._fileInfo)
-      val testInstances: Instances = buildInstances(data = testData, classes = testClasses, fileInfo = this.data._fileInfo)
+      val trainInstances: Instances = buildInstances(data = trainData, classes = trainClasses, fileInfo = this.data.fileInfo)
+      val testInstances: Instances = buildInstances(data = testData, classes = testClasses, fileInfo = this.data.fileInfo)
 
       val j48: J48 = new J48
       j48.setOptions(Array("-U"))
@@ -71,8 +71,8 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
     def computeFitness(trainData: Array[Array[Double]], trainClasses: Array[Any], testData: Array[Array[Double]],
                        testClasses: Array[Any], dict: Map[Any, Double]): Double = {
 
-      val trainInstances: Instances = buildInstances(data = trainData, classes = trainClasses, fileInfo = this.data._fileInfo)
-      val testInstances: Instances = buildInstances(data = testData, classes = testClasses, fileInfo = this.data._fileInfo)
+      val trainInstances: Instances = buildInstances(data = trainData, classes = trainClasses, fileInfo = this.data.fileInfo)
+      val testInstances: Instances = buildInstances(data = testData, classes = testClasses, fileInfo = this.data.fileInfo)
 
       val j48: J48 = new J48
       j48.setOptions(Array("-U"))
@@ -132,7 +132,7 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
 
       val j48: J48 = new J48
       j48.setOptions(Array("-U"))
-      val instances: Instances = buildInstances(data = data, classes = classes, fileInfo = this.data._fileInfo)
+      val instances: Instances = buildInstances(data = data, classes = classes, fileInfo = this.data.fileInfo)
       j48.buildClassifier(instances)
 
       val ids: Array[String] = getLeafs(instances = instances, tree = j48.graph())
@@ -479,9 +479,9 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
     // Stop the time
     val finishTime: Long = System.nanoTime()
 
-    this.data._resultData = population.map((row: Array[Double]) => row.map((e: Double) => e.asInstanceOf[Any]))
-    this.data._resultClasses = classes
-    this.data._index = null
+    this.data.resultData = population.map((row: Array[Double]) => row.map((e: Double) => e.asInstanceOf[Any]))
+    this.data.resultClasses = classes
+    this.data.index = null
 
     if (file.isDefined) {
       // Recount of localTrainClasses

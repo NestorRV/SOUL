@@ -7,20 +7,17 @@ import soul.util.Utilities._
 /** One-Side Selection core. Original paper: "Addressing the Curse of Imbalanced
   * Training Sets: One-Side Selection" by Miroslav Kubat and Stan Matwin.
   *
-  * @param data          data to work with
-  * @param seed          seed to use. If it is not provided, it will use the system time
-  * @param minorityClass indicates the minority class. If it's set to -1, it will set to the one with less instances
-  * @param file          file to store the log. If its set to None, log process would not be done
-  * @param distance      distance to use when calling the NNRule core
+  * @param data     data to work with
+  * @param seed     seed to use. If it is not provided, it will use the system time
+  * @param file     file to store the log. If its set to None, log process would not be done
+  * @param distance distance to use when calling the NNRule core
   * @author Néstor Rodríguez Vico
   */
-class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), private[soul] val minorityClass: Any = -1,
-          file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN) {
+class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN) {
 
-  private[soul] val minorityClass: Any = -1
   // Remove NA values and change nominal values to numeric values
-  private[soul] val x: Array[Array[Double]] = this.data._processedData
-  private[soul] val y: Array[Any] = data._originalClasses
+  private[soul] val x: Array[Array[Double]] = this.data.processedData
+  private[soul] val y: Array[Any] = data.originalClasses
   // Logger object to log the execution of the algorithms
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
@@ -36,7 +33,7 @@ class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // and randomized classes to match the randomized data
   val classesToWorkWith: Array[Any] = (this.index map this.y).toArray
   // Distances among the elements
-  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data._nominal, this.y)
+  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.nominal, this.y)
 
   /** Compute the One-Side Selection core.
     *
@@ -66,21 +63,21 @@ class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val finalC: Array[Int] = (misclassified ++ c).distinct
 
     // Construct a data object to be passed to Tomek Link
-    val auxData: Data = new Data(_nominal = this.data._nominal, _originalData = toXData(finalC map dataToWorkWith),
-      _originalClasses = finalC map classesToWorkWith, _fileInfo = this.data._fileInfo)
+    val auxData: Data = new Data(nominal = this.data.nominal, originalData = toXData(finalC map dataToWorkWith),
+      originalClasses = finalC map classesToWorkWith, fileInfo = this.data.fileInfo)
     // But the untouchableClass must be the same
     val tl = new TL(auxData, file = None, distance = distance)
     tl.untouchableClass_=(this.untouchableClass)
     val resultTL: Data = tl.compute()
     // The final index is the result of applying TomekLink to the content of C
-    val finalIndex: Array[Int] = (resultTL._index.toList map finalC).toArray
+    val finalIndex: Array[Int] = (resultTL.index.toList map finalC).toArray
 
     // Stop the time
     val finishTime: Long = System.nanoTime()
 
-    this.data._resultData = (finalIndex map this.index).sorted map this.data._originalData
-    this.data._resultClasses = (finalIndex map this.index).sorted map this.data._originalClasses
-    this.data._index = (finalIndex map this.index).sorted
+    this.data.resultData = (finalIndex map this.index).sorted map this.data.originalData
+    this.data.resultClasses = (finalIndex map this.index).sorted map this.data.originalClasses
+    this.data.index = (finalIndex map this.index).sorted
 
     if (file.isDefined) {
       // Recount of classes

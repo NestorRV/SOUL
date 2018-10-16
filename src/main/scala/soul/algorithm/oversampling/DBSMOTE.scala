@@ -26,9 +26,9 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
   // Index to shuffle (randomize) the data
   private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.originalClasses.indices.toList)
   // the data of the samples
-  private var samples: Array[Array[Double]] = data._processedData
+  private var samples: Array[Array[Double]] = data.processedData
   // compute minority class
-  private val minorityClassIndex: Array[Int] = minority(data._originalClasses)
+  private val minorityClassIndex: Array[Int] = minority(data.originalClasses)
 
   /** Compute the neighborhood (used in DBScan algorithm)
     *
@@ -39,7 +39,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
   private def regionQuery(point: Int, eps: Double): Array[Int] = {
     (minorityClassIndex map samples).indices.map(sample => {
       if (computeDistanceOversampling(samples(minorityClassIndex(point)), samples(minorityClassIndex(sample)), distance,
-        data._nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data._originalClasses)) <= eps) {
+        data.nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data.originalClasses)) <= eps) {
         Some(sample)
       } else {
         None
@@ -123,7 +123,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     val graph: Array[Array[Boolean]] = Array.fill(cluster.length, cluster.length)(false)
     //distance between each par of nodes
     val distances: Array[Array[Double]] = cluster.map(i => cluster.map(j => computeDistanceOversampling(samples(minorityClassIndex(i)),
-      samples(minorityClassIndex(j)), distance, data._nominal.length == 0, (cluster map samples, cluster map data._originalClasses))))
+      samples(minorityClassIndex(j)), distance, data.nominal.length == 0, (cluster map samples, cluster map data.originalClasses))))
 
     // number of nodes connected to another which satisfied distance(a,b) <= eps
     val NNq: Array[Int] = distances.map(row => row.map(dist => if (dist <= eps) 1 else 0)).map(_.sum)
@@ -179,8 +179,8 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
       graph(u).indices.foreach(v => {
         if (graph(u)(v) && !nodeInfo(v)._3) {
           val alt = nodeInfo(u)._1 + computeDistanceOversampling(samples(minorityClassIndex(cluster(u))),
-            samples(minorityClassIndex(cluster(v))), distance, data._nominal.length == 0,
-            (cluster map samples, cluster map data._originalClasses))
+            samples(minorityClassIndex(cluster(v))), distance, data.nominal.length == 0,
+            (cluster map samples, cluster map data.originalClasses))
           if (alt < nodeInfo(v)._1) nodeInfo(v) = (alt, u, nodeInfo(v)._3)
         }
       })
@@ -197,7 +197,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     // Start the time
     val initTime: Long = System.nanoTime()
 
-    data._minorityClass = data._originalClasses(minorityClassIndex(0))
+    data.minorityClass = data.originalClasses(minorityClassIndex(0))
     if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
     }
@@ -205,8 +205,8 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     //check if the user pass the epsilon parameter
     var eps2 = eps
     if (eps == -1) {
-      eps2 = samples.map(i => samples.map(j => computeDistanceOversampling(i, j, distance, data._nominal.length == 0,
-        (samples, data._originalClasses))).sum).sum / (samples.length * samples.length)
+      eps2 = samples.map(i => samples.map(j => computeDistanceOversampling(i, j, distance, data.nominal.length == 0,
+        (samples, data.originalClasses))).sum).sum / (samples.length * samples.length)
     }
 
     //compute the clusters using dbscan
@@ -254,21 +254,21 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     r.setSeed(seed)
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
-    if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
+    if (data.nominal.length == 0) {
+      data.resultData = dataShuffled map to2Decimals(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output))
     } else {
-      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
+      data.resultData = dataShuffled map toNominal(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output), data.nomToNum)
     }
-    data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))
+    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(data.minorityClass))
 
     // Stop the time
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(data._originalData.length))
-      this.logger.addMsg("NEW DATA SIZE: %d".format(data._resultData.length))
+      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.originalData.length))
+      this.logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
       this.logger.addMsg("NEW SAMPLES ARE:")
       dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))
       // Save the time

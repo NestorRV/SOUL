@@ -37,14 +37,14 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     // Start the time
     val initTime: Long = System.nanoTime()
 
-    var samples: Array[Array[Double]] = data._processedData
+    var samples: Array[Array[Double]] = data.processedData
     if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
     }
 
     // compute minority class
-    val minorityClassIndex: Array[Int] = minority(data._originalClasses)
-    data._minorityClass = data._originalClasses(minorityClassIndex(0))
+    val minorityClassIndex: Array[Int] = minority(data.originalClasses)
+    data.minorityClass = data.originalClasses(minorityClassIndex(0))
 
     // check if the percent is correct
     var T: Int = minorityClassIndex.length
@@ -66,8 +66,8 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     val r: Random = new Random(this.seed)
     // for each minority class sample
     minorityClassIndex.zipWithIndex.foreach(i => {
-      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data._nominal.length == 0,
-        (samples, data._originalClasses)).map(minorityClassIndex(_))
+      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.nominal.length == 0,
+        (samples, data.originalClasses)).map(minorityClassIndex(_))
       // compute populate for the sample
       (0 until N).foreach(_ => {
         val nn: Int = r.nextInt(neighbors.length)
@@ -82,7 +82,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     })
 
     val result: Array[Array[Double]] = Array.concat(samples, output)
-    val resultClasses: Array[Any] = Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))
+    val resultClasses: Array[Any] = Array.concat(data.originalClasses, Array.fill(output.length)(data.minorityClass))
 
     // The following code correspond to TL and it has been made by Néstor Rodríguez Vico
     val shuffle: List[Int] = r.shuffle(resultClasses.indices.toList)
@@ -91,7 +91,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     // and randomized classes to match the randomized data
     val classesToWorkWith: Array[Any] = (shuffle map resultClasses).toArray
     // Distances among the elements
-    val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, Distances.EUCLIDEAN, this.data._nominal, resultClasses)
+    val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, Distances.EUCLIDEAN, this.data.nominal, resultClasses)
 
     // Take the index of the elements that have a different class
     val candidates: Map[Any, Array[Int]] = classesToWorkWith.distinct.map { c: Any =>
@@ -112,19 +112,19 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     val finalIndex: Array[Int] = dataToWorkWith.indices.diff(removedInstances).toArray
 
     // check if the data is nominal or numerical
-    if (data._nomToNum(0).isEmpty) {
-      data._resultData = to2Decimals(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data._maxAttribs, data._minAttribs))
+    if (data.nomToNum(0).isEmpty) {
+      data.resultData = to2Decimals(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.maxAttribs, data.minAttribs))
     } else {
-      data._resultData = toNominal(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data._maxAttribs, data._minAttribs), data._nomToNum)
+      data.resultData = toNominal(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.maxAttribs, data.minAttribs), data.nomToNum)
     }
-    this.data._resultClasses = (finalIndex map shuffle).sorted map resultClasses
+    this.data.resultClasses = (finalIndex map shuffle).sorted map resultClasses
 
     // Stop the time
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(data._originalData.length))
-      this.logger.addMsg("NEW DATA SIZE: %d".format(data._resultData.length))
+      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.originalData.length))
+      this.logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
       this.logger.addMsg("NEW SAMPLES ARE:")
       shuffle.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))
       // Save the time

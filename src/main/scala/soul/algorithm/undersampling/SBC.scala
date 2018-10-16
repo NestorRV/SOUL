@@ -28,8 +28,8 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
 
   private[soul] val minorityClass: Any = -1
   // Remove NA values and change nominal values to numeric values
-  private[soul] val x: Array[Array[Double]] = this.data._processedData
-  private[soul] val y: Array[Any] = data._originalClasses
+  private[soul] val x: Array[Array[Double]] = this.data.processedData
+  private[soul] val y: Array[Any] = data.originalClasses
   // Logger object to log the execution of the algorithms
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
@@ -52,7 +52,7 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     // Start the time
     val initTime: Long = System.nanoTime()
 
-    val (_, centroids, assignment) = kMeans(data = dataToWorkWith, nominal = this.data._nominal, numClusters = numClusters, restarts = restarts,
+    val (_, centroids, assignment) = kMeans(data = dataToWorkWith, nominal = this.data.nominal, numClusters = numClusters, restarts = restarts,
       minDispersion = minDispersion, maxIterations = maxIterations, seed = this.seed)
 
     val kMeansTime: Long = System.nanoTime() - initTime
@@ -91,10 +91,10 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
         if (majorityElementsIndex.length == assignment(clusteridSize._1).length) {
           // Use the centroid as "minority class" element
           val distances: Array[Double] = assignment(clusteridSize._1).map { instance: Int =>
-            if (this.data._nominal.length == 0)
+            if (this.data.nominal.length == 0)
               euclideanDistance(dataToWorkWith(instance), centroids(clusteridSize._1))
             else
-              euclideanNominalDistance(dataToWorkWith(instance), centroids(clusteridSize._1), this.data._nominal)
+              euclideanNominalDistance(dataToWorkWith(instance), centroids(clusteridSize._1), this.data.nominal)
           }
 
           distances.zipWithIndex.sortBy((_: (Double, Int))._2).take(clusteridSize._2).map((_: (Double, Int))._2) map assignment(clusteridSize._1)
@@ -103,7 +103,7 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
             classesToWorkWith(e._1) == this.untouchableClass)
 
           val distances: Array[Array[Double]] = computeDistances(data = assignment(clusteridSize._1) map dataToWorkWith,
-            distance = Distances.EUCLIDEAN, nominal = this.data._nominal, classes = assignment(clusteridSize._1) map classesToWorkWith)
+            distance = Distances.EUCLIDEAN, nominal = this.data.nominal, classes = assignment(clusteridSize._1) map classesToWorkWith)
 
           if (method.equals("NearMiss1")) {
             // selects the majority class samples whose average distances to k nearest minority class samples in the ith cluster are the smallest.
@@ -159,9 +159,9 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     // Stop the time
     val finishTime: Long = System.nanoTime()
 
-    this.data._resultData = (finalIndex map this.index).sorted map this.data._originalData
-    this.data._resultClasses = (finalIndex map this.index).sorted map this.data._originalClasses
-    this.data._index = (finalIndex map this.index).sorted
+    this.data.resultData = (finalIndex map this.index).sorted map this.data.originalData
+    this.data.resultClasses = (finalIndex map this.index).sorted map this.data.originalClasses
+    this.data.index = (finalIndex map this.index).sorted
 
     if (file.isDefined) {
       // Recount of classes

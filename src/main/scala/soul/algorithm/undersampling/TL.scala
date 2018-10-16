@@ -20,15 +20,14 @@ class TL(private[soul] val data: Data, private[soul] val seed: Long = System.cur
 
   private[soul] val minorityClass: Any = -1
   // Remove NA values and change nominal values to numeric values
-  private[soul] val x: Array[Array[Double]] = this.data._processedData
-  private[soul] val y: Array[Any] = data._originalClasses
+  private[soul] val x: Array[Array[Double]] = this.data.processedData
+  private[soul] val y: Array[Any] = data.originalClasses
   // Logger object to log the execution of the algorithms
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = this.y.groupBy(identity).mapValues((_: Array[Any]).length)
-  // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
-  // Otherwise, minorityClass will be used as the minority one
-  private[soul] val untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+  private[this] var untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+
   // Index to shuffle (randomize) the data
   private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.y.indices.toList)
   // Use normalized data for EUCLIDEAN distance and randomized data
@@ -37,7 +36,15 @@ class TL(private[soul] val data: Data, private[soul] val seed: Long = System.cur
   // and randomized classes to match the randomized data
   val classesToWorkWith: Array[Any] = (this.index map this.y).toArray
   // Distances among the elements
-  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data._nominal, this.y)
+  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.nominal, this.y)
+
+  /** untouchableClass setter
+    *
+    * @param value new untouchableClass
+    */
+  private[soul] def untouchableClass_=(value: Any): Unit = {
+    this.untouchableClass = value
+  }
 
   /** Undersampling method based in removing Tomek Links
     *
@@ -80,9 +87,9 @@ class TL(private[soul] val data: Data, private[soul] val seed: Long = System.cur
     val finishTime: Long = System.nanoTime()
 
     // Save the data
-    this.data._resultData = (finalIndex map this.index).sorted map this.data._originalData
-    this.data._resultClasses = (finalIndex map this.index).sorted map this.data._originalClasses
-    this.data._index = (finalIndex map this.index).sorted
+    this.data.resultData = (finalIndex map this.index).sorted map this.data.originalData
+    this.data.resultClasses = (finalIndex map this.index).sorted map this.data.originalClasses
+    this.data.index = (finalIndex map this.index).sorted
 
     if (file.isDefined) {
       // Recount of classes
