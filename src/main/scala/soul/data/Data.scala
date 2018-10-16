@@ -1,7 +1,5 @@
 package soul.data
 
-import soul.util.Utilities.processData
-
 /** Data structure used by the algorithms
   *
   * @param x        data associated to the file (x)
