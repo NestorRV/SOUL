@@ -18,8 +18,7 @@ import soul.util.Utilities._
   */
 class TL(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
          distance: Distances.Distance = Distances.EUCLIDEAN, ratio: String = "not minority", dists: Option[Array[Array[Double]]] = None) {
-
-  private[soul] val minorityClass: Any = -1
+  
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class

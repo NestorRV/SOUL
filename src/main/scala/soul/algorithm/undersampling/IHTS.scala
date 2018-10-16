@@ -20,13 +20,11 @@ import scala.util.Random
   */
 class IHTS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None, nFolds: Int = 5) {
 
-  private[soul] val minorityClass: Any = -1
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
-  // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
-  // Otherwise, minorityClass will be used as the minority one
+  // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
   private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
   private[soul] val randomIndex: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
