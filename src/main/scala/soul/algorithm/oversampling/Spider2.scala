@@ -36,7 +36,8 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
   private var majorityClassIndex: Array[Int] = processedData.indices.diff(minorityClassIndex.toList).toArray
   // the samples computed by the algorithm
   private val output: ArrayBuffer[Array[Double]] = ArrayBuffer()
-  private var samples: Array[Array[Double]] = processedData
+  // Samples to work with
+  private[soul] val samples: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN) zeroOneNormalization(data, processedData) else processedData
   private var resultClasses: Array[Any] = _
 
   /**
@@ -116,10 +117,6 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
     }
 
     val initTime: Long = System.nanoTime()
-    if (distance == Distances.EUCLIDEAN) {
-      samples = zeroOneNormalization(data, processedData)
-    }
-
     // array with the randomIndex of each sample
     var DS: Array[Int] = Array.range(0, samples.length)
     // at the beginning there are not safe samples

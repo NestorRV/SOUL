@@ -25,6 +25,8 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
   private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
   // Data without NA values and with nominal values transformed to numeric values
   private[soul] val (processedData, nomToNum) = processData(data)
+  // Samples to work with
+  private[soul] val samples: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN) zeroOneNormalization(data, processedData) else processedData
 
   /** Compute the SafeLevelSMOTE algorithm
     *
@@ -32,10 +34,6 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
-    var samples: Array[Array[Double]] = processedData
-    if (distance == Distances.EUCLIDEAN) {
-      samples = zeroOneNormalization(data, processedData)
-    }
     // compute minority class
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))

@@ -27,6 +27,8 @@ class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.
   private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
   // Data without NA values and with nominal values transformed to numeric values
   private[soul] val (processedData, nomToNum) = processData(data)
+  // Samples to work with
+  private[soul] val samples: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN) zeroOneNormalization(data, processedData) else processedData
 
   /** Compute the first principal component axis
     *
@@ -53,11 +55,6 @@ class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
-    var samples: Array[Array[Double]] = processedData
-    if (distance == Distances.EUCLIDEAN) {
-      samples = zeroOneNormalization(data, processedData)
-    }
-
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))
     // output with a size of T*N samples

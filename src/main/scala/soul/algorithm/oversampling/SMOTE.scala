@@ -26,6 +26,8 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
   private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
   // Data without NA values and with nominal values transformed to numeric values
   private[soul] val (processedData, nomToNum) = processData(data)
+  // Samples to work with
+  private[soul] val samples: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN) zeroOneNormalization(data, processedData) else processedData
 
   /** Compute the SMOTE algorithm
     *
@@ -34,11 +36,6 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
   def compute(): Data = {
     if (percent > 100 && percent % 100 != 0) {
       throw new Exception("Percent must be a multiple of 100")
-    }
-
-    var samples: Array[Array[Double]] = processedData
-    if (distance == Distances.EUCLIDEAN) {
-      samples = zeroOneNormalization(data, processedData)
     }
 
     val initTime: Long = System.nanoTime()

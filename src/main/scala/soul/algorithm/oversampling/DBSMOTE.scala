@@ -27,10 +27,10 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
   private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
   // Data without NA values and with nominal values transformed to numeric values
   private[soul] val (processedData, nomToNum) = processData(data)
-  // the data of the samples
-  private var samples: Array[Array[Double]] = processedData
   // compute minority class
   private val minorityClassIndex: Array[Int] = minority(data.y)
+  // Samples to work with
+  private[soul] val samples: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN) zeroOneNormalization(data, processedData) else processedData
 
   /** Compute the neighborhood (used in DBScan algorithm)
     *
@@ -198,10 +198,6 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
     val minorityClass: Any = data.y(minorityClassIndex(0))
-    if (distance == Distances.EUCLIDEAN) {
-      samples = zeroOneNormalization(data, processedData)
-    }
-
     //check if the user pass the epsilon parameter
     var eps2 = eps
     if (eps == -1) {

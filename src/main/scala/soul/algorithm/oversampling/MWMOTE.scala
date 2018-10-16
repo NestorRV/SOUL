@@ -29,8 +29,8 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
   private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
   // Data without NA values and with nominal values transformed to numeric values
   private[soul] val (processedData, nomToNum) = processData(data)
-  //data with the samples
-  private var samples: Array[Array[Double]] = processedData
+  // Samples to work with
+  private[soul] val samples: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN) zeroOneNormalization(data, processedData) else processedData
 
   /** cut-off function
     *
@@ -139,9 +139,6 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
-    if (distance == Distances.EUCLIDEAN) {
-      samples = zeroOneNormalization(data, processedData)
-    }
     // compute minority class
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))
