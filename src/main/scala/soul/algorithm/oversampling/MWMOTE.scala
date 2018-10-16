@@ -10,18 +10,18 @@ import scala.util.Random
 /** MWMOTE algorithm. Original paper: "MWMOTE—Majority Weighted Minority Oversampling Technique for Imbalanced Data Set
   * Learning" by Sukarna Barua, Md. Monirul Islam, Xin Yao, Fellow, IEEE, and Kazuyuki Muras.
   *
-  * @param data  data to work with
-  * @param seed  seed to use. If it is not provided, it will use the system time
-  * @param file  file to store the log. If its set to None, log process would not be done
-  * @param N     number of synthetic samples to be generated
-  * @param k1    number of neighbors used for predicting noisy minority class samples
-  * @param k2    number of majority neighbors used for constructing informative minority set
-  * @param k3    number of minority neighbors used for constructing informative minority set
-  * @param dType the type of distance to use, hvdm or euclidean
+  * @param data     data to work with
+  * @param seed     seed to use. If it is not provided, it will use the system time
+  * @param file     file to store the log. If its set to None, log process would not be done
+  * @param N        number of synthetic samples to be generated
+  * @param k1       number of neighbors used for predicting noisy minority class samples
+  * @param k2       number of majority neighbors used for constructing informative minority set
+  * @param k3       number of minority neighbors used for constructing informative minority set
+  * @param distance the type of distance to use, hvdm or euclidean
   * @author David López Pretel
   */
 class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-             N: Int = 500, k1: Int = 5, k2: Int = 5, k3: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN) {
+             N: Int = 500, k1: Int = 5, k2: Int = 5, k3: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN) {
 
   private[soul] val minorityClass: Any = -1
   // Remove NA values and change nominal values to numeric values
@@ -147,15 +147,15 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
     * @return synthetic samples generated
     */
   def compute(): Unit = {
-    if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
+    if (distance != Distances.EUCLIDEAN && distance != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }
 
     // Start the time
     val initTime: Long = System.nanoTime()
 
-    distanceType = dType
-    if (dType == Distances.EUCLIDEAN) {
+    distanceType = distance
+    if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
     }
     // compute minority class
@@ -166,7 +166,7 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
 
     // construct the filtered minority set
     val Sminf: Array[Int] = minorityClassIndex.map(index => {
-      val neighbors = kNeighbors(samples, index, k1, dType, data._nominal.length == 0, (samples, data._originalClasses))
+      val neighbors = kNeighbors(samples, index, k1, distance, data._nominal.length == 0, (samples, data._originalClasses))
       if (neighbors map data._originalClasses contains data._originalClasses(minorityClassIndex(0))) {
         Some(index)
       } else {
@@ -175,10 +175,10 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
     }).filterNot(_.forall(_ == None)).map(_.get)
 
     //for each sample in Sminf compute the nearest majority set
-    val Sbmaj: Array[Int] = Sminf.flatMap(x => kNeighbors(majorityClassIndex map samples, samples(x), k2, dType,
+    val Sbmaj: Array[Int] = Sminf.flatMap(x => kNeighbors(majorityClassIndex map samples, samples(x), k2, distance,
       data._nominal.length == 0, (majorityClassIndex map samples, majorityClassIndex map data._originalClasses))).distinct.map(majorityClassIndex(_))
     // for each majority example in Sbmaj , compute the nearest minority set
-    val Nmin: Array[Array[Int]] = Sbmaj.map(x => kNeighbors(minorityClassIndex map samples, samples(x), k3, dType,
+    val Nmin: Array[Array[Int]] = Sbmaj.map(x => kNeighbors(minorityClassIndex map samples, samples(x), k3, distance,
       data._nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data._originalClasses)).map(minorityClassIndex(_)))
 
     // find the informative minority set (union of all Nmin)
@@ -216,10 +216,10 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
     if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
     } else {
-      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
     }
     data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))

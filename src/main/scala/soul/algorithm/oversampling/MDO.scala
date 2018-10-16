@@ -13,11 +13,11 @@ import scala.util.Random
   * @param data  data to work with
   * @param seed  seed to use. If it is not provided, it will use the system time
   * @param file  file to store the log. If its set to None, log process would not be done
-  * @param dType the type of distance to use, hvdm or euclidean
+  * @param distance the type of distance to use, hvdm or euclidean
   * @author David López Pretel
   */
 class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-          dType: Distances.Distance = Distances.EUCLIDEAN) {
+          distance: Distances.Distance = Distances.EUCLIDEAN) {
 
   private[soul] val minorityClass: Any = -1
   // Remove NA values and change nominal values to numeric values
@@ -87,7 +87,7 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     * @return synthetic samples generated
     */
   def compute(): Unit = {
-    if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
+    if (distance != Distances.EUCLIDEAN && distance != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }
 
@@ -95,7 +95,7 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val initTime: Long = System.nanoTime()
 
     var samples: Array[Array[Double]] = data._processedData
-    if (dType == Distances.EUCLIDEAN) {
+    if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
     }
 
@@ -137,10 +137,10 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
 
     // check if the data is nominal or numerical
     if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
     } else {
-      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
     }
     data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))

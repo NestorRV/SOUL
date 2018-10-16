@@ -10,17 +10,17 @@ import scala.util.Random
 /** Spider2 algorithm. Original paper: "Learning from Imbalanced Data in Presence of Noisy and Borderline Examples" by
   * Krystyna Napiera la, Jerzy Stefanowski and Szymon Wilk.
   *
-  * @param data    data to work with
-  * @param seed    seed to use. If it is not provided, it will use the system time
-  * @param file    file to store the log. If its set to None, log process would not be done
-  * @param relabel relabeling option
-  * @param ampl    amplification option
-  * @param k       number of minority class nearest neighbors
-  * @param dType   the type of distance to use, hvdm or euclidean
+  * @param data     data to work with
+  * @param seed     seed to use. If it is not provided, it will use the system time
+  * @param file     file to store the log. If its set to None, log process would not be done
+  * @param relabel  relabeling option
+  * @param ampl     amplification option
+  * @param k        number of minority class nearest neighbors
+  * @param distance the type of distance to use, hvdm or euclidean
   * @author David López Pretel
   */
 class Spider2(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-              relabel: String = "yes", ampl: String = "weak", k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN) {
+              relabel: String = "yes", ampl: String = "weak", k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN) {
 
   private[soul] val minorityClass: Any = -1
   // Remove NA values and change nominal values to numeric values
@@ -121,15 +121,15 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
       throw new Exception("amplification must be weak or strong or no.")
     }
 
-    if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
+    if (distance != Distances.EUCLIDEAN && distance != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }
 
     // Start the time
     val initTime: Long = System.nanoTime()
 
-    distanceType = dType
-    if (dType == Distances.EUCLIDEAN) {
+    distanceType = distance
+    if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
     }
 
@@ -187,10 +187,10 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
     val dataShuffled: Array[Int] = r.shuffle(output.indices.toList).toArray
     // check if the data is nominal or numerical
     if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(if (dType == Distances.EUCLIDEAN)
+      data._resultData = dataShuffled map to2Decimals(if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output.toArray, data._maxAttribs, data._minAttribs) else output.toArray)
     } else {
-      data._resultData = dataShuffled map toNominal(if (dType == Distances.EUCLIDEAN)
+      data._resultData = dataShuffled map toNominal(if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output.toArray, data._maxAttribs, data._minAttribs) else output.toArray, data._nomToNum)
     }
 

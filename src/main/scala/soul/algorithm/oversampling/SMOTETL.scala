@@ -9,16 +9,16 @@ import scala.util.Random
 /** SMOTETL algorithm. Original paper: "A Study of the Behavior of Several Methods for Balancing Machine Learning
   * Training Data" by Gustavo E. A. P. A. Batista, Ronaldo C. Prati and Maria Carolina Monard.
   *
-  * @param data    data to work with
-  * @param seed    seed to use. If it is not provided, it will use the system time
-  * @param file    file to store the log. If its set to None, log process would not be done
-  * @param percent Amount of Smote N%
-  * @param k       Number of minority class nearest neighbors
-  * @param dType   the type of distance to use, hvdm or euclidean
+  * @param data     data to work with
+  * @param seed     seed to use. If it is not provided, it will use the system time
+  * @param file     file to store the log. If its set to None, log process would not be done
+  * @param percent  Amount of Smote N%
+  * @param k        Number of minority class nearest neighbors
+  * @param distance the type of distance to use, hvdm or euclidean
   * @author David López Pretel
   */
 class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-              percent: Int = 500, k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN) {
+              percent: Int = 500, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN) {
 
   private[soul] val minorityClass: Any = -1
   // Remove NA values and change nominal values to numeric values
@@ -43,7 +43,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
       throw new Exception("Percent must be a multiple of 100")
     }
 
-    if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
+    if (distance != Distances.EUCLIDEAN && distance != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }
 
@@ -51,7 +51,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     val initTime: Long = System.nanoTime()
 
     var samples: Array[Array[Double]] = data._processedData
-    if (dType == Distances.EUCLIDEAN) {
+    if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
     }
 
@@ -79,7 +79,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     val r: Random = new Random(this.seed)
     // for each minority class sample
     minorityClassIndex.zipWithIndex.foreach(i => {
-      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, dType, data._nominal.length == 0,
+      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data._nominal.length == 0,
         (samples, data._originalClasses)).map(minorityClassIndex(_))
       // compute populate for the sample
       (0 until N).foreach(_ => {

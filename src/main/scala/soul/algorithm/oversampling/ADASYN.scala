@@ -9,17 +9,17 @@ import scala.util.Random
 /** ADASYN algorithm. Original paper: "ADASYN: Adaptive Synthetic Sampling Approach for Imbalanced Learning" by Haibo He,
   * Yang Bai, Edwardo A. Garcia, and Shutao Li.
   *
-  * @param data  data to work with
-  * @param seed  seed to use. If it is not provided, it will use the system time
-  * @param file  file to store the log. If its set to None, log process would not be done
-  * @param d     preset threshold for the maximum tolerated degree of class imbalance radio
-  * @param B     balance level after generation of synthetic data
-  * @param k     number of neighbors
-  * @param dType the type of distance to use, hvdm or euclidean
+  * @param data     data to work with
+  * @param seed     seed to use. If it is not provided, it will use the system time
+  * @param file     file to store the log. If its set to None, log process would not be done
+  * @param d        preset threshold for the maximum tolerated degree of class imbalance radio
+  * @param B        balance level after generation of synthetic data
+  * @param k        number of neighbors
+  * @param distance the type of distance to use, hvdm or euclidean
   * @author David López Pretel
   */
 class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None, d: Double = 1, B: Double = 1, k: Int = 5,
-             dType: Distances.Distance = Distances.EUCLIDEAN) {
+             distance: Distances.Distance = Distances.EUCLIDEAN) {
 
   private[soul] val minorityClass: Any = -1
   // Remove NA values and change nominal values to numeric values
@@ -46,7 +46,7 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
       throw new Exception("d must be between 0 and 1, zero not included")
     }
 
-    if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
+    if (distance != Distances.EUCLIDEAN && distance != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }
 
@@ -54,7 +54,7 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
     val initTime: Long = System.nanoTime()
 
     var samples: Array[Array[Double]] = data._processedData
-    if (dType == Distances.EUCLIDEAN) {
+    if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
     }
 
@@ -68,7 +68,7 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
     val G: Int = ((ml - ms) * B).asInstanceOf[Int]
     // k neighbors of each minority sample
     val neighbors: Array[Array[Int]] = minorityClassIndex.indices.map(sample => {
-      kNeighbors(samples, minorityClassIndex(sample), k, dType, data._nominal.length == 0, (samples, data._originalClasses))
+      kNeighbors(samples, minorityClassIndex(sample), k, distance, data._nominal.length == 0, (samples, data._originalClasses))
     }).toArray
 
     // ratio of each minority sample
@@ -108,10 +108,10 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
     if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
     } else {
-      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
     }
     data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))

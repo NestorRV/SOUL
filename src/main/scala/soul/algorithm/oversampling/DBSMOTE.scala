@@ -10,16 +10,16 @@ import scala.util.Random
 /** DBSMOTE algorithm. Original paper: "DBSMOTE: Density-Based Synthetic Minority Over-sampling Technique" by
   * Chumphol Bunkhumpornpat, Krung Sinapiromsaran and Chidchanok Lursinsap.
   *
-  * @param data  data to work with
-  * @param file  file to store the log. If its set to None, log process would not be done
-  * @param eps   epsilon to indicate the distance that must be between two points
-  * @param k     number of neighbors
-  * @param dType the type of distance to use, hvdm or euclidean
-  * @param seed  seed for the random
+  * @param data     data to work with
+  * @param file     file to store the log. If its set to None, log process would not be done
+  * @param eps      epsilon to indicate the distance that must be between two points
+  * @param k        number of neighbors
+  * @param distance the type of distance to use, hvdm or euclidean
+  * @param seed     seed for the random
   * @author David López Pretel
   */
 class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Double = -1, k: Int = 5,
-              dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5) {
+              distance: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5) {
 
   private[soul] val minorityClass: Any = -1
   // Remove NA values and change nominal values to numeric values
@@ -204,7 +204,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     * @return synthetic samples generated
     */
   def compute(): Unit = {
-    if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
+    if (distance != Distances.EUCLIDEAN && distance != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }
 
@@ -212,15 +212,15 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     val initTime: Long = System.nanoTime()
 
     data._minorityClass = data._originalClasses(minorityClassIndex(0))
-    distanceType = dType
-    if (dType == Distances.EUCLIDEAN) {
+    distanceType = distance
+    if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
     }
 
     //check if the user pass the epsilon parameter
     var eps2 = eps
     if (eps == -1) {
-      eps2 = samples.map(i => samples.map(j => computeDistanceOversampling(i, j, dType, data._nominal.length == 0,
+      eps2 = samples.map(i => samples.map(j => computeDistanceOversampling(i, j, distance, data._nominal.length == 0,
         (samples, data._originalClasses))).sum).sum / (samples.length * samples.length)
     }
 
@@ -242,7 +242,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
       var pseudoCentroid: (Int, Double) = (0, 99999999.0)
       //the pseudo-centroid is the sample that is closest to the centroid
       (c map samples).zipWithIndex.foreach(sample => {
-        val distance = computeDistanceOversampling(sample._1, centroid, dType, data._nominal.length == 0,
+        val distance = computeDistanceOversampling(sample._1, centroid, distance, data._nominal.length == 0,
           (c map samples, c map data._originalClasses))
         if (distance < pseudoCentroid._2) pseudoCentroid = (sample._2, distance)
       })
@@ -270,10 +270,10 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
     if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
     } else {
-      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
     }
     data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))

@@ -9,15 +9,15 @@ import scala.util.Random
 /** SafeLevel-SMOTE algorithm. Original paper: "Safe-Level-SMOTE: Safe-Level-Synthetic Minority Over-Sampling Technique
   * for Handling the Class Imbalanced Problem" by Chumphol Bunkhumpornpat, Krung Sinapiromsaran, and Chidchanok Lursinsap.
   *
-  * @param data  data to work with
-  * @param seed  seed to use. If it is not provided, it will use the system time
-  * @param file  file to store the log. If its set to None, log process would not be done
-  * @param k     Number of nearest neighbors
-  * @param dType the type of distance to use, hvdm or euclidean
+  * @param data     data to work with
+  * @param seed     seed to use. If it is not provided, it will use the system time
+  * @param file     file to store the log. If its set to None, log process would not be done
+  * @param k        Number of nearest neighbors
+  * @param distance the type of distance to use, hvdm or euclidean
   * @author David López Pretel
   */
 class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-                     k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN) {
+                     k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN) {
 
   private[soul] val minorityClass: Any = -1
   // Remove NA values and change nominal values to numeric values
@@ -38,7 +38,7 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
     * @return synthetic samples generated
     */
   def compute(): Unit = {
-    if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
+    if (distance != Distances.EUCLIDEAN && distance != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }
 
@@ -46,7 +46,7 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
     val initTime: Long = System.nanoTime()
 
     var samples: Array[Array[Double]] = data._processedData
-    if (dType == Distances.EUCLIDEAN) {
+    if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
     }
     // compute minority class
@@ -66,7 +66,7 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
     // for each minority class sample
     minorityClassIndex.foreach(i => {
       // compute k neighbors from p and save number of positive instances
-      neighbors = kNeighbors(samples, i, k, dType, data._nominal.length == 0, (samples, data._originalClasses))
+      neighbors = kNeighbors(samples, i, k, distance, data._nominal.length == 0, (samples, data._originalClasses))
       val n: Int = neighbors(r.nextInt(neighbors.length))
       val slp: Int = neighbors.map(neighbor => {
         if (data._originalClasses(neighbor) == data._minorityClass) {
@@ -76,7 +76,7 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
         }
       }).sum
       // compute k neighbors from n and save number of positive instances
-      val sln: Int = kNeighbors(samples, n, k, dType, data._nominal.length == 0, (samples, data._originalClasses)).map(neighbor => {
+      val sln: Int = kNeighbors(samples, n, k, distance, data._nominal.length == 0, (samples, data._originalClasses)).map(neighbor => {
         if (data._originalClasses(neighbor) == data._minorityClass) {
           1
         } else {
@@ -112,10 +112,10 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
     if (data._nominal.length == 0) {
-      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+      data._resultData = dataShuffled map to2Decimals(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output))
     } else {
-      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (dType == Distances.EUCLIDEAN)
+      data._resultData = dataShuffled map toNominal(Array.concat(data._processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data._maxAttribs, data._minAttribs) else output), data._nomToNum)
     }
     data._resultClasses = dataShuffled map Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))
