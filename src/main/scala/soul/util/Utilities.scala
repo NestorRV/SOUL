@@ -544,7 +544,7 @@ object Utilities {
           val dict: collection.Map[Any, Double] = uniqueValues.map { value: Any => counter += 1.0; value -> counter }.toMap
           array.indices.foreach((i: Int) => array(i) = dict(array(i)))
           // make the dictionary to convert numerical to nominal
-          dict.foreach(pair => if (pair._1 != "oversampling_NA") {
+          dict.foreach(pair => if (pair._1 != "soul_NA") {
             nomToNum(nomToNumIndex).update(pair._2, pair._1)
           })
           nomToNumIndex += 1
