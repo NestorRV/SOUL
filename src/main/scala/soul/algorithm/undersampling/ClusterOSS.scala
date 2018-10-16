@@ -84,7 +84,7 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
     val auxData: Data = new Data(nominal = this.data.nominal, originalData = toXData(newData map dataToWorkWith),
       originalClasses = newData map classesToWorkWith, fileInfo = this.data.fileInfo)
     // But the untouchableClass must be the same
-    val tl = new TL(auxData, file = None, distance = distance)
+    val tl = new TL(auxData, file = None, distance = distance, dists = Some((newData map this.distances).map(newData map _)))
     tl.untouchableClass_=(this.untouchableClass)
     val resultTL: Data = tl.compute()
     // The final index is the result of applying Tomek Link to the content of newData

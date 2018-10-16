@@ -47,7 +47,7 @@ class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     // Start the time
     val initTime: Long = System.nanoTime()
 
-    val enn = new ENN(this.data, file = None, distance = distance, k = k)
+    val enn = new ENN(this.data, file = None, distance = distance, k = k, dists = Some(distances))
     val resultENN: Data = enn.compute()
     val indexA1: Array[Int] = classesToWorkWith.indices.diff(resultENN.index.toList).toArray
 

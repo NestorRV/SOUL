@@ -13,10 +13,11 @@ import soul.util.Utilities._
   * @param ratio    indicates the instances of the Tomek Links that are going to be remove. "all" will remove all instances,
   *                 "minority" will remove instances of the minority class and "not minority" will remove all the instances
   *                 except the ones of the minority class.
+  * @param dists    distances among the elements. If provided, they won't be recalculated.
   * @author Néstor Rodríguez Vico
   */
 class TL(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-         distance: Distances.Distance = Distances.EUCLIDEAN, ratio: String = "not minority") {
+         distance: Distances.Distance = Distances.EUCLIDEAN, ratio: String = "not minority", dists: Option[Array[Array[Double]]] = None) {
 
   private[soul] val minorityClass: Any = -1
   // Logger object to log the execution of the algorithm
@@ -33,7 +34,7 @@ class TL(private[soul] val data: Data, private[soul] val seed: Long = System.cur
   // and randomized classes to match the randomized data
   val classesToWorkWith: Array[Any] = (this.index map this.data.originalClasses).toArray
   // Distances among the elements
-  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.nominal, this.data.originalClasses)
+  val distances: Array[Array[Double]] = if (dists.isDefined) dists.get else computeDistances(dataToWorkWith, distance, this.data.nominal, this.data.originalClasses)
 
   /** untouchableClass setter
     *

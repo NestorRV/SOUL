@@ -63,7 +63,7 @@ class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val auxData: Data = new Data(nominal = this.data.nominal, originalData = toXData(finalC map dataToWorkWith),
       originalClasses = finalC map classesToWorkWith, fileInfo = this.data.fileInfo)
     // But the untouchableClass must be the same
-    val tl = new TL(auxData, file = None, distance = distance)
+    val tl = new TL(auxData, file = None, distance = distance, dists = Some((finalC map this.distances).map(finalC map _)))
     tl.untouchableClass_=(this.untouchableClass)
     val resultTL: Data = tl.compute()
     // The final index is the result of applying TomekLink to the content of C

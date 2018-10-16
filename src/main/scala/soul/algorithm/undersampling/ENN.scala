@@ -12,9 +12,11 @@ import soul.util.Utilities._
   * @param file     file to store the log. If its set to None, log process would not be done
   * @param distance distance to use when calling the NNRule core
   * @param k        number of neighbours to use when computing k-NN rule (normally 3 neighbours)
+  * @param dists    distances among the elements. If provided, they won't be recalculated.
   * @author Néstor Rodríguez Vico
   */
-class ENN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3) {
+class ENN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
+          distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3, dists: Option[Array[Array[Double]]] = None) {
 
   private[soul] val minorityClass: Any = -1
   // Logger object to log the execution of the algorithm
@@ -32,7 +34,7 @@ class ENN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // and randomized classes to match the randomized data
   val classesToWorkWith: Array[Any] = (this.index map this.data.originalClasses).toArray
   // Distances among the elements
-  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.nominal, this.data.originalClasses)
+  val distances: Array[Array[Double]] = if (dists.isDefined) dists.get else computeDistances(dataToWorkWith, distance, this.data.nominal, this.data.originalClasses)
 
 
   /** Compute the Edited Nearest Neighbour rule (ENN rule)
