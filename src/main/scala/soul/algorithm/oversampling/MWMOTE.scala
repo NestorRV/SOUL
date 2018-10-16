@@ -39,7 +39,6 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
 
   //data with the samples
   private var samples: Array[Array[Double]] = data._processedData
-  private var distanceType: Distances.Distance = Distances.EUCLIDEAN
 
   /** cut-off function
     *
@@ -65,7 +64,7 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
     val CMAX: Double = 2
 
     if (!Nmin(y._2).contains(x))
-      f(samples(0).length / computeDistanceOversampling(samples(y._1), samples(x), distanceType, data._nominal.length == 0,
+      f(samples(0).length / computeDistanceOversampling(samples(y._1), samples(x), distance, data._nominal.length == 0,
         (samples, data._originalClasses)), cut) * CMAX
     else
       0.0
@@ -95,7 +94,7 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
   private def clusterDistance(cluster1: Array[Int], cluster2: Array[Int]): Double = {
     val centroid1: Array[Double] = (cluster1 map samples).transpose.map(_.sum / cluster1.length)
     val centroid2: Array[Double] = (cluster2 map samples).transpose.map(_.sum / cluster2.length)
-    computeDistanceOversampling(centroid1, centroid2, distanceType, data._nominal.length == 0,
+    computeDistanceOversampling(centroid1, centroid2, distance, data._nominal.length == 0,
       (Array.concat(cluster1, cluster2) map samples, Array.concat(cluster1, cluster2) map data._originalClasses))
   }
 
@@ -125,7 +124,7 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
   private def cluster(Sminf: Array[Int]): Array[Array[Int]] = {
     val dist: Array[Array[Double]] = Array.fill(Sminf.length, Sminf.length)(9999999.0)
     Sminf.indices.foreach(i => Sminf.indices.foreach(j => if (i != j) dist(i)(j) = computeDistanceOversampling(samples(Sminf(i)),
-      samples(Sminf(j)), distanceType, data._nominal.length == 0, (Sminf map samples, Sminf map data._originalClasses))))
+      samples(Sminf(j)), distance, data._nominal.length == 0, (Sminf map samples, Sminf map data._originalClasses))))
 
     val Cp: Double = 3 // used in paper
     val Th: Double = dist.map(_.min).sum / Sminf.length * Cp
@@ -150,7 +149,6 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
     // Start the time
     val initTime: Long = System.nanoTime()
 
-    distanceType = distance
     if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
     }

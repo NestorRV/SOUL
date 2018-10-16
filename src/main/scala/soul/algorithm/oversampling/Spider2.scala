@@ -44,7 +44,6 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
   // the samples computed by the algorithm
   private val output: ArrayBuffer[Array[Double]] = ArrayBuffer()
   private var samples: Array[Array[Double]] = data._processedData
-  private var distanceType: Distances.Distance = Distances.HVDM
 
   /**
     * @param c array of index of samples that belongs to a determined class
@@ -65,9 +64,9 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
     */
   def amplify(x: Int, k: Int): Unit = {
     // compute the neighborhood for the majority and minority class
-    val majNeighbors: Array[Int] = kNeighbors(majorityClassIndex map output, output(x), k, distanceType,
+    val majNeighbors: Array[Int] = kNeighbors(majorityClassIndex map output, output(x), k, distance,
       data._nominal.length == 0, (output.toArray, data._resultClasses))
-    val minNeighbors: Array[Int] = kNeighbors(minorityClassIndex map output, output(x), k, distanceType,
+    val minNeighbors: Array[Int] = kNeighbors(minorityClassIndex map output, output(x), k, distance,
       data._nominal.length == 0, (output.toArray, data._resultClasses))
     // compute the number of copies to create
     val S: Int = Math.abs(majNeighbors.length - minNeighbors.length) + 1
@@ -95,7 +94,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
     */
   def correct(x: Int, k: Int, out: Boolean): Boolean = {
     // compute the neighbors
-    val neighbors: Array[Int] = kNeighbors(if (out) samples else output.toArray, if (out) samples(x) else output(x), k, distanceType,
+    val neighbors: Array[Int] = kNeighbors(if (out) samples else output.toArray, if (out) samples(x) else output(x), k, distance,
       data._nominal.length == 0, if (out) (samples, data._originalClasses) else (output.toArray, data._resultClasses))
     val classes: scala.collection.mutable.Map[Any, Int] = scala.collection.mutable.Map()
     // compute the number of samples for each class in the neighborhood
@@ -125,7 +124,6 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
     // Start the time
     val initTime: Long = System.nanoTime()
 
-    distanceType = distance
     if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
     }

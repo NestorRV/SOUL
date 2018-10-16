@@ -36,7 +36,6 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
   private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.y.indices.toList)
   // the data of the samples
   private var samples: Array[Array[Double]] = data._processedData
-  private var distanceType: Distances.Distance = Distances.EUCLIDEAN
   // compute minority class
   private val minorityClassIndex: Array[Int] = minority(data._originalClasses)
 
@@ -48,7 +47,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     */
   private def regionQuery(point: Int, eps: Double): Array[Int] = {
     (minorityClassIndex map samples).indices.map(sample => {
-      if (computeDistanceOversampling(samples(minorityClassIndex(point)), samples(minorityClassIndex(sample)), distanceType,
+      if (computeDistanceOversampling(samples(minorityClassIndex(point)), samples(minorityClassIndex(sample)), distance,
         data._nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data._originalClasses)) <= eps) {
         Some(sample)
       } else {
@@ -133,7 +132,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     val graph: Array[Array[Boolean]] = Array.fill(cluster.length, cluster.length)(false)
     //distance between each par of nodes
     val distances: Array[Array[Double]] = cluster.map(i => cluster.map(j => computeDistanceOversampling(samples(minorityClassIndex(i)),
-      samples(minorityClassIndex(j)), distanceType, data._nominal.length == 0, (cluster map samples, cluster map data._originalClasses))))
+      samples(minorityClassIndex(j)), distance, data._nominal.length == 0, (cluster map samples, cluster map data._originalClasses))))
 
     // number of nodes connected to another which satisfied distance(a,b) <= eps
     val NNq: Array[Int] = distances.map(row => row.map(dist => if (dist <= eps) 1 else 0)).map(_.sum)
@@ -189,7 +188,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
       graph(u).indices.foreach(v => {
         if (graph(u)(v) && !nodeInfo(v)._3) {
           val alt = nodeInfo(u)._1 + computeDistanceOversampling(samples(minorityClassIndex(cluster(u))),
-            samples(minorityClassIndex(cluster(v))), distanceType, data._nominal.length == 0,
+            samples(minorityClassIndex(cluster(v))), distance, data._nominal.length == 0,
             (cluster map samples, cluster map data._originalClasses))
           if (alt < nodeInfo(v)._1) nodeInfo(v) = (alt, u, nodeInfo(v)._3)
         }
@@ -208,7 +207,6 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     val initTime: Long = System.nanoTime()
 
     data._minorityClass = data._originalClasses(minorityClassIndex(0))
-    distanceType = distance
     if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
     }
