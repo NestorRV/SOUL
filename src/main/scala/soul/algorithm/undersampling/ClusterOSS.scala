@@ -44,15 +44,10 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
     * @return data structure with all the important information
     */
   def compute(): Data = {
-    // Start the time
     val initTime: Long = System.nanoTime()
-
     val majElements: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label != this.untouchableClass => i }
-
     val (_, centroids, assignment) = kMeans(data = majElements map dataToWorkWith, nominal = this.data.nominal,
       numClusters = numClusters, restarts = restarts, minDispersion = minDispersion, maxIterations = maxIterations, seed = this.seed)
-
-    val kMeansTime: Long = System.nanoTime() - initTime
 
     val result: (Array[Int], Array[Array[Int]]) = assignment.par.map { cluster: (Int, Array[Int]) =>
       val distances: Array[(Int, Double)] = cluster._2.map { instance: Int =>
@@ -77,20 +72,16 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
 
     // if the label matches (it is well classified) the element is useful
     val misclassified: Array[Int] = calculatedLabels.collect { case (i, label) if label != classesToWorkWith(i) => i }
-
     val newData: Array[Int] = misclassified ++ train
 
     // Construct a data object to be passed to Tomek Link
     val auxData: Data = new Data(nominal = this.data.nominal, originalData = toXData(newData map dataToWorkWith),
       originalClasses = newData map classesToWorkWith, fileInfo = this.data.fileInfo)
-    // But the untouchableClass must be the same
     val tl = new TL(auxData, file = None, distance = distance, dists = Some((newData map this.distances).map(newData map _)))
     tl.untouchableClass_=(this.untouchableClass)
     val resultTL: Data = tl.compute()
     // The final index is the result of applying Tomek Link to the content of newData
     val finalIndex: Array[Int] = (resultTL.index.toList map newData).toArray
-
-    // Stop the time
     val finishTime: Long = System.nanoTime()
 
     this.data.index = (finalIndex map this.index).sorted
@@ -98,23 +89,13 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
     this.data.resultClasses = this.data.index map this.data.originalClasses
 
     if (file.isDefined) {
-      // Recount of classes
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
-
       this.logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
       this.logger.addMsg("NEW DATA SIZE: %d".format(finalIndex.length))
       this.logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))
-
       this.logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(this.counter, this.untouchableClass)))
-      // Recompute the Imbalanced Ratio
       this.logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, this.untouchableClass)))
-
-      // Save the kmeans time
-      this.logger.addMsg("KMEANS CALCULATION TIME: %s".format(nanoTimeToString(kMeansTime)))
-      // Save the time
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-
-      // Save the log
       this.logger.storeFile(file.get)
     }
 

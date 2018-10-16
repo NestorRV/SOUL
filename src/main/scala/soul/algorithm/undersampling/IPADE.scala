@@ -359,9 +359,7 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
       (localTrainData, localTrainClasses)
     }
 
-    // Start the time
     val initTime: Long = System.nanoTime()
-
     var counter: Double = -1.0
     val classesTranslation: Map[Any, Double] = classesToWorkWith.distinct.map { value: Any => counter += 1.0; value -> counter }.toMap
 
@@ -473,7 +471,6 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
       }
     }
 
-    // Stop the time
     val finishTime: Long = System.nanoTime()
 
     this.data.resultData = population.map((row: Array[Double]) => row.map((e: Double) => e.asInstanceOf[Any]))
@@ -481,21 +478,13 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
     this.data.index = null
 
     if (file.isDefined) {
-      // Recount of localTrainClasses
       val newCounter: Map[Any, Int] = classes.groupBy(identity).mapValues((_: Array[Any]).length)
-
       this.logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
       this.logger.addMsg("NEW DATA SIZE: %d".format(classes.length))
       this.logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (classes.length.toFloat / dataToWorkWith.length) * 100))
-
       this.logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(this.counter, this.untouchableClass)))
-      // Recompute the Imbalanced Ratio
       this.logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, this.untouchableClass)))
-
-      // Save the time
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-
-      // Save the log
       this.logger.storeFile(file.get)
     }
 

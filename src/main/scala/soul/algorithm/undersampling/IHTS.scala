@@ -40,9 +40,7 @@ class IHTS(private[soul] val data: Data, private[soul] val seed: Long = System.c
     * @return data structure with all the important information
     */
   def compute(): Data = {
-    // Start the time
     val initTime: Long = System.nanoTime()
-
     val random: Random = new Random(this.seed)
     // Each element is the index of test elements
     val indices: Array[Array[Int]] = random.shuffle(classesToWorkWith.indices.toList).toArray.grouped((classesToWorkWith.length.toFloat / nFolds).ceil.toInt).toArray
@@ -84,7 +82,6 @@ class IHTS(private[soul] val data: Data, private[soul] val seed: Long = System.c
       indexTargetClass map boolToIndex(classesToWorkWith.map((c: Any) => c == targetClass))
     }
 
-    // Stop the time
     val finishTime: Long = System.nanoTime()
 
     this.data.index = (finalIndex map this.index).sorted
@@ -92,21 +89,13 @@ class IHTS(private[soul] val data: Data, private[soul] val seed: Long = System.c
     this.data.resultClasses = this.data.index map this.data.originalClasses
 
     if (file.isDefined) {
-      // Recount of classes
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
-
       this.logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
       this.logger.addMsg("NEW DATA SIZE: %d".format(finalIndex.length))
       this.logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))
-
       this.logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(this.counter, this.untouchableClass)))
-      // Recompute the Imbalanced Ratio
       this.logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, this.untouchableClass)))
-
-      // Save the time
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-
-      // Save the log
       this.logger.storeFile(file.get)
     }
 

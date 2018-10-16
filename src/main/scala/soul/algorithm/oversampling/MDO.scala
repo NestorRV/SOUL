@@ -78,9 +78,7 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     * @return synthetic samples generated
     */
   def compute(): Unit = {
-    // Start the time
     val initTime: Long = System.nanoTime()
-
     var samples: Array[Array[Double]] = data.processedData
     if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
@@ -131,8 +129,6 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
         zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output), data.nomToNum)
     }
     data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(data.minorityClass))
-
-    // Stop the time
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
@@ -140,10 +136,7 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       this.logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
       this.logger.addMsg("NEW SAMPLES ARE:")
       dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))
-      // Save the time
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-
-      // Save the log
       this.logger.storeFile(file.get)
     }
   }

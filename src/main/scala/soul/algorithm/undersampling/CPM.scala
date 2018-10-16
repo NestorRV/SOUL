@@ -43,20 +43,14 @@ class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     * @return data structure with all the important information
     */
   def compute(): Data = {
-    // Start the time
     val initTime: Long = System.nanoTime()
-
-    // Count the number of positive and negative elements
     val posElements: Int = this.counter.head._2
     val negElements: Int = this.counter.tail.values.sum
-    // Compute the impurity
     val impurity: Double = posElements.asInstanceOf[Double] / negElements.asInstanceOf[Double]
-    // The first cluster contains all the elements
     val cluster: Array[Int] = new Array[Int](dataToWorkWith.length).indices.toArray
 
     purityMaximization(impurity, cluster, 0)
 
-    // Stop the time
     val finishTime: Long = System.nanoTime()
 
     this.data.index = (this.centers.toArray map this.index).sorted
@@ -64,21 +58,13 @@ class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     this.data.resultClasses = this.data.index map this.data.originalClasses
 
     if (file.isDefined) {
-      // Recount of classes
       val newCounter: Map[Any, Int] = (this.centers.toArray map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
-
       this.logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
       this.logger.addMsg("NEW DATA SIZE: %d".format(this.centers.toArray.length))
       this.logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (this.centers.toArray.length.toFloat / dataToWorkWith.length) * 100))
-
       this.logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(this.counter, this.untouchableClass)))
-      // Recompute the Imbalanced Ratio
       this.logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, this.untouchableClass)))
-
-      // Save the time
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-
-      // Save the log
       this.logger.storeFile(file.get)
     }
     this.data

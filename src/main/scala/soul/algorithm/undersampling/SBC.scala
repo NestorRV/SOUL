@@ -46,34 +46,25 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     * @return data structure with all the important information
     */
   def compute(): Data = {
-    // Start the time
     val initTime: Long = System.nanoTime()
-
     val (_, centroids, assignment) = kMeans(data = dataToWorkWith, nominal = this.data.nominal, numClusters = numClusters, restarts = restarts,
       minDispersion = minDispersion, maxIterations = maxIterations, seed = this.seed)
-
-    val kMeansTime: Long = System.nanoTime() - initTime
-
     val minMajElements: List[(Int, Int)] = (0 until numClusters).toList.map { cluster: Int =>
       val elements = assignment(cluster)
       val minElements: Int = (elements map classesToWorkWith).count((c: Any) => c == this.untouchableClass)
       (minElements, elements.length - minElements)
     }
-
     val nPos: Double = minMajElements.unzip._2.sum.toDouble
     val sizeK: Double = minMajElements.map((pair: (Int, Int)) => pair._2.toDouble / max(pair._1, 1)).sum
-
     val sSizes: Array[(Int, Int)] = assignment.map { element: (Int, Array[Int]) =>
       val ratio: (Int, Int) = minMajElements(element._1)
       // The min is to prevent infinity values if no minority elements are added to the cluster
       (element._1, min(m * nPos * ((ratio._2.toDouble / (ratio._1 + 1)) / sizeK), ratio._2).toInt)
     }.toArray
-
-    // Compute the minorityElements of the dataset
     val minorityElements: Array[Int] = assignment.flatMap((element: (Int, Array[Int])) => element._2.filter((index: Int) =>
       classesToWorkWith(index) == this.untouchableClass)).toArray
-    val random: Random = new util.Random(this.seed)
 
+    val random: Random = new util.Random(this.seed)
     val majorityElements: Array[Int] = if (method.equals("random")) {
       sSizes.filter((_: (Int, Int))._2 != 0).flatMap { clusteridSize: (Int, Int) =>
         random.shuffle(assignment(clusteridSize._1).toList).filter((e: Int) =>
@@ -152,8 +143,6 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     }
 
     val finalIndex: Array[Int] = minorityElements.distinct ++ majorityElements.distinct
-
-    // Stop the time
     val finishTime: Long = System.nanoTime()
 
     this.data.index = (finalIndex map this.index).sorted
@@ -161,23 +150,13 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     this.data.resultClasses = this.data.index map this.data.originalClasses
 
     if (file.isDefined) {
-      // Recount of classes
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
-
       this.logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
       this.logger.addMsg("NEW DATA SIZE: %d".format(finalIndex.length))
       this.logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))
-
       this.logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(this.counter, this.untouchableClass)))
-      // Recompute the Imbalanced Ratio
       this.logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, this.untouchableClass)))
-
-      // Save the kmeans time
-      this.logger.addMsg("KMEANS CALCULATION TIME: %s".format(nanoTimeToString(kMeansTime)))
-      // Save the time
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-
-      // Save the log
       this.logger.storeFile(file.get)
     }
 

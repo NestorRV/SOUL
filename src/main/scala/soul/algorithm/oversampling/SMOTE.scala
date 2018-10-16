@@ -39,10 +39,7 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
       samples = zeroOneNormalization(data)
     }
 
-    // Start the time
     val initTime: Long = System.nanoTime()
-
-    // compute minority class
     val minorityClassIndex: Array[Int] = minority(data.originalClasses)
     data.minorityClass = data.originalClasses(minorityClassIndex(0))
 
@@ -92,7 +89,6 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
         zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output), data.nomToNum)
     }
     data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(data.minorityClass))
-    // Stop the time
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
@@ -100,10 +96,7 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
       this.logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
       this.logger.addMsg("NEW SAMPLES ARE:")
       dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))
-      // Save the time
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-
-      // Save the log
       this.logger.storeFile(file.get)
     }
   }

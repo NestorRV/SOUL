@@ -34,9 +34,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
       throw new Exception("Percent must be a multiple of 100")
     }
 
-    // Start the time
     val initTime: Long = System.nanoTime()
-
     var samples: Array[Array[Double]] = data.processedData
     if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
@@ -118,8 +116,6 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
       data.resultData = toNominal(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.maxAttribs, data.minAttribs), data.nomToNum)
     }
     this.data.resultClasses = (finalIndex map shuffle).sorted map resultClasses
-
-    // Stop the time
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
@@ -127,10 +123,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
       this.logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
       this.logger.addMsg("NEW SAMPLES ARE:")
       shuffle.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))
-      // Save the time
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-
-      // Save the log
       this.logger.storeFile(file.get)
     }
   }

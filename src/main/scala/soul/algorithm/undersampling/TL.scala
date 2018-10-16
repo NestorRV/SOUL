@@ -49,10 +49,7 @@ class TL(private[soul] val data: Data, private[soul] val seed: Long = System.cur
     * @return data structure with all the important information
     */
   def compute(): Data = {
-    // Start the time
     val initTime: Long = System.nanoTime()
-
-    // Take the index of the elements that have a different class
     val candidates: Map[Any, Array[Int]] = classesToWorkWith.distinct.map {
       c: Any =>
         c -> classesToWorkWith.zipWithIndex.collect {
@@ -62,11 +59,8 @@ class TL(private[soul] val data: Data, private[soul] val seed: Long = System.cur
 
     // Look for the nearest neighbour in the rest of the classes
     val nearestNeighbour: Array[Int] = distances.zipWithIndex.map((row: (Array[Double], Int)) => row._1.indexOf((candidates(classesToWorkWith(row._2)) map row._1).min))
-
     // For each instance, I: If my nearest neighbour is J and the nearest neighbour of J it's me, I, I and J form a Tomek link
     val tomekLinks: Array[(Int, Int)] = nearestNeighbour.zipWithIndex.filter((pair: (Int, Int)) => nearestNeighbour(pair._1) == pair._2)
-
-    // Instances that form a Tomek link are going to be removed
     val targetInstances: Array[Int] = tomekLinks.flatMap((x: (Int, Int)) => List(x._1, x._2)).distinct
     // but the user can choose which of them should be removed
     val removedInstances: Array[Int] = if (ratio == "all") targetInstances else if (ratio == "minority")
@@ -77,11 +71,7 @@ class TL(private[soul] val data: Data, private[soul] val seed: Long = System.cur
         case (a, b) if a != this.untouchableClass => b
       } else
       throw new Exception("Incorrect value of ratio. Possible options: all, minority, not minority")
-
-    // Get the final index
     val finalIndex: Array[Int] = dataToWorkWith.indices.diff(removedInstances).toArray
-
-    // Stop the time
     val finishTime: Long = System.nanoTime()
 
     this.data.index = (finalIndex map this.index).sorted
@@ -89,24 +79,14 @@ class TL(private[soul] val data: Data, private[soul] val seed: Long = System.cur
     this.data.resultClasses = this.data.index map this.data.originalClasses
 
     if (file.isDefined) {
-      // Recount of classes
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
-
       this.logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
       this.logger.addMsg("NEW DATA SIZE: %d".format(finalIndex.length))
       this.logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))
-
       this.logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(this.counter, this.untouchableClass)))
-      // Recompute the Imbalanced Ratio
       this.logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, this.untouchableClass)))
-
-      // Save the time
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-
-      // Save the info about the remove method used
       this.logger.addMsg("REMOVED INSTANCES: %s".format(ratio))
-
-      // Save the log
       this.logger.storeFile(file.get)
     }
 
