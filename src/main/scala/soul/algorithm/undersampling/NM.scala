@@ -100,8 +100,6 @@ class NM(private[soul] val data: Data, private[soul] val seed: Long = System.cur
       // Recompute the Imbalanced Ratio
       this.logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, this.untouchableClass)))
 
-      // Save the distance calculation time
-      this.logger.addMsg("DISTANCES CALCULATION TIME: %s".format(nanoTimeToString(distancesTime)))
       // Save the time
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
 
