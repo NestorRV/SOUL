@@ -89,7 +89,7 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
     val classesToWorkWith: Array[Any] = (shuffle map resultClasses).toArray
 
     // Distances among the elements
-    val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, Distances.EUCLIDEAN, this.data.nominal, resultClasses)
+    val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, Distances.EUCLIDEAN, this.data.fileInfo.nominal, resultClasses)
 
     val finalIndex: Array[Int] = classesToWorkWith.distinct.flatMap { targetClass: Any =>
       if (targetClass != data.minorityClass) {

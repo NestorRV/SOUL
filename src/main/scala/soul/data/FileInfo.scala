@@ -12,6 +12,7 @@ import scala.collection.mutable
   * @param _header           header of the file. If it is _, there was no header
   * @param _attributes       map with the form: index -> attributeName
   * @param _attributesValues map with the form attributeName -> type (it it's nominal, possible values instead of type)
+  * @param nominal           array to know which attributes are nominal
   * @author Néstor Rodríguez Vico
   */
 class FileInfo private[soul](private[soul] val _file: String, private[soul] val _comment: String,
@@ -19,6 +20,7 @@ class FileInfo private[soul](private[soul] val _file: String, private[soul] val 
                              private[soul] val _delimiter: String, private[soul] val _missing: String,
                              private[soul] val _header: Array[String], private[soul] val _relationName: String,
                              private[soul] val _attributes: mutable.Map[Int, String],
-                             private[soul] val _attributesValues: mutable.Map[String, String]) {
+                             private[soul] val _attributesValues: mutable.Map[String, String],
+                             private[soul] val nominal: Array[Int]) {
 
 }

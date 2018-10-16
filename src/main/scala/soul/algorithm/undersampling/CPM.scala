@@ -35,7 +35,7 @@ class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // and randomized classes to match the randomized data
   val classesToWorkWith: Array[Any] = (this.index map this.data.originalClasses).toArray
   // Distances among the elements
-  private[soul] val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.nominal, this.data.originalClasses)
+  private[soul] val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.fileInfo.nominal, this.data.originalClasses)
   private[soul] val centers: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
 
   /** Undersampling method based in ClassPurityMaximization clustering

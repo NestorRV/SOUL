@@ -34,7 +34,7 @@ class TL(private[soul] val data: Data, private[soul] val seed: Long = System.cur
   // and randomized classes to match the randomized data
   val classesToWorkWith: Array[Any] = (this.index map this.data.originalClasses).toArray
   // Distances among the elements
-  val distances: Array[Array[Double]] = if (dists.isDefined) dists.get else computeDistances(dataToWorkWith, distance, this.data.nominal, this.data.originalClasses)
+  val distances: Array[Array[Double]] = if (dists.isDefined) dists.get else computeDistances(dataToWorkWith, distance, this.data.fileInfo.nominal, this.data.originalClasses)
 
   /** untouchableClass setter
     *

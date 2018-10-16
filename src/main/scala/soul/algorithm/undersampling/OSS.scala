@@ -30,7 +30,7 @@ class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // and randomized classes to match the randomized data
   val classesToWorkWith: Array[Any] = (this.index map this.data.originalClasses).toArray
   // Distances among the elements
-  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.nominal, this.data.originalClasses)
+  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.fileInfo.nominal, this.data.originalClasses)
 
   /** Compute the One-Side Selection core.
     *
@@ -48,7 +48,7 @@ class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val misclassified: Array[Int] = labels.collect { case (i, label) if label != classesToWorkWith(i) => i }.toArray
     val finalC: Array[Int] = (misclassified ++ c).distinct
 
-    val auxData: Data = new Data(nominal = this.data.nominal, originalData = toXData(finalC map dataToWorkWith),
+    val auxData: Data = new Data(originalData = toXData(finalC map dataToWorkWith),
       originalClasses = finalC map classesToWorkWith, fileInfo = this.data.fileInfo)
     val tl = new TL(auxData, file = None, distance = distance, dists = Some((finalC map this.distances).map(finalC map _)))
     tl.untouchableClass_=(this.untouchableClass)

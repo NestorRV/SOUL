@@ -37,7 +37,7 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
   // and randomized classes to match the randomized data
   val classesToWorkWith: Array[Any] = (this.index map this.data.originalClasses).toArray
   // Distances among the elements
-  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.nominal, this.data.originalClasses)
+  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.fileInfo.nominal, this.data.originalClasses)
 
   /** Undersampling method based in ClusterOSS
     *
@@ -46,15 +46,15 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
     val majElements: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label != this.untouchableClass => i }
-    val (_, centroids, assignment) = kMeans(data = majElements map dataToWorkWith, nominal = this.data.nominal,
+    val (_, centroids, assignment) = kMeans(data = majElements map dataToWorkWith, nominal = this.data.fileInfo.nominal,
       numClusters = numClusters, restarts = restarts, minDispersion = minDispersion, maxIterations = maxIterations, seed = this.seed)
 
     val result: (Array[Int], Array[Array[Int]]) = assignment.par.map { cluster: (Int, Array[Int]) =>
       val distances: Array[(Int, Double)] = cluster._2.map { instance: Int =>
-        if (this.data.nominal.length == 0)
+        if (this.data.fileInfo.nominal.length == 0)
           (instance, euclideanDistance(dataToWorkWith(instance), centroids(cluster._1)))
         else
-          (instance, euclideanNominalDistance(dataToWorkWith(instance), centroids(cluster._1), this.data.nominal))
+          (instance, euclideanNominalDistance(dataToWorkWith(instance), centroids(cluster._1), this.data.fileInfo.nominal))
       }
 
       val closestInstance: Int = if (distances.isEmpty) -1 else distances.minBy((_: (Int, Double))._2)._1
@@ -75,7 +75,7 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
     val newData: Array[Int] = misclassified ++ train
 
     // Construct a data object to be passed to Tomek Link
-    val auxData: Data = new Data(nominal = this.data.nominal, originalData = toXData(newData map dataToWorkWith),
+    val auxData: Data = new Data(originalData = toXData(newData map dataToWorkWith),
       originalClasses = newData map classesToWorkWith, fileInfo = this.data.fileInfo)
     val tl = new TL(auxData, file = None, distance = distance, dists = Some((newData map this.distances).map(newData map _)))
     tl.untouchableClass_=(this.untouchableClass)

@@ -89,7 +89,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     // and randomized classes to match the randomized data
     val classesToWorkWith: Array[Any] = (shuffle map resultClasses).toArray
     // Distances among the elements
-    val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, Distances.EUCLIDEAN, this.data.nominal, resultClasses)
+    val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, Distances.EUCLIDEAN, this.data.fileInfo.nominal, resultClasses)
 
     // Take the index of the elements that have a different class
     val candidates: Map[Any, Array[Int]] = classesToWorkWith.distinct.map { c: Any =>

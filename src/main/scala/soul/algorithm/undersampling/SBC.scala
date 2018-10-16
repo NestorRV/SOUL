@@ -47,7 +47,7 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
-    val (_, centroids, assignment) = kMeans(data = dataToWorkWith, nominal = this.data.nominal, numClusters = numClusters, restarts = restarts,
+    val (_, centroids, assignment) = kMeans(data = dataToWorkWith, nominal = this.data.fileInfo.nominal, numClusters = numClusters, restarts = restarts,
       minDispersion = minDispersion, maxIterations = maxIterations, seed = this.seed)
     val minMajElements: List[(Int, Int)] = (0 until numClusters).toList.map { cluster: Int =>
       val elements = assignment(cluster)
@@ -79,10 +79,10 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
         if (majorityElementsIndex.length == assignment(clusteridSize._1).length) {
           // Use the centroid as "minority class" element
           val distances: Array[Double] = assignment(clusteridSize._1).map { instance: Int =>
-            if (this.data.nominal.length == 0)
+            if (this.data.fileInfo.nominal.length == 0)
               euclideanDistance(dataToWorkWith(instance), centroids(clusteridSize._1))
             else
-              euclideanNominalDistance(dataToWorkWith(instance), centroids(clusteridSize._1), this.data.nominal)
+              euclideanNominalDistance(dataToWorkWith(instance), centroids(clusteridSize._1), this.data.fileInfo.nominal)
           }
 
           distances.zipWithIndex.sortBy((_: (Double, Int))._2).take(clusteridSize._2).map((_: (Double, Int))._2) map assignment(clusteridSize._1)
@@ -91,7 +91,7 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
             classesToWorkWith(e._1) == this.untouchableClass)
 
           val distances: Array[Array[Double]] = computeDistances(data = assignment(clusteridSize._1) map dataToWorkWith,
-            distance = Distances.EUCLIDEAN, nominal = this.data.nominal, classes = assignment(clusteridSize._1) map classesToWorkWith)
+            distance = Distances.EUCLIDEAN, nominal = this.data.fileInfo.nominal, classes = assignment(clusteridSize._1) map classesToWorkWith)
 
           if (method.equals("NearMiss1")) {
             // selects the majority class samples whose average distances to k nearest minority class samples in the ith cluster are the smallest.

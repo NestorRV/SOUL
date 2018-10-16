@@ -44,7 +44,7 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // and randomized classes to match the randomized data
   val classesToWorkWith: Array[Any] = (this.index map this.data.originalClasses).toArray
   // Distances among the elements
-  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.nominal, this.data.originalClasses)
+  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.fileInfo.nominal, this.data.originalClasses)
 
   /** Compute Evolutionary Under Sampling
     *
