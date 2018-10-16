@@ -41,8 +41,10 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
   private[soul] val untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
   private[soul] val index: List[Int] = this.random.shuffle(this.data.y.indices.toList)
+  // Data without NA values and with nominal values transformed to numeric values
+  private[soul] val (processedData, _) = processData(data)
   // Use normalized localTrainData and randomized localTrainData
-  val dataToWorkWith: Array[Array[Double]] = (this.index map zeroOneNormalization(this.data)).toArray
+  val dataToWorkWith: Array[Array[Double]] = (this.index map zeroOneNormalization(this.data, this.processedData)).toArray
   // and randomized localTrainClasses to match the randomized localTrainData
   val classesToWorkWith: Array[Any] = (this.index map this.data.y).toArray
 

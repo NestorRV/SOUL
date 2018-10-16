@@ -642,14 +642,14 @@ object Utilities {
     * @author Néstor Rodríguez Vico
     * @return normalized data
     */
-  def zeroOneNormalization(d: Data): Array[Array[Double]] = {
-    val maxV: Array[Double] = d.processedData.transpose.map((col: Array[Double]) => col.max)
-    val minV: Array[Double] = d.processedData.transpose.map((col: Array[Double]) => col.min)
+  def zeroOneNormalization(d: Data, x: Array[Array[Double]]): Array[Array[Double]] = {
+    val maxV: Array[Double] = x.transpose.map((col: Array[Double]) => col.max)
+    val minV: Array[Double] = x.transpose.map((col: Array[Double]) => col.min)
     d.fileInfo.maxAttribs = maxV
     d.fileInfo.minAttribs = minV
-    val result: Array[Array[Double]] = d.processedData.transpose.clone()
+    val result: Array[Array[Double]] = x.transpose.clone()
 
-    d.processedData.transpose.indices.diff(d.fileInfo.nominal).par.foreach { index: Int =>
+    x.transpose.indices.diff(d.fileInfo.nominal).par.foreach { index: Int =>
       val aux: Array[Double] = result(index).map((element: Double) => (element - minV(index)).toFloat / (maxV(index) - minV(index)))
       result(index) = if (aux.count((_: Double).isNaN) == 0) aux else Array.fill[Double](aux.length)(0.0)
     }

@@ -24,6 +24,8 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
   private[soul] val logger: Logger = new Logger
   // Index to shuffle (randomize) the data
   private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
+  // Data without NA values and with nominal values transformed to numeric values
+  private[soul] val (processedData, nomToNum) = processData(data)
 
   /** Compute the SMOTETL algorithm
     *
@@ -35,9 +37,9 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     }
 
     val initTime: Long = System.nanoTime()
-    var samples: Array[Array[Double]] = data.processedData
+    var samples: Array[Array[Double]] = this.processedData
     if (distance == Distances.EUCLIDEAN) {
-      samples = zeroOneNormalization(data)
+      samples = zeroOneNormalization(data, processedData)
     }
 
     // compute minority class
@@ -110,10 +112,10 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     val finalIndex: Array[Int] = dataToWorkWith.indices.diff(removedInstances).toArray
 
     // check if the data is nominal or numerical
-    if (data.nomToNum(0).isEmpty) {
+    if (this.nomToNum(0).isEmpty) {
       data.resultData = to2Decimals(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs))
     } else {
-      data.resultData = toNominal(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs), data.nomToNum)
+      data.resultData = toNominal(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs), this.nomToNum)
     }
     this.data.resultClasses = (finalIndex map shuffle).sorted map resultClasses
     val finishTime: Long = System.nanoTime()

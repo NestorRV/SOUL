@@ -25,8 +25,10 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
   private[soul] val logger: Logger = new Logger
   // Index to shuffle (randomize) the data
   private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
+  // Data without NA values and with nominal values transformed to numeric values
+  private[soul] val (processedData, nomToNum) = processData(data)
   // the data of the samples
-  private var samples: Array[Array[Double]] = data.processedData
+  private var samples: Array[Array[Double]] = this.processedData
   // compute minority class
   private val minorityClassIndex: Array[Int] = minority(data.y)
 
@@ -197,7 +199,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     val initTime: Long = System.nanoTime()
     val minorityClass: Any = data.y(minorityClassIndex(0))
     if (distance == Distances.EUCLIDEAN) {
-      samples = zeroOneNormalization(data)
+      samples = zeroOneNormalization(data, processedData)
     }
 
     //check if the user pass the epsilon parameter
@@ -253,11 +255,11 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
     if (this.data.fileInfo.nominal.length == 0) {
-      data.resultData = dataShuffled map to2Decimals(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
+      data.resultData = dataShuffled map to2Decimals(Array.concat(this.processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
     } else {
-      data.resultData = dataShuffled map toNominal(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), data.nomToNum)
+      data.resultData = dataShuffled map toNominal(Array.concat(this.processedData, if (distance == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), this.nomToNum)
     }
     data.resultClasses = dataShuffled map Array.concat(data.y, Array.fill(output.length)(minorityClass))
     val finishTime: Long = System.nanoTime()

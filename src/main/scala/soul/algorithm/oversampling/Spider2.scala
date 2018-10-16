@@ -26,15 +26,17 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
   private[soul] val logger: Logger = new Logger
   // Index to shuffle (randomize) the data
   private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
+  // Data without NA values and with nominal values transformed to numeric values
+  private[soul] val (processedData, nomToNum) = processData(data)
 
   // array with the index of the minority class
   private var minorityClassIndex: Array[Int] = minority(data.y)
   private val minorityClass: Any = data.y(minorityClassIndex(0))
   // array with the index of the majority class
-  private var majorityClassIndex: Array[Int] = data.processedData.indices.diff(minorityClassIndex.toList).toArray
+  private var majorityClassIndex: Array[Int] = processedData.indices.diff(minorityClassIndex.toList).toArray
   // the samples computed by the algorithm
   private val output: ArrayBuffer[Array[Double]] = ArrayBuffer()
-  private var samples: Array[Array[Double]] = data.processedData
+  private var samples: Array[Array[Double]] = this.processedData
 
   /**
     * @param c array of index of samples that belongs to a determined class
@@ -114,7 +116,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
 
     val initTime: Long = System.nanoTime()
     if (distance == Distances.EUCLIDEAN) {
-      samples = zeroOneNormalization(data)
+      samples = zeroOneNormalization(data, processedData)
     }
 
     // array with the index of each sample
@@ -175,7 +177,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
         zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray)
     } else {
       data.resultData = dataShuffled map toNominal(if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray, data.nomToNum)
+        zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray, this.nomToNum)
     }
 
     data.resultClasses = dataShuffled map data.resultClasses

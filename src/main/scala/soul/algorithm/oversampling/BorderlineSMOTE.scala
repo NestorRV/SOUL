@@ -24,6 +24,8 @@ class BorderlineSMOTE(private[soul] val data: Data, private[soul] val seed: Long
   private[soul] val logger: Logger = new Logger
   // Index to shuffle (randomize) the data
   private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
+  // Data without NA values and with nominal values transformed to numeric values
+  private[soul] val (processedData, nomToNum) = processData(data)
 
   /** Compute the BorderlineSMOTE algorithm
     *
@@ -31,9 +33,9 @@ class BorderlineSMOTE(private[soul] val data: Data, private[soul] val seed: Long
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
-    var samples: Array[Array[Double]] = data.processedData
+    var samples: Array[Array[Double]] = this.processedData
     if (distance == Distances.EUCLIDEAN) {
-      samples = zeroOneNormalization(data)
+      samples = zeroOneNormalization(data, processedData)
     }
 
     val minorityClassIndex: Array[Int] = minority(data.y)
@@ -93,11 +95,11 @@ class BorderlineSMOTE(private[soul] val data: Data, private[soul] val seed: Long
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
     if (this.data.fileInfo.nominal.length == 0) {
-      data.resultData = dataShuffled map to2Decimals(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
+      data.resultData = dataShuffled map to2Decimals(Array.concat(this.processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
     } else {
-      data.resultData = dataShuffled map toNominal(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), data.nomToNum)
+      data.resultData = dataShuffled map toNominal(Array.concat(this.processedData, if (distance == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), this.nomToNum)
     }
     data.resultClasses = dataShuffled map Array.concat(data.y, Array.fill(output.length)(minorityClass))
     val finishTime: Long = System.nanoTime()

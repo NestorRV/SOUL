@@ -30,8 +30,10 @@ class IHTS(private[soul] val data: Data, private[soul] val seed: Long = System.c
   private[soul] val untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
   private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
+  // Data without NA values and with nominal values transformed to numeric values
+  private[soul] val (processedData, _) = processData(data)
   // Use randomized data
-  val dataToWorkWith: Array[Array[Double]] = (this.index map this.data.processedData).toArray
+  val dataToWorkWith: Array[Array[Double]] = (this.index map this.processedData).toArray
   // and randomized classes to match the randomized data
   val classesToWorkWith: Array[Any] = (this.index map this.data.y).toArray
 

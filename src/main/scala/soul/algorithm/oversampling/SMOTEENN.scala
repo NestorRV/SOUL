@@ -24,6 +24,8 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
   private[soul] val logger: Logger = new Logger
   // Index to shuffle (randomize) the data
   private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
+  // Data without NA values and with nominal values transformed to numeric values
+  private[soul] val (processedData, nomToNum) = processData(data)
 
   /** Compute the SMOTEENN algorithm
     *
@@ -34,9 +36,9 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
       throw new Exception("Percent must be a multiple of 100")
     }
 
-    var samples: Array[Array[Double]] = data.processedData
+    var samples: Array[Array[Double]] = this.processedData
     if (distance == Distances.EUCLIDEAN) {
-      samples = zeroOneNormalization(data)
+      samples = zeroOneNormalization(data, processedData)
     }
 
     val initTime: Long = System.nanoTime()
@@ -103,10 +105,10 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
     }
 
     // check if the data is nominal or numerical
-    if (data.nomToNum(0).isEmpty) {
+    if (this.nomToNum(0).isEmpty) {
       data.resultData = to2Decimals(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs))
     } else {
-      data.resultData = toNominal(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs), data.nomToNum)
+      data.resultData = toNominal(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs), this.nomToNum)
     }
     this.data.resultClasses = (finalIndex map shuffle).sorted map resultClasses
     val finishTime: Long = System.nanoTime()

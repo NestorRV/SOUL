@@ -25,12 +25,13 @@ class TL(private[soul] val data: Data, private[soul] val seed: Long = System.cur
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = this.data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   private[this] var untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
-
   // Index to shuffle (randomize) the data
   private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
+  // Data without NA values and with nominal values transformed to numeric values
+  private[soul] val (processedData, _) = processData(data)
   // Use normalized data for EUCLIDEAN distance and randomized data
   val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
-    (this.index map zeroOneNormalization(this.data)).toArray else (this.index map this.data.processedData).toArray
+    (this.index map zeroOneNormalization(this.data, this.processedData)).toArray else (this.index map this.processedData).toArray
   // and randomized classes to match the randomized data
   val classesToWorkWith: Array[Any] = (this.index map this.data.y).toArray
   // Distances among the elements
