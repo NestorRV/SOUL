@@ -59,10 +59,9 @@ class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     // Stop the time
     val finishTime: Long = System.nanoTime()
 
-    // Save the data
-    this.data.resultData = (this.centers.toArray map this.index).sorted map this.data.originalData
-    this.data.resultClasses = (this.centers.toArray map this.index).sorted map this.data.originalClasses
     this.data.index = (this.centers.toArray map this.index).sorted
+    this.data.resultData = this.data.index map this.data.originalData
+    this.data.resultClasses = this.data.index map this.data.originalClasses
 
     if (file.isDefined) {
       // Recount of classes

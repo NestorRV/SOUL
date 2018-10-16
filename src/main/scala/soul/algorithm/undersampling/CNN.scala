@@ -97,9 +97,9 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     // Stop the time
     val finishTime: Long = System.nanoTime()
 
-    this.data.resultData = (storeIndex map this.index).sorted map this.data.originalData
-    this.data.resultClasses = (storeIndex map this.index).sorted map this.data.originalClasses
     this.data.index = (storeIndex map this.index).sorted
+    this.data.resultData = this.data.index map this.data.originalData
+    this.data.resultClasses = this.data.index map this.data.originalClasses
 
     if (file.isDefined) {
       // Recount of classes
