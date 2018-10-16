@@ -29,7 +29,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
 
   // array with the index of the minority class
   private var minorityClassIndex: Array[Int] = minority(data.originalClasses)
-  data.minorityClass = data.originalClasses(minorityClassIndex(0))
+  private val minorityClass: Any = data.originalClasses(minorityClassIndex(0))
   // array with the index of the majority class
   private var majorityClassIndex: Array[Int] = data.processedData.indices.diff(minorityClassIndex.toList).toArray
   // the samples computed by the algorithm
@@ -67,7 +67,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
       output ++= Traversable(output(x))
     })
     // add n copies to the output
-    if (data.resultClasses(x) == data.minorityClass) {
+    if (data.resultClasses(x) == minorityClass) {
       minorityClassIndex = minorityClassIndex ++ (outputSize until outputSize + S)
     } else {
       majorityClassIndex = majorityClassIndex ++ (outputSize until outputSize + S)
@@ -131,7 +131,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
       //add the RS samples to the minority set
       minorityClassIndex = minorityClassIndex ++ RS
       data.resultClasses = data.originalClasses
-      RS.foreach(data.resultClasses(_) = data.minorityClass)
+      RS.foreach(data.resultClasses(_) = minorityClass)
     } else {
 
       // eliminate the samples from the initial set, first we recalculate the index for min and maj class

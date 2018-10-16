@@ -36,7 +36,7 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
     }
     // compute minority class
     val minorityClassIndex: Array[Int] = minority(data.originalClasses)
-    data.minorityClass = data.originalClasses(minorityClassIndex(0))
+    val minorityClass: Any = data.originalClasses(minorityClassIndex(0))
 
     // output with a size of |D|-t samples
     val output: Array[Array[Double]] = Array.fill(minorityClassIndex.length, samples(0).length)(0.0)
@@ -54,7 +54,7 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
       neighbors = kNeighbors(samples, i, k, distance, data.nominal.length == 0, (samples, data.originalClasses))
       val n: Int = neighbors(r.nextInt(neighbors.length))
       val slp: Int = neighbors.map(neighbor => {
-        if (data.originalClasses(neighbor) == data.minorityClass) {
+        if (data.originalClasses(neighbor) == minorityClass) {
           1
         } else {
           0
@@ -62,7 +62,7 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
       }).sum
       // compute k neighbors from n and save number of positive instances
       val sln: Int = kNeighbors(samples, n, k, distance, data.nominal.length == 0, (samples, data.originalClasses)).map(neighbor => {
-        if (data.originalClasses(neighbor) == data.minorityClass) {
+        if (data.originalClasses(neighbor) == minorityClass) {
           1
         } else {
           0
@@ -103,7 +103,7 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
       data.resultData = dataShuffled map toNominal(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output), data.nomToNum)
     }
-    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(data.minorityClass))
+    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(minorityClass))
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {

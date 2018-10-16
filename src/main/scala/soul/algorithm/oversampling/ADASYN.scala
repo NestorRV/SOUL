@@ -45,7 +45,7 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
       samples = zeroOneNormalization(data)
     }
     val minorityClassIndex: Array[Int] = minority(data.originalClasses)
-    data.minorityClass = data.originalClasses(minorityClassIndex(0))
+    val minorityClass: Any = data.originalClasses(minorityClassIndex(0))
 
     // calculate size of the output
     val ms: Int = minorityClassIndex.length
@@ -59,7 +59,7 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
     // ratio of each minority sample
     var ratio: Array[Double] = neighbors.map(neighborsOfX => {
       neighborsOfX.map(neighbor => {
-        if (data.originalClasses(neighbor) != data.minorityClass) {
+        if (data.originalClasses(neighbor) != minorityClass) {
           1
         } else {
           0
@@ -99,7 +99,7 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
       data.resultData = dataShuffled map toNominal(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output), data.nomToNum)
     }
-    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(data.minorityClass))
+    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(minorityClass))
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {

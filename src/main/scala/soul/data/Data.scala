@@ -21,8 +21,6 @@ class Data private[soul](private[soul] val nominal: Array[Int], private[soul] va
   private[soul] var resultClasses: Array[Any] = _
   // index representing the kept elements
   private[soul] var index: Array[Int] = _
-  // class obtained after applying an algorithm
-  private[soul] var minorityClass: Any = _
   // data necessary to denormalize the data
   private[soul] var maxAttribs: Array[Double] = _
   private[soul] var minAttribs: Array[Double] = _

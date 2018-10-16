@@ -195,7 +195,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
-    data.minorityClass = data.originalClasses(minorityClassIndex(0))
+    val minorityClass: Any = data.originalClasses(minorityClassIndex(0))
     if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
     }
@@ -259,7 +259,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
       data.resultData = dataShuffled map toNominal(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output), data.nomToNum)
     }
-    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(data.minorityClass))
+    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(minorityClass))
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {

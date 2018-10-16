@@ -37,7 +37,7 @@ class BorderlineSMOTE(private[soul] val data: Data, private[soul] val seed: Long
     }
 
     val minorityClassIndex: Array[Int] = minority(data.originalClasses)
-    data.minorityClass = data.originalClasses(minorityClassIndex(0))
+    val minorityClass: Any = data.originalClasses(minorityClassIndex(0))
 
     // compute minority class neighbors
     val minorityClassNeighbors: Array[Array[Int]] = minorityClassIndex.map(node => kNeighbors(samples, node, m, distance,
@@ -47,7 +47,7 @@ class BorderlineSMOTE(private[soul] val data: Data, private[soul] val seed: Long
     val DangerNodes: Array[Int] = minorityClassNeighbors.map(neighbors => {
       var counter = 0
       neighbors.foreach(neighbor => {
-        if (data.originalClasses(neighbor) != data.minorityClass) {
+        if (data.originalClasses(neighbor) != minorityClass) {
           counter += 1
         } else {
           counter
@@ -99,7 +99,7 @@ class BorderlineSMOTE(private[soul] val data: Data, private[soul] val seed: Long
       data.resultData = dataShuffled map toNominal(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output), data.nomToNum)
     }
-    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(data.minorityClass))
+    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(minorityClass))
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {

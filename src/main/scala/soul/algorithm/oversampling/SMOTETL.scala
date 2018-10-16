@@ -42,7 +42,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
 
     // compute minority class
     val minorityClassIndex: Array[Int] = minority(data.originalClasses)
-    data.minorityClass = data.originalClasses(minorityClassIndex(0))
+    val minorityClass: Any = data.originalClasses(minorityClassIndex(0))
 
     // check if the percent is correct
     var T: Int = minorityClassIndex.length
@@ -80,7 +80,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     })
 
     val result: Array[Array[Double]] = Array.concat(samples, output)
-    val resultClasses: Array[Any] = Array.concat(data.originalClasses, Array.fill(output.length)(data.minorityClass))
+    val resultClasses: Array[Any] = Array.concat(data.originalClasses, Array.fill(output.length)(minorityClass))
 
     // The following code correspond to TL and it has been made by Néstor Rodríguez Vico
     val shuffle: List[Int] = r.shuffle(resultClasses.indices.toList)

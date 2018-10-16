@@ -57,7 +57,7 @@ class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.
     }
 
     val minorityClassIndex: Array[Int] = minority(data.originalClasses)
-    data.minorityClass = data.originalClasses(minorityClassIndex(0))
+    val minorityClass: Any = data.originalClasses(minorityClassIndex(0))
     // output with a size of T*N samples
     val output: Array[Array[Double]] = Array.fill(minorityClassIndex.length * percent / 100, samples(0).length)(0.0)
     // index array to save the neighbors of each sample
@@ -97,7 +97,7 @@ class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.
       data.resultData = dataShuffled map toNominal(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output), data.nomToNum)
     }
-    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(data.minorityClass))
+    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(minorityClass))
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {

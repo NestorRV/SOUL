@@ -87,7 +87,7 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     // compute minority class
     val minorityClassIndex: Array[Int] = minority(data.originalClasses)
     // compute majority class
-    data.minorityClass = data.originalClasses(minorityClassIndex(0))
+    val minorityClass: Any = data.originalClasses(minorityClassIndex(0))
     val majorityClassIndex: Array[Int] = samples.indices.diff(minorityClassIndex.toList).toArray
 
     // compute the mean for the values of each attribute
@@ -128,7 +128,7 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       data.resultData = dataShuffled map toNominal(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output), data.nomToNum)
     }
-    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(data.minorityClass))
+    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(minorityClass))
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
