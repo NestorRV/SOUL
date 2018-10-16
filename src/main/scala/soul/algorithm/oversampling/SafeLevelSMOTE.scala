@@ -1,7 +1,7 @@
 package soul.algorithm.oversampling
 
-import soul.algorithm.Algorithm
 import soul.data.Data
+import soul.io.Logger
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -9,22 +9,35 @@ import scala.util.Random
 /** SafeLevel-SMOTE algorithm. Original paper: "Safe-Level-SMOTE: Safe-Level-Synthetic Minority Over-Sampling Technique
   * for Handling the Class Imbalanced Problem" by Chumphol Bunkhumpornpat, Krung Sinapiromsaran, and Chidchanok Lursinsap.
   *
-  * @param data data to work with
-  * @param seed seed to use. If it is not provided, it will use the system time
+  * @param data  data to work with
+  * @param seed  seed to use. If it is not provided, it will use the system time
+  * @param file  file to store the log. If its set to None, log process would not be done
+  * @param k     Number of nearest neighbors
+  * @param dType the type of distance to use, hvdm or euclidean
   * @author David López Pretel
   */
-class SafeLevelSMOTE(private[soul] val data: Data,
-                     override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
+class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
+                     k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN) {
+
+  private[soul] val minorityClass: Any = -1
+  // Remove NA values and change nominal values to numeric values
+  private[soul] val x: Array[Array[Double]] = this.data._processedData
+  private[soul] val y: Array[Any] = data._originalClasses
+  // Logger object to log the execution of the algorithms
+  private[soul] val logger: Logger = new Logger
+  // Count the number of instances for each class
+  private[soul] val counter: Map[Any, Int] = this.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
+  // Otherwise, minorityClass will be used as the minority one
+  private[soul] var untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+  // Index to shuffle (randomize) the data
+  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.y.indices.toList)
 
   /** Compute the SafeLevelSMOTE algorithm
     *
-    * @param file  file to store the log. If its set to None, log process would not be done
-    * @param k     Number of nearest neighbors
-    * @param dType the type of distance to use, hvdm or euclidean
-    * @param seed  seed for the random
     * @return synthetic samples generated
     */
-  def compute(file: Option[String] = None, k: Int = 5, dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5): Unit = {
+  def compute(): Unit = {
     if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }

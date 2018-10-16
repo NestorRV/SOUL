@@ -1,7 +1,7 @@
 package soul.algorithm.undersampling
 
-import soul.algorithm.Algorithm
 import soul.data.Data
+import soul.io.Logger
 import soul.util.Utilities._
 
 /** One-Side Selection core. Original paper: "Addressing the Curse of Imbalanced
@@ -10,35 +10,43 @@ import soul.util.Utilities._
   * @param data          data to work with
   * @param seed          seed to use. If it is not provided, it will use the system time
   * @param minorityClass indicates the minority class. If it's set to -1, it will set to the one with less instances
+  * @param file          file to store the log. If its set to None, log process would not be done
+  * @param distance      distance to use when calling the NNRule core
   * @author Néstor Rodríguez Vico
   */
-class OSS(private[soul] val data: Data,
-          override private[soul] val seed: Long = System.currentTimeMillis(),
-          override private[soul] val minorityClass: Any = -1) extends Algorithm {
+class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), private[soul] val minorityClass: Any = -1,
+          file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN) {
+
+  private[soul] val minorityClass: Any = -1
+  // Remove NA values and change nominal values to numeric values
+  private[soul] val x: Array[Array[Double]] = this.data._processedData
+  private[soul] val y: Array[Any] = data._originalClasses
+  // Logger object to log the execution of the algorithms
+  private[soul] val logger: Logger = new Logger
+  // Count the number of instances for each class
+  private[soul] val counter: Map[Any, Int] = this.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
+  // Otherwise, minorityClass will be used as the minority one
+  private[soul] var untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+  // Index to shuffle (randomize) the data
+  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.y.indices.toList)
+  // Use normalized data for EUCLIDEAN distance and randomized data
+  val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
+    (this.index map zeroOneNormalization(this.data)).toArray else (this.index map this.x).toArray
+  // and randomized classes to match the randomized data
+  val classesToWorkWith: Array[Any] = (this.index map this.y).toArray
+  // Distances among the elements
+  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data._nominal, this.y)
 
   /** Compute the One-Side Selection core.
     *
-    * @param file     file to store the log. If its set to None, log process would not be done
-    * @param distance distance to use when calling the NNRule core
     * @return data structure with all the important information
     */
-  def compute(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN): Data = {
+  def compute(): Data = {
     // Note: the notation used to refers the subsets of data is the used in the original paper.
-
-    // Use normalized data for EUCLIDEAN distance and randomized data
-    val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
-      (this.index map zeroOneNormalization(this.data)).toArray else
-      (this.index map this.x).toArray
-    // and randomized classes to match the randomized data
-    val classesToWorkWith: Array[Any] = (this.index map this.y).toArray
 
     // Start the time
     val initTime: Long = System.nanoTime()
-
-    val initDistancesTime: Long = System.nanoTime()
-    // Distances among the elements
-    val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data._nominal, this.y)
-    val distancesTime: Long = System.nanoTime() - initDistancesTime
 
     // Let's save all the positive instances
     val positives: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label == this.untouchableClass => i }
@@ -61,9 +69,9 @@ class OSS(private[soul] val data: Data,
     val auxData: Data = new Data(_nominal = this.data._nominal, _originalData = toXData(finalC map dataToWorkWith),
       _originalClasses = finalC map classesToWorkWith, _fileInfo = this.data._fileInfo)
     // But the untouchableClass must be the same
-    val tl = new TL(auxData)
+    val tl = new TL(auxData, file = None, distance = distance)
     tl.untouchableClass_=(this.untouchableClass)
-    val resultTL: Data = tl.compute(file = None, distance = distance)
+    val resultTL: Data = tl.compute()
     // The final index is the result of applying TomekLink to the content of C
     val finalIndex: Array[Int] = (resultTL._index.toList map finalC).toArray
 
@@ -86,8 +94,6 @@ class OSS(private[soul] val data: Data,
       // Recompute the Imbalanced Ratio
       this.logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, this.untouchableClass)))
 
-      // Save the distance calculation time
-      this.logger.addMsg("DISTANCES CALCULATION TIME: %s".format(nanoTimeToString(distancesTime)))
       // Save the time
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
 

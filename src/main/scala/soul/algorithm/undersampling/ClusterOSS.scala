@@ -1,44 +1,54 @@
 package soul.algorithm.undersampling
 
-import soul.algorithm.Algorithm
 import soul.data.Data
+import soul.io.Logger
 import soul.util.Utilities._
 
 /** ClusterOSS. Original paper: "ClusterOSS: a new undersampling method for imbalanced learning."
   * by Victor H Barella, Eduardo P Costa and André C P L F Carvalho.
   *
-  * @param data data to work with
-  * @param seed seed to use. If it is not provided, it will use the system time
+  * @param data          data to work with
+  * @param seed          seed to use. If it is not provided, it will use the system time
+  * @param file          file to store the log. If its set to None, log process would not be done
+  * @param distance      distance to use when calling the NNRule core
+  * @param k             number of neighbours to use when computing k-NN rule (normally 3 neighbours)
+  * @param numClusters   number of clusters to be created by KMeans core
+  * @param restarts      number of times to relaunch KMeans core
+  * @param minDispersion stop KMeans core if dispersion is lower than this value
+  * @param maxIterations number of iterations to be done in KMeans core
   * @author Néstor Rodríguez Vico
   */
-class ClusterOSS(private[soul] val data: Data,
-                 override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
+class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
+                 distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3, numClusters: Int = 15, restarts: Int = 5, minDispersion: Double = 0.0001, maxIterations: Int = 100) {
+
+  private[soul] val minorityClass: Any = -1
+  // Remove NA values and change nominal values to numeric values
+  private[soul] val x: Array[Array[Double]] = this.data._processedData
+  private[soul] val y: Array[Any] = data._originalClasses
+  // Logger object to log the execution of the algorithms
+  private[soul] val logger: Logger = new Logger
+  // Count the number of instances for each class
+  private[soul] val counter: Map[Any, Int] = this.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
+  // Otherwise, minorityClass will be used as the minority one
+  private[soul] var untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+  // Index to shuffle (randomize) the data
+  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.y.indices.toList)
+  // Use randomized data
+  val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
+    (this.index map zeroOneNormalization(this.data)).toArray else (this.index map this.x).toArray
+  // and randomized classes to match the randomized data
+  val classesToWorkWith: Array[Any] = (this.index map this.y).toArray
+  // Distances among the elements
+  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data._nominal, this.y)
 
   /** Undersampling method based in ClusterOSS
     *
-    * @param file          file to store the log. If its set to None, log process would not be done
-    * @param distance      distance to use when calling the NNRule core
-    * @param k             number of neighbours to use when computing k-NN rule (normally 3 neighbours)
-    * @param numClusters   number of clusters to be created by KMeans core
-    * @param restarts      number of times to relaunch KMeans core
-    * @param minDispersion stop KMeans core if dispersion is lower than this value
-    * @param maxIterations number of iterations to be done in KMeans core
     * @return data structure with all the important information
     */
-  def compute(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3, numClusters: Int = 15,
-              restarts: Int = 5, minDispersion: Double = 0.0001, maxIterations: Int = 100): Data = {
-    // Use randomized data 
-    val dataToWorkWith: Array[Array[Double]] = (this.index map this.x).toArray
-    // and randomized classes to match the randomized data
-    val classesToWorkWith: Array[Any] = (this.index map this.y).toArray
-
+  def compute(): Data = {
     // Start the time
     val initTime: Long = System.nanoTime()
-
-    val initDistancesTime: Long = System.nanoTime()
-    // Distances among the elements
-    val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data._nominal, this.y)
-    val distancesTime: Long = System.nanoTime() - initDistancesTime
 
     val majElements: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label != this.untouchableClass => i }
 
@@ -77,9 +87,9 @@ class ClusterOSS(private[soul] val data: Data,
     val auxData: Data = new Data(_nominal = this.data._nominal, _originalData = toXData(newData map dataToWorkWith),
       _originalClasses = newData map classesToWorkWith, _fileInfo = this.data._fileInfo)
     // But the untouchableClass must be the same
-    val tl = new TL(auxData)
+    val tl = new TL(auxData, file = None, distance = distance)
     tl.untouchableClass_=(this.untouchableClass)
-    val resultTL: Data = tl.compute(file = None, distance = distance)
+    val resultTL: Data = tl.compute()
     // The final index is the result of applying Tomek Link to the content of newData
     val finalIndex: Array[Int] = (resultTL._index.toList map newData).toArray
 
@@ -104,8 +114,6 @@ class ClusterOSS(private[soul] val data: Data,
 
       // Save the kmeans time
       this.logger.addMsg("KMEANS CALCULATION TIME: %s".format(nanoTimeToString(kMeansTime)))
-      // Save the distance calculation time
-      this.logger.addMsg("DISTANCES CALCULATION TIME: %s".format(nanoTimeToString(distancesTime)))
       // Save the time
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
 

@@ -1,7 +1,7 @@
 package soul.algorithm.oversampling
 
-import soul.algorithm.Algorithm
 import soul.data.Data
+import soul.io.Logger
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -9,24 +9,37 @@ import scala.util.Random
 /** ADASYN algorithm. Original paper: "ADASYN: Adaptive Synthetic Sampling Approach for Imbalanced Learning" by Haibo He,
   * Yang Bai, Edwardo A. Garcia, and Shutao Li.
   *
-  * @param data data to work with
-  * @param seed seed to use. If it is not provided, it will use the system time
+  * @param data  data to work with
+  * @param seed  seed to use. If it is not provided, it will use the system time
+  * @param file  file to store the log. If its set to None, log process would not be done
+  * @param d     preset threshold for the maximum tolerated degree of class imbalance radio
+  * @param B     balance level after generation of synthetic data
+  * @param k     number of neighbors
+  * @param dType the type of distance to use, hvdm or euclidean
   * @author David López Pretel
   */
-class ADASYN(private[soul] val data: Data,
-             override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
+class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None, d: Double = 1, B: Double = 1, k: Int = 5,
+             dType: Distances.Distance = Distances.EUCLIDEAN) {
+
+  private[soul] val minorityClass: Any = -1
+  // Remove NA values and change nominal values to numeric values
+  private[soul] val x: Array[Array[Double]] = this.data._processedData
+  private[soul] val y: Array[Any] = data._originalClasses
+  // Logger object to log the execution of the algorithms
+  private[soul] val logger: Logger = new Logger
+  // Count the number of instances for each class
+  private[soul] val counter: Map[Any, Int] = this.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
+  // Otherwise, minorityClass will be used as the minority one
+  private[soul] var untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+  // Index to shuffle (randomize) the data
+  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.y.indices.toList)
 
   /** Compute the ADASYN algorithm
     *
-    * @param file  file to store the log. If its set to None, log process would not be done
-    * @param d     preset threshold for the maximum tolerated degree of class imbalance radio
-    * @param B     balance level after generation of synthetic data
-    * @param k     number of neighbors
-    * @param dType the type of distance to use, hvdm or euclidean
     * @return synthetic samples generated
     */
-  def compute(file: Option[String] = None, d: Double = 1, B: Double = 1, k: Int = 5,
-              dType: Distances.Distance = Distances.EUCLIDEAN): Unit = {
+  def compute(): Unit = {
     if (B > 1 || B < 0) {
       throw new Exception("B must be between 0 and 1, both included")
     } else if (d > 1 || d <= 0) {

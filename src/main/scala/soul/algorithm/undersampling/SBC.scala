@@ -1,7 +1,7 @@
 package soul.algorithm.undersampling
 
-import soul.algorithm.Algorithm
 import soul.data.Data
+import soul.io.Logger
 import soul.util.Utilities._
 
 import scala.math.{max, min}
@@ -10,32 +10,45 @@ import scala.util.Random
 /** Undersampling Based on Clustering core. Original paper: "Under-Sampling Approaches for Improving Prediction of the
   * Minority Class in an Imbalanced Dataset" by Show-Jane Yen and Yue-Shi Lee.
   *
-  * @param data data to work with
-  * @param seed seed to use. If it is not provided, it will use the system time
+  * @param data          data to work with
+  * @param seed          seed to use. If it is not provided, it will use the system time
+  * @param file          file to store the log. If its set to None, log process would not be done
+  * @param method        selection method to apply. Possible options: random, NearMiss1, NearMiss2, NearMiss3, MostDistant and MostFar
+  * @param m             ratio used in the SSize calculation
+  * @param k             number of neighbours to use when computing k-NN rule (normally 3 neighbours)
+  * @param numClusters   number of clusters to be created by KMeans core
+  * @param restarts      number of times to relaunch KMeans core
+  * @param minDispersion stop KMeans core if dispersion is lower than this value
+  * @param maxIterations number of iterations to be done in KMeans core
   * @author Néstor Rodríguez Vico
   */
-class SBC(private[soul] val data: Data,
-          override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
+class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
+          method: String = "random", m: Double = 1.0, k: Int = 3, numClusters: Int = 50, restarts: Int = 1,
+          minDispersion: Double = 0.0001, maxIterations: Int = 200) {
+
+  private[soul] val minorityClass: Any = -1
+  // Remove NA values and change nominal values to numeric values
+  private[soul] val x: Array[Array[Double]] = this.data._processedData
+  private[soul] val y: Array[Any] = data._originalClasses
+  // Logger object to log the execution of the algorithms
+  private[soul] val logger: Logger = new Logger
+  // Count the number of instances for each class
+  private[soul] val counter: Map[Any, Int] = this.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
+  // Otherwise, minorityClass will be used as the minority one
+  private[soul] var untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+  // Index to shuffle (randomize) the data
+  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.y.indices.toList)
+  // Use randomized data
+  val dataToWorkWith: Array[Array[Double]] = (this.index map this.x).toArray
+  // and randomized classes to match the randomized data
+  val classesToWorkWith: Array[Any] = (this.index map this.y).toArray
 
   /** Undersampling method based in SBC
     *
-    * @param file          file to store the log. If its set to None, log process would not be done
-    * @param method        selection method to apply. Possible options: random, NearMiss1, NearMiss2, NearMiss3, MostDistant and MostFar
-    * @param m             ratio used in the SSize calculation
-    * @param k             number of neighbours to use when computing k-NN rule (normally 3 neighbours)
-    * @param numClusters   number of clusters to be created by KMeans core
-    * @param restarts      number of times to relaunch KMeans core
-    * @param minDispersion stop KMeans core if dispersion is lower than this value
-    * @param maxIterations number of iterations to be done in KMeans core
     * @return data structure with all the important information
     */
-  def compute(file: Option[String] = None, method: String = "random", m: Double = 1.0, k: Int = 3, numClusters: Int = 50,
-              restarts: Int = 1, minDispersion: Double = 0.0001, maxIterations: Int = 200): Data = {
-    // Use randomized data 
-    val dataToWorkWith: Array[Array[Double]] = (this.index map this.x).toArray
-    // and randomized classes to match the randomized data
-    val classesToWorkWith: Array[Any] = (this.index map this.y).toArray
-
+  def compute(): Data = {
     // Start the time
     val initTime: Long = System.nanoTime()
 

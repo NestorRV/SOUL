@@ -4,8 +4,8 @@ import java.io.ByteArrayInputStream
 import java.util
 
 import com.paypal.digraph.parser.{GraphEdge, GraphNode, GraphParser}
-import soul.algorithm.Algorithm
 import soul.data.Data
+import soul.io.Logger
 import soul.util.Utilities._
 import weka.classifiers.Evaluation
 import weka.classifiers.trees.J48
@@ -19,24 +19,42 @@ import scala.collection.mutable.ArrayBuffer
 /** Iterative Instance Adjustment for Imbalanced Domains. Original paper: "Addressing imbalanced classification with instance
   * generation techniques: IPADE-ID" by Victoria López, Isaac Triguero, Cristóbal J. Carmona, Salvador García and Francisco Herrera.
   *
-  * @param data localTrainData to work with
-  * @param seed seed to use. If it is not provided, it will use the system time
+  * @param data         localTrainData to work with
+  * @param seed         seed to use. If it is not provided, it will use the system time
+  * @param file         file to store the log. If its set to None, log process would not be done
+  * @param iterations   number of iterations used in Differential Evolution
+  * @param strategy     strategy used in the mutation process of Differential Evolution
+  * @param randomChoice whether to choose a random individual or not
   * @author Néstor Rodríguez Vico
   */
-class IPADE(private[soul] val data: Data,
-            override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
+class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
+            iterations: Int = 100, strategy: Int = 1, randomChoice: Boolean = true) {
 
   private[soul] val random: scala.util.Random = new scala.util.Random(this.seed)
+  private[soul] val minorityClass: Any = -1
+  // Remove NA values and change nominal values to numeric values
+  private[soul] val x: Array[Array[Double]] = this.data._processedData
+  private[soul] val y: Array[Any] = data._originalClasses
+  // Logger object to log the execution of the algorithms
+  private[soul] val logger: Logger = new Logger
+  // Count the number of instances for each class
+  private[soul] val counter: Map[Any, Int] = this.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
+  // Otherwise, minorityClass will be used as the minority one
+  private[soul] var untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+  // Index to shuffle (randomize) the data
+  private[soul] val index: List[Int] = this.random.shuffle(this.y.indices.toList)
+  // Use normalized localTrainData and randomized localTrainData
+  val dataToWorkWith: Array[Array[Double]] = (this.index map zeroOneNormalization(this.data)).toArray
+  // and randomized localTrainClasses to match the randomized localTrainData
+  val classesToWorkWith: Array[Any] = (this.index map this.y).toArray
+
 
   /** Compute Iterative Instance Adjustment for Imbalanced Domains algorithm
     *
-    * @param file         file to store the log. If its set to None, log process would not be done
-    * @param iterations   number of iterations used in Differential Evolution
-    * @param strategy     strategy used in the mutation process of Differential Evolution
-    * @param randomChoice whether to choose a random individual or not
     * @return data structure with all the important information
     */
-  def compute(file: Option[String] = None, iterations: Int = 100, strategy: Int = 1, randomChoice: Boolean = true): Data = {
+  def compute(): Data = {
     def accuracy(trainData: Array[Array[Double]], trainClasses: Array[Any], testData: Array[Array[Double]], testClasses: Array[Any]): Double = {
       val trainInstances: Instances = buildInstances(data = trainData, classes = trainClasses, fileInfo = this.data._fileInfo)
       val testInstances: Instances = buildInstances(data = testData, classes = testClasses, fileInfo = this.data._fileInfo)
@@ -343,12 +361,6 @@ class IPADE(private[soul] val data: Data,
 
       (localTrainData, localTrainClasses)
     }
-
-    // Use normalized localTrainData and randomized localTrainData
-    val dataToWorkWith: Array[Array[Double]] = (this.index map zeroOneNormalization(this.data)).toArray
-
-    // and randomized localTrainClasses to match the randomized localTrainData
-    val classesToWorkWith: Array[Any] = (this.index map this.y).toArray
 
     // Start the time
     val initTime: Long = System.nanoTime()

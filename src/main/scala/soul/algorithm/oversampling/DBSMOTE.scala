@@ -1,7 +1,7 @@
 package soul.algorithm.oversampling
 
-import soul.algorithm.Algorithm
 import soul.data.Data
+import soul.io.Logger
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -10,10 +10,30 @@ import scala.util.Random
 /** DBSMOTE algorithm. Original paper: "DBSMOTE: Density-Based Synthetic Minority Over-sampling Technique" by
   * Chumphol Bunkhumpornpat, Krung Sinapiromsaran and Chidchanok Lursinsap.
   *
-  * @param data data to work with
+  * @param data  data to work with
+  * @param file  file to store the log. If its set to None, log process would not be done
+  * @param eps   epsilon to indicate the distance that must be between two points
+  * @param k     number of neighbors
+  * @param dType the type of distance to use, hvdm or euclidean
+  * @param seed  seed for the random
   * @author David López Pretel
   */
-class DBSMOTE(private[soul] val data: Data) extends Algorithm {
+class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Double = -1, k: Int = 5,
+              dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5) {
+
+  private[soul] val minorityClass: Any = -1
+  // Remove NA values and change nominal values to numeric values
+  private[soul] val x: Array[Array[Double]] = this.data._processedData
+  private[soul] val y: Array[Any] = data._originalClasses
+  // Logger object to log the execution of the algorithms
+  private[soul] val logger: Logger = new Logger
+  // Count the number of instances for each class
+  private[soul] val counter: Map[Any, Int] = this.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
+  // Otherwise, minorityClass will be used as the minority one
+  private[soul] var untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+  // Index to shuffle (randomize) the data
+  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.y.indices.toList)
   // the data of the samples
   private var samples: Array[Array[Double]] = data._processedData
   private var distanceType: Distances.Distance = Distances.EUCLIDEAN
@@ -181,15 +201,9 @@ class DBSMOTE(private[soul] val data: Data) extends Algorithm {
 
   /** Compute the DensityBasedSmote algorithm
     *
-    * @param file  file to store the log. If its set to None, log process would not be done
-    * @param eps   epsilon to indicate the distance that must be between two points
-    * @param k     number of neighbors
-    * @param dType the type of distance to use, hvdm or euclidean
-    * @param seed  seed for the random
     * @return synthetic samples generated
     */
-  def compute(file: Option[String] = None, eps: Double = -1, k: Int = 5,
-              dType: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5): Unit = {
+  def compute(): Unit = {
     if (dType != Distances.EUCLIDEAN && dType != Distances.HVDM) {
       throw new Exception("The distance must be euclidean or hvdm")
     }

@@ -1,7 +1,7 @@
 package soul.algorithm.undersampling
 
-import soul.algorithm.Algorithm
 import soul.data.Data
+import soul.io.Logger
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -9,40 +9,49 @@ import scala.util.Random
 /** NearMiss. Original paper: "kNN Approach to Unbalanced Data Distribution: A Case Study involving Information
   * Extraction" by Jianping Zhang and Inderjeet Mani.
   *
-  * @param data data to work with
-  * @param seed seed to use. If it is not provided, it will use the system time
+  * @param data        data to work with
+  * @param seed        seed to use. If it is not provided, it will use the system time
+  * @param file        file to store the log. If its set to None, log process would not be done
+  * @param distance    distance to use when calling the NNRule core
+  * @param version     version of the core to execute
+  * @param nNeighbours number of neighbours to take for each minority example (only used if version is set to 3)
+  * @param ratio       ratio to know how many majority class examples to preserve. By default it's set to 1 so there
+  *                    will be the same minority class examples as majority class examples. It will take
+  *                    numMinorityInstances * ratio
   * @author Néstor Rodríguez Vico
   */
-class NM(private[soul] val data: Data,
-         override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
+class NM(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
+         distance: Distances.Distance = Distances.EUCLIDEAN, version: Int = 1, nNeighbours: Int = 3, ratio: Double = 1.0) {
+
+
+  private[soul] val minorityClass: Any = -1
+  // Remove NA values and change nominal values to numeric values
+  private[soul] val x: Array[Array[Double]] = this.data._processedData
+  private[soul] val y: Array[Any] = data._originalClasses
+  // Logger object to log the execution of the algorithms
+  private[soul] val logger: Logger = new Logger
+  // Count the number of instances for each class
+  private[soul] val counter: Map[Any, Int] = this.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
+  // Otherwise, minorityClass will be used as the minority one
+  private[soul] var untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+  // Index to shuffle (randomize) the data
+  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.y.indices.toList)
+  // Use normalized data for EUCLIDEAN distance and randomized data
+  val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
+    (this.index map zeroOneNormalization(this.data)).toArray else (this.index map this.x).toArray
+  // and randomized classes to match the randomized data
+  val classesToWorkWith: Array[Any] = (this.index map this.y).toArray
+  // Distances among the elements
+  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data._nominal, this.y)
 
   /** Compute NearMiss algorithm
     *
-    * @param file        file to store the log. If its set to None, log process would not be done
-    * @param distance    distance to use when calling the NNRule core
-    * @param version     version of the core to execute
-    * @param nNeighbours number of neighbours to take for each minority example (only used if version is set to 3)
-    * @param ratio       ratio to know how many majority class examples to preserve. By default it's set to 1 so there
-    *                    will be the same minority class examples as majority class examples. It will take 
-    *                    numMinorityInstances * ratio
     * @return data structure with all the important information
     */
-  def compute(file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, version: Int = 1,
-              nNeighbours: Int = 3, ratio: Double = 1.0): Data = {
-    // Use normalized data for EUCLIDEAN distance and randomized data
-    val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
-      (this.index map zeroOneNormalization(this.data)).toArray else
-      (this.index map this.x).toArray
-    // and randomized classes to match the randomized data
-    val classesToWorkWith: Array[Any] = (this.index map this.y).toArray
-
+  def compute(): Data = {
     // Start the time
     val initTime: Long = System.nanoTime()
-
-    val initDistancesTime: Long = System.nanoTime()
-    // Distances among the elements
-    val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data._nominal, this.y)
-    val distancesTime: Long = System.nanoTime() - initDistancesTime
 
     val majElements: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label != this.untouchableClass => i }
     val minElements: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label == this.untouchableClass => i }

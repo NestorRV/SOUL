@@ -1,7 +1,7 @@
 package soul.algorithm.undersampling
 
-import soul.algorithm.Algorithm
 import soul.data.Data
+import soul.io.Logger
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -11,41 +11,51 @@ import scala.util.Random
 /** Evolutionary Under Sampling. Original paper: "Evolutionary Under-Sampling for Classification with Imbalanced Data
   * Sets: Proposals and Taxonomy" by Salvador Garcia and Francisco Herrera.
   *
-  * @param data data to work with
-  * @param seed seed to use. If it is not provided, it will use the system time
+  * @param data           data to work with
+  * @param seed           seed to use. If it is not provided, it will use the system time
+  * @param file           file to store the log. If its set to None, log process would not be done
+  * @param populationSize number of chromosomes to generate
+  * @param maxEvaluations number of evaluations
+  * @param algorithm      version of core to execute. One of: EBUSGSGM, EBUSMSGM, EBUSGSAUC, EBUSMSAUC,
+  *                       EUSCMGSGM, EUSCMMSGM, EUSCMGSAUC or EUSCMMSAUC
+  * @param distance       distance to use when calling the NNRule core
+  * @param probHUX        probability of changing a gen from 0 to 1 (used in crossover)
+  * @param recombination  recombination threshold (used in reinitialization)
+  * @param prob0to1       probability of changing a gen from 0 to 1 (used in reinitialization)
   * @author Néstor Rodríguez Vico
   */
-class EUS(private[soul] val data: Data,
-          override private[soul] val seed: Long = System.currentTimeMillis()) extends Algorithm {
+class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
+          populationSize: Int = 50, maxEvaluations: Int = 1000, algorithm: String = "EBUSMSGM", distance: Distances.Distance = Distances.EUCLIDEAN,
+          probHUX: Double = 0.25, recombination: Double = 0.35, prob0to1: Double = 0.05) {
+
+  private[soul] val minorityClass: Any = -1
+  // Remove NA values and change nominal values to numeric values
+  private[soul] val x: Array[Array[Double]] = this.data._processedData
+  private[soul] val y: Array[Any] = data._originalClasses
+  // Logger object to log the execution of the algorithms
+  private[soul] val logger: Logger = new Logger
+  // Count the number of instances for each class
+  private[soul] val counter: Map[Any, Int] = this.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
+  // Otherwise, minorityClass will be used as the minority one
+  private[soul] var untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+  // Index to shuffle (randomize) the data
+  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.y.indices.toList)
+  // Use randomized data
+  val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
+    (this.index map zeroOneNormalization(this.data)).toArray else (this.index map this.x).toArray
+  // and randomized classes to match the randomized data
+  val classesToWorkWith: Array[Any] = (this.index map this.y).toArray
+  // Distances among the elements
+  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data._nominal, this.y)
 
   /** Compute Evolutionary Under Sampling
     *
-    * @param file           file to store the log. If its set to None, log process would not be done
-    * @param populationSize number of chromosomes to generate
-    * @param maxEvaluations number of evaluations
-    * @param algorithm      version of core to execute. One of: EBUSGSGM, EBUSMSGM, EBUSGSAUC, EBUSMSAUC,
-    *                       EUSCMGSGM, EUSCMMSGM, EUSCMGSAUC or EUSCMMSAUC
-    * @param distance       distance to use when calling the NNRule core
-    * @param probHUX        probability of changing a gen from 0 to 1 (used in crossover)
-    * @param recombination  recombination threshold (used in reinitialization)
-    * @param prob0to1       probability of changing a gen from 0 to 1 (used in reinitialization)
     * @return data structure with all the important information
     */
-  def compute(file: Option[String] = None, populationSize: Int = 50, maxEvaluations: Int = 1000,
-              algorithm: String = "EBUSMSGM", distance: Distances.Distance = Distances.EUCLIDEAN, probHUX: Double = 0.25,
-              recombination: Double = 0.35, prob0to1: Double = 0.05): Data = {
-    // Use randomized data
-    val dataToWorkWith: Array[Array[Double]] = (this.index map this.x).toArray
-    // and randomized classes to match the randomized data
-    val classesToWorkWith: Array[Any] = (this.index map this.y).toArray
-
+  def compute(): Data = {
     // Start the time
     val initTime: Long = System.nanoTime()
-
-    val initDistancesTime: Long = System.nanoTime()
-    // Distances among the elements
-    val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data._nominal, this.y)
-    val distancesTime: Long = System.nanoTime() - initDistancesTime
 
     val majoritySelection: Boolean = algorithm.contains("MS")
     val targetInstances: Array[Int] = classesToWorkWith.indices.toArray
@@ -211,8 +221,6 @@ class EUS(private[soul] val data: Data,
       // Recompute the Imbalanced Ratio
       this.logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, this.untouchableClass)))
 
-      // Save the distance calculation time
-      this.logger.addMsg("DISTANCES CALCULATION TIME: %s".format(nanoTimeToString(distancesTime)))
       // Save the time
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
 
