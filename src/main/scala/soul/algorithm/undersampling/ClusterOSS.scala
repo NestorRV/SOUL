@@ -25,21 +25,21 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = this.data.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
   // Otherwise, minorityClass will be used as the minority one
-  private[soul] val untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+  private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
+  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
   // Data without NA values and with nominal values transformed to numeric values
   private[soul] val (processedData, _) = processData(data)
   // Use randomized data
   val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
-    (this.index map zeroOneNormalization(this.data, this.processedData)).toArray else (this.index map this.processedData).toArray
+    (index map zeroOneNormalization(data, processedData)).toArray else (index map processedData).toArray
   // and randomized classes to match the randomized data
-  val classesToWorkWith: Array[Any] = (this.index map this.data.y).toArray
+  val classesToWorkWith: Array[Any] = (index map data.y).toArray
   // Distances among the elements
-  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.fileInfo.nominal, this.data.y)
+  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, data.fileInfo.nominal, data.y)
 
   /** Undersampling method based in ClusterOSS
     *
@@ -47,16 +47,16 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
-    val majElements: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label != this.untouchableClass => i }
-    val (_, centroids, assignment) = kMeans(data = majElements map dataToWorkWith, nominal = this.data.fileInfo.nominal,
-      numClusters = numClusters, restarts = restarts, minDispersion = minDispersion, maxIterations = maxIterations, seed = this.seed)
+    val majElements: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label != untouchableClass => i }
+    val (_, centroids, assignment) = kMeans(data = majElements map dataToWorkWith, nominal = data.fileInfo.nominal,
+      numClusters = numClusters, restarts = restarts, minDispersion = minDispersion, maxIterations = maxIterations, seed = seed)
 
     val result: (Array[Int], Array[Array[Int]]) = assignment.par.map { cluster: (Int, Array[Int]) =>
       val distances: Array[(Int, Double)] = cluster._2.map { instance: Int =>
-        if (this.data.fileInfo.nominal.length == 0)
+        if (data.fileInfo.nominal.length == 0)
           (instance, euclideanDistance(dataToWorkWith(instance), centroids(cluster._1)))
         else
-          (instance, euclideanNominalDistance(dataToWorkWith(instance), centroids(cluster._1), this.data.fileInfo.nominal))
+          (instance, euclideanNominalDistance(dataToWorkWith(instance), centroids(cluster._1), data.fileInfo.nominal))
       }
 
       val closestInstance: Int = if (distances.isEmpty) -1 else distances.minBy((_: (Int, Double))._2)._1
@@ -78,29 +78,29 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
 
     // Construct a data object to be passed to Tomek Link
     val auxData: Data = new Data(x = toXData(newData map dataToWorkWith),
-      y = newData map classesToWorkWith, fileInfo = this.data.fileInfo)
-    val tl = new TL(auxData, file = None, distance = distance, dists = Some((newData map this.distances).map(newData map _)))
-    tl.untouchableClass_=(this.untouchableClass)
+      y = newData map classesToWorkWith, fileInfo = data.fileInfo)
+    val tl = new TL(auxData, file = None, distance = distance, dists = Some((newData map distances).map(newData map _)))
+    tl.untouchableClass_=(untouchableClass)
     val resultTL: Data = tl.compute()
     // The final index is the result of applying Tomek Link to the content of newData
     val finalIndex: Array[Int] = (resultTL.index.toList map newData).toArray
     val finishTime: Long = System.nanoTime()
 
-    this.data.index = (finalIndex map this.index).sorted
-    this.data.resultData = this.data.index map this.data.x
-    this.data.resultClasses = this.data.index map this.data.y
+    data.index = (finalIndex map index).sorted
+    data.resultData = data.index map data.x
+    data.resultClasses = data.index map data.y
 
     if (file.isDefined) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
-      this.logger.addMsg("NEW DATA SIZE: %d".format(finalIndex.length))
-      this.logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))
-      this.logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(this.counter, this.untouchableClass)))
-      this.logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, this.untouchableClass)))
-      this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-      this.logger.storeFile(file.get)
+      logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
+      logger.addMsg("NEW DATA SIZE: %d".format(finalIndex.length))
+      logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))
+      logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(counter, untouchableClass)))
+      logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, untouchableClass)))
+      logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+      logger.storeFile(file.get)
     }
 
-    this.data
+    data
   }
 }

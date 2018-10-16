@@ -16,7 +16,7 @@ private[soul] class Logger {
     * @param msg message to store
     */
   private[soul] def addMsg(msg: String): Unit = {
-    this.log += msg
+    log += msg
   }
 
   /** Store the logs into a file
@@ -25,7 +25,7 @@ private[soul] class Logger {
     */
   private[soul] def storeFile(file: String): Unit = {
     val data = new PrintWriter(new File(file + ".log"))
-    this.log.foreach((line: String) => data.write(line + "\n"))
+    log.foreach((line: String) => data.write(line + "\n"))
     data.close()
   }
 }

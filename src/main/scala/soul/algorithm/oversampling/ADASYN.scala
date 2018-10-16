@@ -24,7 +24,7 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
+  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
   // Data without NA values and with nominal values transformed to numeric values
   private[soul] val (processedData, nomToNum) = processData(data)
 
@@ -42,7 +42,7 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
     }
 
     val initTime: Long = System.nanoTime()
-    var samples: Array[Array[Double]] = this.processedData
+    var samples: Array[Array[Double]] = processedData
     if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data, processedData)
     }
@@ -55,7 +55,7 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
     val G: Int = ((ml - ms) * B).asInstanceOf[Int]
     // k neighbors of each minority sample
     val neighbors: Array[Array[Int]] = minorityClassIndex.indices.map(sample => {
-      kNeighbors(samples, minorityClassIndex(sample), k, distance, this.data.fileInfo.nominal.length == 0, (samples, data.y))
+      kNeighbors(samples, minorityClassIndex(sample), k, distance, data.fileInfo.nominal.length == 0, (samples, data.y))
     }).toArray
 
     // ratio of each minority sample
@@ -76,7 +76,7 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
     // output with a size of sum(Gi) samples
     val output: Array[Array[Double]] = Array.fill(g.sum, samples(0).length)(0.0)
     var newIndex: Int = 0
-    val r: Random = new Random(this.seed)
+    val r: Random = new Random(seed)
     // for each minority class sample, create gi synthetic samples
     minorityClassIndex.zipWithIndex.foreach(xi => {
       (0 until g(xi._2)).foreach(_ => {
@@ -94,25 +94,25 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
 
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
-    if (this.data.fileInfo.nominal.length == 0) {
-      data.resultData = dataShuffled map to2Decimals(Array.concat(this.processedData, if (distance == Distances.EUCLIDEAN)
+    if (data.fileInfo.nominal.length == 0) {
+      data.resultData = dataShuffled map to2Decimals(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
     } else {
-      data.resultData = dataShuffled map toNominal(Array.concat(this.processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), this.nomToNum)
+      data.resultData = dataShuffled map toNominal(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), nomToNum)
     }
     data.resultClasses = dataShuffled map Array.concat(data.y, Array.fill(output.length)(minorityClass))
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
-      this.logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
-      this.logger.addMsg("NEW SAMPLES ARE:")
-      dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))
-      this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-      this.logger.storeFile(file.get)
+      logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
+      logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
+      logger.addMsg("NEW SAMPLES ARE:")
+      dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) logger.addMsg("%d".format(index._2)))
+      logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+      logger.storeFile(file.get)
     }
 
-    this.data
+    data
   }
 }

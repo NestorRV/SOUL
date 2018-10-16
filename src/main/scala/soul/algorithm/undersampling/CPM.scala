@@ -23,21 +23,21 @@ class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = this.data.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
   // Otherwise, minorityClass will be used as the minority one
-  private[soul] val untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+  private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
+  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
   // Data without NA values and with nominal values transformed to numeric values
   private[soul] val (processedData, _) = processData(data)
   // Use normalized data for EUCLIDEAN distance and randomized data
   val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
-    (this.index map zeroOneNormalization(this.data, this.processedData)).toArray else (this.index map this.processedData).toArray
+    (index map zeroOneNormalization(data, processedData)).toArray else (index map processedData).toArray
   // and randomized classes to match the randomized data
-  val classesToWorkWith: Array[Any] = (this.index map this.data.y).toArray
+  val classesToWorkWith: Array[Any] = (index map data.y).toArray
   // Distances among the elements
-  private[soul] val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.fileInfo.nominal, this.data.y)
+  private[soul] val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, data.fileInfo.nominal, data.y)
   private[soul] val centers: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
 
   /** Undersampling method based in ClassPurityMaximization clustering
@@ -46,8 +46,8 @@ class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
-    val posElements: Int = this.counter.head._2
-    val negElements: Int = this.counter.tail.values.sum
+    val posElements: Int = counter.head._2
+    val negElements: Int = counter.tail.values.sum
     val impurity: Double = posElements.asInstanceOf[Double] / negElements.asInstanceOf[Double]
     val cluster: Array[Int] = new Array[Int](dataToWorkWith.length).indices.toArray
 
@@ -55,21 +55,21 @@ class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.cu
 
     val finishTime: Long = System.nanoTime()
 
-    this.data.index = (this.centers.toArray map this.index).sorted
-    this.data.resultData = this.data.index map this.data.x
-    this.data.resultClasses = this.data.index map this.data.y
+    data.index = (centers.toArray map index).sorted
+    data.resultData = data.index map data.x
+    data.resultClasses = data.index map data.y
 
     if (file.isDefined) {
-      val newCounter: Map[Any, Int] = (this.centers.toArray map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
-      this.logger.addMsg("NEW DATA SIZE: %d".format(this.centers.toArray.length))
-      this.logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (this.centers.toArray.length.toFloat / dataToWorkWith.length) * 100))
-      this.logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(this.counter, this.untouchableClass)))
-      this.logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, this.untouchableClass)))
-      this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-      this.logger.storeFile(file.get)
+      val newCounter: Map[Any, Int] = (centers.toArray map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
+      logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
+      logger.addMsg("NEW DATA SIZE: %d".format(centers.toArray.length))
+      logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (centers.toArray.length.toFloat / dataToWorkWith.length) * 100))
+      logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(counter, untouchableClass)))
+      logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, untouchableClass)))
+      logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+      logger.storeFile(file.get)
     }
-    this.data
+    data
   }
 
   /** Purity maximization method
@@ -79,7 +79,7 @@ class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     * @param center         center of the cluster
     */
   private[soul] def purityMaximization(parentImpurity: Double, parentCluster: Array[Int], center: Int): Unit = {
-    val classes: Array[Any] = (this.index map this.data.y).toArray
+    val classes: Array[Any] = (index map data.y).toArray
 
     val cluster1: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
     val cluster2: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
@@ -93,33 +93,33 @@ class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     var impurity1: Double = Double.PositiveInfinity
     var impurity2: Double = Double.PositiveInfinity
 
-    parentCluster.foreach((f: Int) => if (classes(f) == this.untouchableClass) posElements += f else negElements += f)
+    parentCluster.foreach((f: Int) => if (classes(f) == untouchableClass) posElements += f else negElements += f)
 
     val pairs: ArrayBuffer[(Int, Int)] = for {x <- negElements; y <- posElements} yield (x, y)
 
     while (parentImpurity <= impurity) {
       if (pointer >= pairs.length) {
-        this.centers += center
+        centers += center
         return
       }
 
       center1 = pairs(pointer)._1
       center2 = pairs(pointer)._2
 
-      parentCluster.foreach((element: Int) => if (this.distances(element)(center1) < this.distances(element)(center2))
+      parentCluster.foreach((element: Int) => if (distances(element)(center1) < distances(element)(center2))
         cluster1 += element else cluster2 += element)
 
       if (cluster1.nonEmpty)
-        impurity1 = cluster1.count((element: Int) => classes(element) == this.untouchableClass).toDouble / cluster1.length
+        impurity1 = cluster1.count((element: Int) => classes(element) == untouchableClass).toDouble / cluster1.length
       else {
-        this.centers += center2
+        centers += center2
         return
       }
 
       if (cluster2.nonEmpty)
-        impurity2 = cluster2.count((element: Int) => classes(element) == this.untouchableClass).toDouble / cluster2.length
+        impurity2 = cluster2.count((element: Int) => classes(element) == untouchableClass).toDouble / cluster2.length
       else {
-        this.centers += center1
+        centers += center1
         return
       }
 

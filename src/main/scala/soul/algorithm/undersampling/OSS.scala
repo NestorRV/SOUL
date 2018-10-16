@@ -18,21 +18,21 @@ class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = this.data.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
   // Otherwise, minorityClass will be used as the minority one
-  private[soul] val untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+  private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
+  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
   // Data without NA values and with nominal values transformed to numeric values
   private[soul] val (processedData, _) = processData(data)
   // Use normalized data for EUCLIDEAN distance and randomized data
   val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
-    (this.index map zeroOneNormalization(this.data, this.processedData)).toArray else (this.index map this.processedData).toArray
+    (index map zeroOneNormalization(data, processedData)).toArray else (index map processedData).toArray
   // and randomized classes to match the randomized data
-  val classesToWorkWith: Array[Any] = (this.index map this.data.y).toArray
+  val classesToWorkWith: Array[Any] = (index map data.y).toArray
   // Distances among the elements
-  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.fileInfo.nominal, this.data.y)
+  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, data.fileInfo.nominal, data.y)
 
   /** Compute the One-Side Selection core.
     *
@@ -41,8 +41,8 @@ class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   def compute(): Data = {
     // Note: the notation used to refers the subsets of data is the used in the original paper.
     val initTime: Long = System.nanoTime()
-    val positives: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label == this.untouchableClass => i }
-    val randomElement: Int = classesToWorkWith.indices.diff(positives)(new util.Random(this.seed).nextInt(classesToWorkWith.length - positives.length))
+    val positives: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label == untouchableClass => i }
+    val randomElement: Int = classesToWorkWith.indices.diff(positives)(new util.Random(seed).nextInt(classesToWorkWith.length - positives.length))
     val c: Array[Int] = positives ++ Array(randomElement)
     val labels: Seq[(Int, Any)] = dataToWorkWith.indices.map { index: Int =>
       (index, nnRule(distances = distances(index), selectedElements = c.diff(List(index)), labels = classesToWorkWith, k = 1)._1)
@@ -51,29 +51,29 @@ class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val finalC: Array[Int] = (misclassified ++ c).distinct
 
     val auxData: Data = new Data(x = toXData(finalC map dataToWorkWith),
-      y = finalC map classesToWorkWith, fileInfo = this.data.fileInfo)
-    val tl = new TL(auxData, file = None, distance = distance, dists = Some((finalC map this.distances).map(finalC map _)))
-    tl.untouchableClass_=(this.untouchableClass)
+      y = finalC map classesToWorkWith, fileInfo = data.fileInfo)
+    val tl = new TL(auxData, file = None, distance = distance, dists = Some((finalC map distances).map(finalC map _)))
+    tl.untouchableClass_=(untouchableClass)
     val resultTL: Data = tl.compute()
 
     val finalIndex: Array[Int] = (resultTL.index.toList map finalC).toArray
     val finishTime: Long = System.nanoTime()
 
-    this.data.index = (finalIndex map this.index).sorted
-    this.data.resultData = (this.index map this.data.x).toArray
-    this.data.resultClasses = (this.index map this.data.y).toArray
+    data.index = (finalIndex map index).sorted
+    data.resultData = (index map data.x).toArray
+    data.resultClasses = (index map data.y).toArray
 
     if (file.isDefined) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
-      this.logger.addMsg("NEW DATA SIZE: %d".format(finalIndex.length))
-      this.logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))
-      this.logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(this.counter, this.untouchableClass)))
-      this.logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, this.untouchableClass)))
-      this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-      this.logger.storeFile(file.get)
+      logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
+      logger.addMsg("NEW DATA SIZE: %d".format(finalIndex.length))
+      logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))
+      logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(counter, untouchableClass)))
+      logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, untouchableClass)))
+      logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+      logger.storeFile(file.get)
     }
 
-    this.data
+    data
   }
 }

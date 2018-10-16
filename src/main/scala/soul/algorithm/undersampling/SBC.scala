@@ -30,18 +30,18 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = this.data.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
   // Otherwise, minorityClass will be used as the minority one
-  private[soul] val untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+  private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
+  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
   // Data without NA values and with nominal values transformed to numeric values
   private[soul] val (processedData, _) = processData(data)
   // Use randomized data
-  val dataToWorkWith: Array[Array[Double]] = (this.index map this.processedData).toArray
+  val dataToWorkWith: Array[Array[Double]] = (index map processedData).toArray
   // and randomized classes to match the randomized data
-  val classesToWorkWith: Array[Any] = (this.index map this.data.y).toArray
+  val classesToWorkWith: Array[Any] = (index map data.y).toArray
 
   /** Undersampling method based in SBC
     *
@@ -49,11 +49,11 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
-    val (_, centroids, assignment) = kMeans(data = dataToWorkWith, nominal = this.data.fileInfo.nominal, numClusters = numClusters, restarts = restarts,
-      minDispersion = minDispersion, maxIterations = maxIterations, seed = this.seed)
+    val (_, centroids, assignment) = kMeans(data = dataToWorkWith, nominal = data.fileInfo.nominal, numClusters = numClusters, restarts = restarts,
+      minDispersion = minDispersion, maxIterations = maxIterations, seed = seed)
     val minMajElements: List[(Int, Int)] = (0 until numClusters).toList.map { cluster: Int =>
       val elements = assignment(cluster)
-      val minElements: Int = (elements map classesToWorkWith).count((c: Any) => c == this.untouchableClass)
+      val minElements: Int = (elements map classesToWorkWith).count((c: Any) => c == untouchableClass)
       (minElements, elements.length - minElements)
     }
     val nPos: Double = minMajElements.unzip._2.sum.toDouble
@@ -64,36 +64,36 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       (element._1, min(m * nPos * ((ratio._2.toDouble / (ratio._1 + 1)) / sizeK), ratio._2).toInt)
     }.toArray
     val minorityElements: Array[Int] = assignment.flatMap((element: (Int, Array[Int])) => element._2.filter((index: Int) =>
-      classesToWorkWith(index) == this.untouchableClass)).toArray
+      classesToWorkWith(index) == untouchableClass)).toArray
 
-    val random: Random = new util.Random(this.seed)
+    val random: Random = new util.Random(seed)
     val majorityElements: Array[Int] = if (method.equals("random")) {
       sSizes.filter((_: (Int, Int))._2 != 0).flatMap { clusteridSize: (Int, Int) =>
         random.shuffle(assignment(clusteridSize._1).toList).filter((e: Int) =>
-          classesToWorkWith(e) != this.untouchableClass).take(clusteridSize._2)
+          classesToWorkWith(e) != untouchableClass).take(clusteridSize._2)
       }
     } else {
       sSizes.filter((_: (Int, Int))._2 != 0).flatMap { clusteridSize: (Int, Int) =>
         val majorityElementsIndex: Array[(Int, Int)] = assignment(clusteridSize._1).zipWithIndex.filter((e: (Int, Int)) =>
-          classesToWorkWith(e._1) != this.untouchableClass)
+          classesToWorkWith(e._1) != untouchableClass)
 
         // If no minority class elements are assigned to the cluster
         if (majorityElementsIndex.length == assignment(clusteridSize._1).length) {
           // Use the centroid as "minority class" element
           val distances: Array[Double] = assignment(clusteridSize._1).map { instance: Int =>
-            if (this.data.fileInfo.nominal.length == 0)
+            if (data.fileInfo.nominal.length == 0)
               euclideanDistance(dataToWorkWith(instance), centroids(clusteridSize._1))
             else
-              euclideanNominalDistance(dataToWorkWith(instance), centroids(clusteridSize._1), this.data.fileInfo.nominal)
+              euclideanNominalDistance(dataToWorkWith(instance), centroids(clusteridSize._1), data.fileInfo.nominal)
           }
 
           distances.zipWithIndex.sortBy((_: (Double, Int))._2).take(clusteridSize._2).map((_: (Double, Int))._2) map assignment(clusteridSize._1)
         } else {
           val minorityElementsIndex: Array[(Int, Int)] = assignment(clusteridSize._1).zipWithIndex.filter((e: (Int, Int)) =>
-            classesToWorkWith(e._1) == this.untouchableClass)
+            classesToWorkWith(e._1) == untouchableClass)
 
           val distances: Array[Array[Double]] = computeDistances(data = assignment(clusteridSize._1) map dataToWorkWith,
-            distance = Distances.EUCLIDEAN, nominal = this.data.fileInfo.nominal, classes = assignment(clusteridSize._1) map classesToWorkWith)
+            distance = Distances.EUCLIDEAN, nominal = data.fileInfo.nominal, classes = assignment(clusteridSize._1) map classesToWorkWith)
 
           if (method.equals("NearMiss1")) {
             // selects the majority class samples whose average distances to k nearest minority class samples in the ith cluster are the smallest.
@@ -147,21 +147,21 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val finalIndex: Array[Int] = minorityElements.distinct ++ majorityElements.distinct
     val finishTime: Long = System.nanoTime()
 
-    this.data.index = (finalIndex map this.index).sorted
-    this.data.resultData = this.data.index map this.data.x
-    this.data.resultClasses = this.data.index map this.data.y
+    data.index = (finalIndex map index).sorted
+    data.resultData = data.index map data.x
+    data.resultClasses = data.index map data.y
 
     if (file.isDefined) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
-      this.logger.addMsg("NEW DATA SIZE: %d".format(finalIndex.length))
-      this.logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))
-      this.logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(this.counter, this.untouchableClass)))
-      this.logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, this.untouchableClass)))
-      this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-      this.logger.storeFile(file.get)
+      logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
+      logger.addMsg("NEW DATA SIZE: %d".format(finalIndex.length))
+      logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))
+      logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(counter, untouchableClass)))
+      logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, untouchableClass)))
+      logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+      logger.storeFile(file.get)
     }
 
-    this.data
+    data
   }
 }

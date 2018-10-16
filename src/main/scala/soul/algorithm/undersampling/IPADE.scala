@@ -30,23 +30,23 @@ import scala.collection.mutable.ArrayBuffer
 class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
             iterations: Int = 100, strategy: Int = 1, randomChoice: Boolean = true) {
 
-  private[soul] val random: scala.util.Random = new scala.util.Random(this.seed)
+  private[soul] val random: scala.util.Random = new scala.util.Random(seed)
   private[soul] val minorityClass: Any = -1
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = this.data.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
   // Otherwise, minorityClass will be used as the minority one
-  private[soul] val untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+  private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = this.random.shuffle(this.data.y.indices.toList)
+  private[soul] val index: List[Int] = random.shuffle(data.y.indices.toList)
   // Data without NA values and with nominal values transformed to numeric values
   private[soul] val (processedData, _) = processData(data)
   // Use normalized localTrainData and randomized localTrainData
-  val dataToWorkWith: Array[Array[Double]] = (this.index map zeroOneNormalization(this.data, this.processedData)).toArray
+  val dataToWorkWith: Array[Array[Double]] = (index map zeroOneNormalization(data, processedData)).toArray
   // and randomized localTrainClasses to match the randomized localTrainData
-  val classesToWorkWith: Array[Any] = (this.index map this.data.y).toArray
+  val classesToWorkWith: Array[Any] = (index map data.y).toArray
 
 
   /** Compute Iterative Instance Adjustment for Imbalanced Domains algorithm
@@ -55,8 +55,8 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
     */
   def compute(): Data = {
     def accuracy(trainData: Array[Array[Double]], trainClasses: Array[Any], testData: Array[Array[Double]], testClasses: Array[Any]): Double = {
-      val trainInstances: Instances = buildInstances(data = trainData, classes = trainClasses, fileInfo = this.data.fileInfo)
-      val testInstances: Instances = buildInstances(data = testData, classes = testClasses, fileInfo = this.data.fileInfo)
+      val trainInstances: Instances = buildInstances(data = trainData, classes = trainClasses, fileInfo = data.fileInfo)
+      val testInstances: Instances = buildInstances(data = testData, classes = testClasses, fileInfo = data.fileInfo)
 
       val j48: J48 = new J48
       j48.setOptions(Array("-U"))
@@ -70,8 +70,8 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
     def computeFitness(trainData: Array[Array[Double]], trainClasses: Array[Any], testData: Array[Array[Double]],
                        testClasses: Array[Any], dict: Map[Any, Double]): Double = {
 
-      val trainInstances: Instances = buildInstances(data = trainData, classes = trainClasses, fileInfo = this.data.fileInfo)
-      val testInstances: Instances = buildInstances(data = testData, classes = testClasses, fileInfo = this.data.fileInfo)
+      val trainInstances: Instances = buildInstances(data = trainData, classes = trainClasses, fileInfo = data.fileInfo)
+      val testInstances: Instances = buildInstances(data = testData, classes = testClasses, fileInfo = data.fileInfo)
 
       val j48: J48 = new J48
       j48.setOptions(Array("-U"))
@@ -83,7 +83,7 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
       evaluations.areaUnderROC(testInstances.classIndex())
     }
 
-    def selectInitInstances(data: Array[Array[Double]], classes: Array[Any]): (Array[Array[Double]], Array[Any]) = {
+    def selectInitInstances(population: Array[Array[Double]], classes: Array[Any]): (Array[Array[Double]], Array[Any]) = {
       def getCentroid(cluster: Array[Int], data: Array[Array[Double]]): Int = {
         val elements: Array[Array[Double]] = cluster map data
         val centroid: Array[Double] = elements.transpose.map((_: Array[Double]).sum).map((_: Double) / cluster.length)
@@ -131,23 +131,23 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
 
       val j48: J48 = new J48
       j48.setOptions(Array("-U"))
-      val instances: Instances = buildInstances(data = data, classes = classes, fileInfo = this.data.fileInfo)
+      val instances: Instances = buildInstances(data = population, classes = classes, fileInfo = data.fileInfo)
       j48.buildClassifier(instances)
 
       val ids: Array[String] = getLeafs(instances = instances, tree = j48.graph())
       val clusters: Map[String, Array[Int]] = ids.zipWithIndex.groupBy((_: (String, Int))._1).mapValues((_: Array[(String, Int)]).unzip._2)
 
       val selectedElements: Array[Int] = clusters.map { cluster: (String, Array[Int]) =>
-        getCentroid(cluster = cluster._2, data = data)
+        getCentroid(cluster = cluster._2, data = population)
       }.toArray
 
-      val selectedData: Array[Array[Double]] = selectedElements map data
+      val selectedData: Array[Array[Double]] = selectedElements map population
       val selectedClasses: Array[Any] = selectedElements map classes
 
       val (finalData, finalClasses) = classes.distinct.map { targetClass: Any =>
         if (selectedClasses.indexOf(targetClass) == -1) {
-          val targetInstances: Array[Int] = this.random.shuffle(classes.zipWithIndex.collect { case (c, i) if c == targetClass => i }.toList).toArray
-          (Array(data(targetInstances(0))) ++ Array(data(targetInstances(1))), Array(classes(targetInstances(0))) ++ Array(classes(targetInstances(1))))
+          val targetInstances: Array[Int] = random.shuffle(classes.zipWithIndex.collect { case (c, i) if c == targetClass => i }.toList).toArray
+          (Array(population(targetInstances(0))) ++ Array(population(targetInstances(1))), Array(classes(targetInstances(0))) ++ Array(classes(targetInstances(1))))
         } else {
           (selectedData, selectedClasses)
         }
@@ -182,7 +182,7 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
               val disturbance: Array[Double] = individuals(j).clone
 
               disturbance.indices.foreach((k: Int) => disturbance(k) = trainData(instance)(k) +
-                (-0.01 * j) + ((0.01 * j) - (-0.01 * j)) * this.random.nextDouble)
+                (-0.01 * j) + ((0.01 * j) - (-0.01 * j)) * random.nextDouble)
               auxPopulation += disturbance
               auxLabels += labels(j)
             }
@@ -194,7 +194,7 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
 
           val aux: Array[Int] = sameClassData.indices.toArray
           if (instance < aux.length) aux(instance) = 0
-          val randomList: Array[Int] = this.random.shuffle(aux.init.toList).toArray ++ Array(aux.last)
+          val randomList: Array[Int] = random.shuffle(aux.init.toList).toArray ++ Array(aux.last)
 
           val r1: Array[Double] = sameClassData(randomList(0))
           val r2: Array[Double] = sameClassData(randomList(1))
@@ -209,9 +209,9 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
               val prod2: Array[Double] = (nearestNeighbor zip trainData(instance)).map((e: (Double, Double)) => (e._1 - e._2) * fi)
               val prod: Array[Double] = (prod1 zip prod2).map((e: (Double, Double)) => e._1 + e._2)
               ((trainData(instance) zip prod).map((e: (Double, Double)) => e._1 + e._2), trainClasses(instance))
-            case 3 => val random: Double = this.random.nextDouble
-              val prod1: Array[Double] = (r2 zip r3).map((e: (Double, Double)) => (e._1 - e._2) * fi * random)
-              val prod2: Array[Double] = (r1 zip trainData(instance)).map((e: (Double, Double)) => (e._1 - e._2) * fi * random)
+            case 3 => val r: Double = random.nextDouble
+              val prod1: Array[Double] = (r2 zip r3).map((e: (Double, Double)) => (e._1 - e._2) * fi * r)
+              val prod2: Array[Double] = (r1 zip trainData(instance)).map((e: (Double, Double)) => (e._1 - e._2) * fi * r)
               ((prod1 zip prod2).map((e: (Double, Double)) => e._1 + e._2), sameClassLabels(randomList(1)))
             case 4 => val prod1: Array[Double] = (r2 zip r3).map((e: (Double, Double)) => (e._1 - e._2) * fi)
               val prod2: Array[Double] = (r4 zip r5).map((e: (Double, Double)) => (e._1 - e._2) * fi)
@@ -292,8 +292,8 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
 
       var localTrainData: Array[Array[Double]] = trainData.clone
       var localTrainClasses: Array[Any] = trainClasses.clone
-      val randJ: Double = this.random.nextDouble()
-      val tau: Array[Double] = Array(this.random.nextDouble(), this.random.nextDouble())
+      val randJ: Double = random.nextDouble()
+      val tau: Array[Double] = Array(random.nextDouble(), random.nextDouble())
 
       var fitness: Double = computeFitness(trainData = localTrainData, trainClasses = localTrainClasses,
         testData = testData, testClasses = testClasses, dict = dict)
@@ -310,7 +310,7 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
             (localTrainData.clone, localTrainClasses.clone)
           }
         } else {
-          val scalingFactor: Double = this.random.nextDouble
+          val scalingFactor: Double = random.nextDouble
           localTrainData.indices.map { instance: Int =>
             val sameClassIndex: Array[Int] = testClasses.zipWithIndex.collect { case (c, i) if c == localTrainClasses(instance) => i }
 
@@ -324,7 +324,7 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
                 val disturbance: Array[Double] = individuals(j).clone
 
                 disturbance.indices.foreach((k: Int) => disturbance(k) = localTrainData(instance)(k) +
-                  (-0.01 * j) + ((0.01 * j) - (-0.01 * j)) * this.random.nextDouble)
+                  (-0.01 * j) + ((0.01 * j) - (-0.01 * j)) * random.nextDouble)
                 auxPopulation += disturbance
                 auxLabels += labels(j)
               }
@@ -334,15 +334,15 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
               (sameClassIndex map testData, sameClassIndex map testClasses)
             }
 
-            val randomList: Array[Int] = this.random.shuffle(sameClassData.indices.toList).toArray
+            val randomList: Array[Int] = random.shuffle(sameClassData.indices.toList).toArray
 
             val r1: Array[Double] = sameClassData(randomList(0))
             val r2: Array[Double] = sameClassData(randomList(1))
             val r3: Array[Double] = sameClassData(randomList(2))
 
-            val random: Double = this.random.nextDouble
-            val prod1: Array[Double] = (r2 zip r3).map((e: (Double, Double)) => (e._1 - e._2) * scalingFactor * random)
-            val prod2: Array[Double] = (r1 zip localTrainData(instance)).map((e: (Double, Double)) => (e._1 - e._2) * random)
+            val r: Double = random.nextDouble
+            val prod1: Array[Double] = (r2 zip r3).map((e: (Double, Double)) => (e._1 - e._2) * scalingFactor * r)
+            val prod2: Array[Double] = (r1 zip localTrainData(instance)).map((e: (Double, Double)) => (e._1 - e._2) * r)
             val crossOver: Array[Double] = (prod1, prod2, localTrainData(instance)).zipped.toArray.map((e: (Double, Double, Double)) => e._1 + e._2 + e._3)
 
             (crossOver.map((e: Double) => if (e > 1) 1 else if (e < 0) 0 else e), sameClassLabels(randomList(1)))
@@ -362,10 +362,10 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
     }
 
     val initTime: Long = System.nanoTime()
-    var counter: Double = -1.0
-    val classesTranslation: Map[Any, Double] = classesToWorkWith.distinct.map { value: Any => counter += 1.0; value -> counter }.toMap
+    var counterAux: Double = -1.0
+    val classesTranslation: Map[Any, Double] = classesToWorkWith.distinct.map { value: Any => counterAux += 1.0; value -> counterAux }.toMap
 
-    val initInstances: (Array[Array[Double]], Array[Any]) = selectInitInstances(data = dataToWorkWith, classes = classesToWorkWith)
+    val initInstances: (Array[Array[Double]], Array[Any]) = selectInitInstances(population = dataToWorkWith, classes = classesToWorkWith)
     var (population, classes): (Array[Array[Double]], Array[Any]) = differentialEvolution(trainData = initInstances._1,
       trainClasses = initInstances._2, testData = dataToWorkWith, testClasses = classesToWorkWith,
       iterations = iterations, strategy = strategy, dict = classesTranslation)
@@ -407,13 +407,13 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
       }
 
       if (!isClassMarked(targetClass)) {
-        val (population2Data, population2Classes): (Array[Array[Double]], Array[Any]) = if (targetClass == this.untouchableClass
+        val (population2Data, population2Classes): (Array[Array[Double]], Array[Any]) = if (targetClass == untouchableClass
           && contOptimizedPositive(targetClass) > 0) {
           (alternativeData.clone, alternativeClasses.clone)
         } else {
           val sameClassIndex: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (c, i) if c == targetClass => i }
-          val (newIndividual, newClass): (Array[Double], Any) = if (randomChoice || targetClass != this.untouchableClass) {
-            val randomElement: Int = this.random.shuffle(sameClassIndex.toList).head
+          val (newIndividual, newClass): (Array[Double], Any) = if (randomChoice || targetClass != untouchableClass) {
+            val randomElement: Int = random.shuffle(sameClassIndex.toList).head
             (dataToWorkWith(randomElement), classesToWorkWith(randomElement))
           } else {
             var farthest: Int = 0
@@ -452,12 +452,12 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
           population = testerData.clone
           classes = testerClasses.clone
           contOptimizedPositive(targetClass) = 0
-        } else if (targetClass == this.untouchableClass && optimizedIteration(targetClass) < 10) {
+        } else if (targetClass == untouchableClass && optimizedIteration(targetClass) < 10) {
           optimizedIteration(targetClass) += 1
           population = testerData.clone
           classes = testerClasses.clone
         } else {
-          if (targetClass == this.untouchableClass) {
+          if (targetClass == untouchableClass) {
             alternativeData = testerData.clone
             alternativeClasses = testerClasses.clone
 
@@ -475,21 +475,21 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
 
     val finishTime: Long = System.nanoTime()
 
-    this.data.resultData = population.map((row: Array[Double]) => row.map((e: Double) => e.asInstanceOf[Any]))
-    this.data.resultClasses = classes
-    this.data.index = null
+    data.resultData = population.map((row: Array[Double]) => row.map((e: Double) => e.asInstanceOf[Any]))
+    data.resultClasses = classes
+    data.index = null
 
     if (file.isDefined) {
       val newCounter: Map[Any, Int] = classes.groupBy(identity).mapValues((_: Array[Any]).length)
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
-      this.logger.addMsg("NEW DATA SIZE: %d".format(classes.length))
-      this.logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (classes.length.toFloat / dataToWorkWith.length) * 100))
-      this.logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(this.counter, this.untouchableClass)))
-      this.logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, this.untouchableClass)))
-      this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-      this.logger.storeFile(file.get)
+      logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
+      logger.addMsg("NEW DATA SIZE: %d".format(classes.length))
+      logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (classes.length.toFloat / dataToWorkWith.length) * 100))
+      logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(counter, untouchableClass)))
+      logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, untouchableClass)))
+      logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+      logger.storeFile(file.get)
     }
 
-    this.data
+    data
   }
 }

@@ -22,7 +22,7 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
+  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
   // Data without NA values and with nominal values transformed to numeric values
   private[soul] val (processedData, nomToNum) = processData(data)
 
@@ -81,7 +81,7 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
-    var samples: Array[Array[Double]] = this.processedData
+    var samples: Array[Array[Double]] = processedData
     if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data, processedData)
     }
@@ -119,29 +119,29 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     // the output
     val output: Array[Array[Double]] = Array.range(0, samplesWithMean.rows).map(i => samplesWithMean(i, ::).t.toArray)
 
-    val r: Random = new Random(this.seed)
+    val r: Random = new Random(seed)
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
 
     // check if the data is nominal or numerical
-    if (this.data.fileInfo.nominal.length == 0) {
-      data.resultData = dataShuffled map to2Decimals(Array.concat(this.processedData, if (distance == Distances.EUCLIDEAN)
+    if (data.fileInfo.nominal.length == 0) {
+      data.resultData = dataShuffled map to2Decimals(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
     } else {
-      data.resultData = dataShuffled map toNominal(Array.concat(this.processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), this.nomToNum)
+      data.resultData = dataShuffled map toNominal(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
+        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), nomToNum)
     }
     data.resultClasses = dataShuffled map Array.concat(data.y, Array.fill(output.length)(minorityClass))
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
-      this.logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
-      this.logger.addMsg("NEW SAMPLES ARE:")
-      dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))
-      this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-      this.logger.storeFile(file.get)
+      logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
+      logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
+      logger.addMsg("NEW SAMPLES ARE:")
+      dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) logger.addMsg("%d".format(index._2)))
+      logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+      logger.storeFile(file.get)
     }
 
-    this.data
+    data
   }
 }

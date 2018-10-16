@@ -23,7 +23,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
+  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
   // Data without NA values and with nominal values transformed to numeric values
   private[soul] val (processedData, nomToNum) = processData(data)
 
@@ -37,7 +37,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     }
 
     val initTime: Long = System.nanoTime()
-    var samples: Array[Array[Double]] = this.processedData
+    var samples: Array[Array[Double]] = processedData
     if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data, processedData)
     }
@@ -63,10 +63,10 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     var neighbors: Array[Int] = new Array[Int](minorityClassIndex.length)
 
     var newIndex: Int = 0
-    val r: Random = new Random(this.seed)
+    val r: Random = new Random(seed)
     // for each minority class sample
     minorityClassIndex.zipWithIndex.foreach(i => {
-      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, this.data.fileInfo.nominal.length == 0,
+      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.fileInfo.nominal.length == 0,
         (samples, data.y)).map(minorityClassIndex(_))
       // compute populate for the sample
       (0 until N).foreach(_ => {
@@ -91,7 +91,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     // and randomized classes to match the randomized data
     val classesToWorkWith: Array[Any] = (shuffle map resultClasses).toArray
     // Distances among the elements
-    val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, Distances.EUCLIDEAN, this.data.fileInfo.nominal, resultClasses)
+    val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, Distances.EUCLIDEAN, data.fileInfo.nominal, resultClasses)
 
     // Take the index of the elements that have a different class
     val candidates: Map[Any, Array[Int]] = classesToWorkWith.distinct.map { c: Any =>
@@ -112,23 +112,23 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     val finalIndex: Array[Int] = dataToWorkWith.indices.diff(removedInstances).toArray
 
     // check if the data is nominal or numerical
-    if (this.nomToNum(0).isEmpty) {
+    if (nomToNum(0).isEmpty) {
       data.resultData = to2Decimals(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs))
     } else {
-      data.resultData = toNominal(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs), this.nomToNum)
+      data.resultData = toNominal(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs), nomToNum)
     }
-    this.data.resultClasses = (finalIndex map shuffle).sorted map resultClasses
+    data.resultClasses = (finalIndex map shuffle).sorted map resultClasses
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
-      this.logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
-      this.logger.addMsg("NEW SAMPLES ARE:")
-      shuffle.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))
-      this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-      this.logger.storeFile(file.get)
+      logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
+      logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
+      logger.addMsg("NEW SAMPLES ARE:")
+      shuffle.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) logger.addMsg("%d".format(index._2)))
+      logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+      logger.storeFile(file.get)
     }
 
-    this.data
+    data
   }
 }

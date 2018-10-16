@@ -32,21 +32,21 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = this.data.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
   // Otherwise, minorityClass will be used as the minority one
-  private[soul] val untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+  private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
+  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
   // Data without NA values and with nominal values transformed to numeric values
   private[soul] val (processedData, _) = processData(data)
   // Use randomized data
   val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
-    (this.index map zeroOneNormalization(this.data, this.processedData)).toArray else (this.index map this.processedData).toArray
+    (index map zeroOneNormalization(data, processedData)).toArray else (index map processedData).toArray
   // and randomized classes to match the randomized data
-  val classesToWorkWith: Array[Any] = (this.index map this.data.y).toArray
+  val classesToWorkWith: Array[Any] = (index map data.y).toArray
   // Distances among the elements
-  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.fileInfo.nominal, this.data.y)
+  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, data.fileInfo.nominal, data.y)
 
   /** Compute Evolutionary Under Sampling
     *
@@ -56,7 +56,7 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val initTime: Long = System.nanoTime()
     val majoritySelection: Boolean = algorithm.contains("MS")
     val targetInstances: Array[Int] = classesToWorkWith.indices.toArray
-    val minorityElements: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (c, i) if c == this.untouchableClass => i }
+    val minorityElements: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (c, i) if c == untouchableClass => i }
 
     def fitnessFunction(instance: Array[Int]): Double = {
       val index: Array[Int] = zeroOneToIndex(instance) map targetInstances
@@ -64,14 +64,14 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
         selectedElements = index.diff(Array(e)), labels = classesToWorkWith, k = 1)._1).toArray
 
       val matrix: (Int, Int, Int, Int) = confusionMatrix(originalLabels = index map classesToWorkWith,
-        predictedLabels = predicted, minorityClass = this.untouchableClass)
+        predictedLabels = predicted, minorityClass = untouchableClass)
 
       val tp: Int = matrix._1
       val fp: Int = matrix._2
       val fn: Int = matrix._3
       val tn: Int = matrix._4
 
-      val nPositives: Int = (index map classesToWorkWith).count((_: Any) == this.untouchableClass)
+      val nPositives: Int = (index map classesToWorkWith).count((_: Any) == untouchableClass)
       val nNegatives: Int = (index map classesToWorkWith).length - nPositives
 
       val tpr: Double = tp / ((tp + fn) + 0.00000001)
@@ -83,7 +83,7 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       val fitness: Double = if (algorithm == "EBUSGSGM") {
         g - abs(1 - (nPositives.toFloat / nNegatives)) * 20
       } else if (algorithm == "EBUSMSGM") {
-        g - abs(1 - (this.counter(this.untouchableClass).toFloat / nNegatives)) * 20
+        g - abs(1 - (counter(untouchableClass).toFloat / nNegatives)) * 20
       } else if (algorithm == "EUSCMGSGM") {
         g
       } else if (algorithm == "EUSCMMSGM") {
@@ -91,7 +91,7 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       } else if (algorithm == "EBUSGSAUC") {
         auc - abs(1 - (nPositives.toFloat / nNegatives)) * 0.2
       } else if (algorithm == "EBUSMSAUC") {
-        auc - abs(1 - (this.counter(this.untouchableClass).toFloat / nNegatives)) * 0.2
+        auc - abs(1 - (counter(untouchableClass).toFloat / nNegatives)) * 0.2
       } else if (algorithm == "EUSCMGSAUC") {
         auc
       } else if (algorithm == "EUSCMMSAUC") {
@@ -107,7 +107,7 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       fitness
     }
 
-    val random: Random = new Random(this.seed)
+    val random: Random = new Random(seed)
     val population: Array[Array[Int]] = new Array[Array[Int]](populationSize)
     (0 until populationSize).foreach { i: Int =>
       val individual: Array[Int] = targetInstances.indices.map((_: Int) => random.nextInt(2)).toArray
@@ -201,21 +201,21 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val finalIndex: Array[Int] = zeroOneToIndex(bestChromosome) map targetInstances
     val finishTime: Long = System.nanoTime()
 
-    this.data.index = (finalIndex map this.index).sorted
-    this.data.resultData = this.data.index map this.data.x
-    this.data.resultClasses = this.data.index map this.data.y
+    data.index = (finalIndex map index).sorted
+    data.resultData = data.index map data.x
+    data.resultClasses = data.index map data.y
 
     if (file.isDefined) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
-      this.logger.addMsg("NEW DATA SIZE: %d".format(finalIndex.length))
-      this.logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))
-      this.logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(this.counter, this.untouchableClass)))
-      this.logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, this.untouchableClass)))
-      this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-      this.logger.storeFile(file.get)
+      logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
+      logger.addMsg("NEW DATA SIZE: %d".format(finalIndex.length))
+      logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))
+      logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(counter, untouchableClass)))
+      logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, untouchableClass)))
+      logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+      logger.storeFile(file.get)
     }
 
-    this.data
+    data
   }
 }
