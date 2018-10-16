@@ -29,7 +29,7 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
     *
     * @return synthetic samples generated
     */
-  def compute(): Unit = {
+  def compute(): Data = {
     if (percent > 100 && percent % 100 != 0) {
       throw new Exception("Percent must be a multiple of 100")
     }
@@ -99,5 +99,7 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
       this.logger.storeFile(file.get)
     }
+
+    this.data
   }
 }

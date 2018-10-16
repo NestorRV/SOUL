@@ -193,7 +193,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     *
     * @return synthetic samples generated
     */
-  def compute(): Unit = {
+  def compute(): Data = {
     val initTime: Long = System.nanoTime()
     data.minorityClass = data.originalClasses(minorityClassIndex(0))
     if (distance == Distances.EUCLIDEAN) {
@@ -270,5 +270,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
       this.logger.storeFile(file.get)
     }
+
+    this.data
   }
 }

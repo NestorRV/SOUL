@@ -30,7 +30,7 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
     *
     * @return synthetic samples generated
     */
-  def compute(): Unit = {
+  def compute(): Data = {
     if (B > 1 || B < 0) {
       throw new Exception("B must be between 0 and 1, both included")
     }
@@ -110,5 +110,7 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
       this.logger.storeFile(file.get)
     }
+
+    this.data
   }
 }

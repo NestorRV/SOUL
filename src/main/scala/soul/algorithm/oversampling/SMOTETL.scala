@@ -29,7 +29,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     *
     * @return synthetic samples generated
     */
-  def compute(): Unit = {
+  def compute(): Data = {
     if (percent > 100 && percent % 100 != 0) {
       throw new Exception("Percent must be a multiple of 100")
     }
@@ -126,5 +126,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
       this.logger.storeFile(file.get)
     }
+
+    this.data
   }
 }

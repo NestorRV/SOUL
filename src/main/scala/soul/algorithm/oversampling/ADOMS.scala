@@ -49,7 +49,7 @@ class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.
     *
     * @return synthetic samples generated
     */
-  def compute(): Unit = {
+  def compute(): Data = {
     val initTime: Long = System.nanoTime()
     var samples: Array[Array[Double]] = data.processedData
     if (distance == Distances.EUCLIDEAN) {
@@ -108,5 +108,7 @@ class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
       this.logger.storeFile(file.get)
     }
+
+    this.data
   }
 }

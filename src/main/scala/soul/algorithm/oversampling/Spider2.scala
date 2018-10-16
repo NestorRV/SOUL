@@ -103,7 +103,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
     *
     * @return synthetic samples generated
     */
-  def compute(): Unit = {
+  def compute(): Data = {
     if (relabel != "no" && relabel != "yes") {
       throw new Exception("relabel must be yes or no.")
     }
@@ -190,5 +190,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
       this.logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
       this.logger.storeFile(file.get)
     }
+
+    this.data
   }
 }
