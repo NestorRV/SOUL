@@ -27,8 +27,7 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
   // Use normalized data for EUCLIDEAN distance and randomized data
   val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
-    (this.index map zeroOneNormalization(this.data)).toArray else
-    (this.index map this.data.processedData).toArray
+    (this.index map zeroOneNormalization(this.data)).toArray else (this.index map this.data.processedData).toArray
   // and randomized classes to match the randomized data
   val classesToWorkWith: Array[Any] = (this.index map this.data.y).toArray
   // Distances among the elements
