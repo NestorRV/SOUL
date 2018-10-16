@@ -61,11 +61,7 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
     // ratio of each minority sample
     var ratio: Array[Double] = neighbors.map(neighborsOfX => {
       neighborsOfX.map(neighbor => {
-        if (data.y(neighbor) != minorityClass) {
-          1
-        } else {
-          0
-        }
+        if (data.y(neighbor) != minorityClass) 1 else 0
       }).sum.asInstanceOf[Double] / k
     })
 
