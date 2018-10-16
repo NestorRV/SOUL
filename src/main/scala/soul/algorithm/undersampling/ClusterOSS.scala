@@ -41,9 +41,9 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
   // Distances among the elements
   val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, data.fileInfo.nominal, data.y)
 
-  /** Undersampling method based in ClusterOSS
+  /** Compute the ClusterOSS algorithm
     *
-    * @return data structure with all the important information
+    * @return undersampled data structure
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()

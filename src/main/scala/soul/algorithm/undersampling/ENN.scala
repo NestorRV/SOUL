@@ -38,9 +38,9 @@ class ENN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // Distances among the elements
   val distances: Array[Array[Double]] = if (dists.isDefined) dists.get else computeDistances(dataToWorkWith, distance, data.fileInfo.nominal, data.y)
 
-  /** Compute the Edited Nearest Neighbour rule (ENN rule)
+  /** Compute the ENN algorithm.
     *
-    * @return data structure with all the important information
+    * @return undersampled data structure
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()

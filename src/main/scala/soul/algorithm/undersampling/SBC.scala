@@ -43,9 +43,9 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // and randomized classes to match the randomized data
   val classesToWorkWith: Array[Any] = (randomIndex map data.y).toArray
 
-  /** Undersampling method based in SBC
+  /** Compute the SBC algorithm.
     *
-    * @return data structure with all the important information
+    * @return undersampled data structure
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()

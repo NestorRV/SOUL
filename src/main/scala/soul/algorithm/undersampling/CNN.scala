@@ -35,9 +35,9 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // Distances among the elements
   val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, data.fileInfo.nominal, data.y)
 
-  /** Compute the Condensed Nearest Neighbor decision rule (CNN rule)
+  /** Compute the CNN algorithm
     *
-    * @return data structure with all the important information
+    * @return undersampled data structure
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()

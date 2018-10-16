@@ -37,9 +37,9 @@ class IHTS(private[soul] val data: Data, private[soul] val seed: Long = System.c
   // and randomized classes to match the randomized data
   val classesToWorkWith: Array[Any] = (randomIndex map data.y).toArray
 
-  /** Compute InstanceHardnessThreshold algorithm
+  /** Compute the IHTS algorithm.
     *
-    * @return data structure with all the important information
+    * @return undersampled data structure
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()

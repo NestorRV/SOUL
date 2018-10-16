@@ -39,9 +39,9 @@ class EE(private[soul] val data: Data, private[soul] val seed: Long = System.cur
   // and randomized classes to match the randomized data
   val classesToWorkWith: Array[Any] = (randomIndex map data.y).toArray
 
-  /** Compute the Easy Ensemble core.
+  /** Compute the EE algorithm.
     *
-    * @return data structure with all the important information and randomIndex of elements kept
+    * @return undersampled data structure
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()

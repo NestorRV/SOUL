@@ -34,9 +34,9 @@ class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // Distances among the elements
   val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, data.fileInfo.nominal, data.y)
 
-  /** Compute the One-Side Selection core.
+  /** Compute the OSS algorithm.
     *
-    * @return data structure with all the important information
+    * @return undersampled data structure
     */
   def compute(): Data = {
     // Note: the notation used to refers the subsets of data is the used in the original paper.

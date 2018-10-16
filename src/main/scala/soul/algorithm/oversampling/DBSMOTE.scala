@@ -191,7 +191,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     throw new Exception("Path not found")
   }
 
-  /** Compute the DensityBasedSmote algorithm
+  /** Compute the DBSMOTE algorithm
     *
     * @return synthetic samples generated
     */

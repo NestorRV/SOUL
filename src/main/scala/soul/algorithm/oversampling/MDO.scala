@@ -75,7 +75,7 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     output
   }
 
-  /** Compute the Mahalanobis distance-based over-sampling algorithm
+  /** Compute the MDO algorithm
     *
     * @return synthetic samples generated
     */

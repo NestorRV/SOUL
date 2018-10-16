@@ -45,9 +45,9 @@ class BC(private[soul] val data: Data, private[soul] val seed: Long = System.cur
   // Distances among the elements
   val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, data.fileInfo.nominal, data.y)
 
-  /** Compute the Balance Cascade core.
+  /** Compute the BC algorithm.
     *
-    * @return array of data structures with all the important information and randomIndex of elements kept for each subset
+    * @return undersampled data structure
     */
 
   def compute(): Data = {

@@ -49,9 +49,9 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
   val classesToWorkWith: Array[Any] = (randomIndex map data.y).toArray
 
 
-  /** Compute Iterative Instance Adjustment for Imbalanced Domains algorithm
+  /** Compute the IPADE algorithm.
     *
-    * @return data structure with all the important information
+    * @return undersampled data structure
     */
   def compute(): Data = {
     def accuracy(trainData: Array[Array[Double]], trainClasses: Array[Any], testData: Array[Array[Double]], testClasses: Array[Any]): Double = {

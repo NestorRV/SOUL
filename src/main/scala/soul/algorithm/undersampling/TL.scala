@@ -45,9 +45,9 @@ class TL(private[soul] val data: Data, private[soul] val seed: Long = System.cur
     untouchableClass = value
   }
 
-  /** Undersampling method based in removing Tomek Links
+  /** Compute the TL algorithm.
     *
-    * @return data structure with all the important information
+    * @return undersampled data structure
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()

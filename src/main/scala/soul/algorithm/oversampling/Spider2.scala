@@ -102,7 +102,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
       false
   }
 
-  /** Compute the Smote algorithm
+  /** Compute the Spider2 algorithm
     *
     * @return synthetic samples generated
     */

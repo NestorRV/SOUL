@@ -40,9 +40,9 @@ class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   private[soul] val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, data.fileInfo.nominal, data.y)
   private[soul] val centers: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
 
-  /** Undersampling method based in ClassPurityMaximization clustering
+  /** Compute the CPM algorithm.
     *
-    * @return data structure with all the important information
+    * @return undersampled data structure
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()

@@ -39,9 +39,9 @@ class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // Distances among the elements
   val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, data.fileInfo.nominal, data.y)
 
-  /** Compute the Neighbourhood Cleaning Rule (NCL)
+  /** Compute the NCL algorithm.
     *
-    * @return data structure with all the important information and index of elements kept
+    * @return undersampled data structure
     */
   def compute(): Data = {
     // Note: the notation used to refers the subsets of data is the used in the original paper.
