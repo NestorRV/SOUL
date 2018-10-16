@@ -227,9 +227,9 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
       var pseudoCentroid: (Int, Double) = (0, 99999999.0)
       //the pseudo-centroid is the sample that is closest to the centroid
       (c map samples).zipWithIndex.foreach(sample => {
-        val distance = computeDistanceOversampling(sample._1, centroid, distance, data._nominal.length == 0,
-          (c map samples, c map data._originalClasses))
-        if (distance < pseudoCentroid._2) pseudoCentroid = (sample._2, distance)
+        val d = computeDistanceOversampling(sample._1, centroid, distance, data.nominal.length == 0,
+          (c map samples, c map data.originalClasses))
+        if (d < pseudoCentroid._2) pseudoCentroid = (sample._2, d)
       })
 
       c.indices.foreach(p => {
