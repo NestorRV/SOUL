@@ -117,12 +117,9 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
     if (relabel != "no" && relabel != "yes") {
       throw new Exception("relabel must be yes or no.")
     }
+
     if (ampl != "weak" && ampl != "strong" && ampl != "no") {
       throw new Exception("amplification must be weak or strong or no.")
-    }
-
-    if (distance != Distances.EUCLIDEAN && distance != Distances.HVDM) {
-      throw new Exception("The distance must be euclidean or hvdm")
     }
 
     // Start the time

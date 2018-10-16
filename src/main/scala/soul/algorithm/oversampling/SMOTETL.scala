@@ -43,10 +43,6 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
       throw new Exception("Percent must be a multiple of 100")
     }
 
-    if (distance != Distances.EUCLIDEAN && distance != Distances.HVDM) {
-      throw new Exception("The distance must be euclidean or hvdm")
-    }
-
     // Start the time
     val initTime: Long = System.nanoTime()
 

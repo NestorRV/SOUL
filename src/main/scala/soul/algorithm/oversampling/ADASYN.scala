@@ -42,12 +42,10 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
   def compute(): Unit = {
     if (B > 1 || B < 0) {
       throw new Exception("B must be between 0 and 1, both included")
-    } else if (d > 1 || d <= 0) {
-      throw new Exception("d must be between 0 and 1, zero not included")
     }
 
-    if (distance != Distances.EUCLIDEAN && distance != Distances.HVDM) {
-      throw new Exception("The distance must be euclidean or hvdm")
+    if (d > 1 || d <= 0) {
+      throw new Exception("d must be between 0 and 1, zero not included")
     }
 
     // Start the time

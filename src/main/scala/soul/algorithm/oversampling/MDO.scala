@@ -87,10 +87,6 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     * @return synthetic samples generated
     */
   def compute(): Unit = {
-    if (distance != Distances.EUCLIDEAN && distance != Distances.HVDM) {
-      throw new Exception("The distance must be euclidean or hvdm")
-    }
-
     // Start the time
     val initTime: Long = System.nanoTime()
 

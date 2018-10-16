@@ -43,10 +43,6 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
       throw new Exception("Percent must be a multiple of 100")
     }
 
-    if (distance != Distances.EUCLIDEAN && distance != Distances.HVDM) {
-      throw new Exception("The distance must be euclidean or hvdm")
-    }
-
     var samples: Array[Array[Double]] = data._processedData
     if (distance == Distances.EUCLIDEAN) {
       samples = zeroOneNormalization(data)
