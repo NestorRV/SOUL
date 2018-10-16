@@ -25,11 +25,11 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.originalClasses.indices.toList)
+  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
 
   // array with the index of the minority class
-  private var minorityClassIndex: Array[Int] = minority(data.originalClasses)
-  private val minorityClass: Any = data.originalClasses(minorityClassIndex(0))
+  private var minorityClassIndex: Array[Int] = minority(data.y)
+  private val minorityClass: Any = data.y(minorityClassIndex(0))
   // array with the index of the majority class
   private var majorityClassIndex: Array[Int] = data.processedData.indices.diff(minorityClassIndex.toList).toArray
   // the samples computed by the algorithm
@@ -86,14 +86,14 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
   def correct(x: Int, k: Int, out: Boolean): Boolean = {
     // compute the neighbors
     val neighbors: Array[Int] = kNeighbors(if (out) samples else output.toArray, if (out) samples(x) else output(x), k, distance,
-      this.data.fileInfo.nominal.length == 0, if (out) (samples, data.originalClasses) else (output.toArray, data.resultClasses))
+      this.data.fileInfo.nominal.length == 0, if (out) (samples, data.y) else (output.toArray, data.resultClasses))
     val classes: scala.collection.mutable.Map[Any, Int] = scala.collection.mutable.Map()
     // compute the number of samples for each class in the neighborhood
-    neighbors.foreach(neighbor => classes += data.originalClasses(neighbor) -> 0)
-    neighbors.foreach(neighbor => classes(data.originalClasses(neighbor)) += 1)
+    neighbors.foreach(neighbor => classes += data.y(neighbor) -> 0)
+    neighbors.foreach(neighbor => classes(data.y(neighbor)) += 1)
 
     // if the majority class in neighborhood is the minority class return true
-    if (classes.reduceLeft((x: (Any, Int), y: (Any, Int)) => if (x._2 > y._2) x else y)._1 == data.originalClasses(x))
+    if (classes.reduceLeft((x: (Any, Int), y: (Any, Int)) => if (x._2 > y._2) x else y)._1 == data.y(x))
       true
     else
       false
@@ -130,7 +130,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
     if (relabel == "yes") {
       //add the RS samples to the minority set
       minorityClassIndex = minorityClassIndex ++ RS
-      data.resultClasses = data.originalClasses
+      data.resultClasses = data.y
       RS.foreach(data.resultClasses(_) = minorityClass)
     } else {
 
@@ -148,7 +148,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
       })
       DS = DS.diff(RS)
       safeSamples = DS map safeSamples
-      data.resultClasses = DS map data.originalClasses
+      data.resultClasses = DS map data.y
     }
 
     // the output is DS if ampl is not weak or strong
@@ -183,7 +183,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.originalData.length))
+      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
       this.logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
       this.logger.addMsg("NEW SAMPLES ARE:")
       dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))

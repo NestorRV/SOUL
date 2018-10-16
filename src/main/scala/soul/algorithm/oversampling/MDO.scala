@@ -22,7 +22,7 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.originalClasses.indices.toList)
+  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
 
   /** create the new samples for MDO algorithm
     *
@@ -85,9 +85,9 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     }
 
     // compute minority class
-    val minorityClassIndex: Array[Int] = minority(data.originalClasses)
+    val minorityClassIndex: Array[Int] = minority(data.y)
     // compute majority class
-    val minorityClass: Any = data.originalClasses(minorityClassIndex(0))
+    val minorityClass: Any = data.y(minorityClassIndex(0))
     val majorityClassIndex: Array[Int] = samples.indices.diff(minorityClassIndex.toList).toArray
 
     // compute the mean for the values of each attribute
@@ -128,11 +128,11 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       data.resultData = dataShuffled map toNominal(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), data.nomToNum)
     }
-    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(minorityClass))
+    data.resultClasses = dataShuffled map Array.concat(data.y, Array.fill(output.length)(minorityClass))
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.originalData.length))
+      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
       this.logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
       this.logger.addMsg("NEW SAMPLES ARE:")
       dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))

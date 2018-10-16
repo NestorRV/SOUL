@@ -23,7 +23,7 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.originalClasses.indices.toList)
+  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
 
   /** Compute the SMOTEENN algorithm
     *
@@ -40,8 +40,8 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
     }
 
     val initTime: Long = System.nanoTime()
-    val minorityClassIndex: Array[Int] = minority(data.originalClasses)
-    val minorityClass: Any = data.originalClasses(minorityClassIndex(0))
+    val minorityClassIndex: Array[Int] = minority(data.y)
+    val minorityClass: Any = data.y(minorityClassIndex(0))
 
     // check if the percent is correct
     var T: Int = minorityClassIndex.length
@@ -64,7 +64,7 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
     // for each minority class sample
     minorityClassIndex.zipWithIndex.foreach(i => {
       neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, this.data.fileInfo.nominal.length == 0,
-        (samples, data.originalClasses)).map(minorityClassIndex(_))
+        (samples, data.y)).map(minorityClassIndex(_))
       // compute populate for the sample
       (0 until N).foreach(_ => {
         val nn: Int = r.nextInt(neighbors.length)
@@ -79,7 +79,7 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
     })
 
     val result: Array[Array[Double]] = Array.concat(samples, output)
-    val resultClasses: Array[Any] = Array.concat(data.originalClasses, Array.fill(output.length)(minorityClass))
+    val resultClasses: Array[Any] = Array.concat(data.y, Array.fill(output.length)(minorityClass))
     // The following code correspond to ENN and it has been made by Néstor Rodríguez Vico
 
     val shuffle: List[Int] = r.shuffle(resultClasses.indices.toList)
@@ -112,7 +112,7 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.originalData.length))
+      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
       this.logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
       this.logger.addMsg("NEW SAMPLES ARE:")
       shuffle.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))

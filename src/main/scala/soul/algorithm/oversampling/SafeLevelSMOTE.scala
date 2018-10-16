@@ -22,7 +22,7 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.originalClasses.indices.toList)
+  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
 
   /** Compute the SafeLevelSMOTE algorithm
     *
@@ -35,8 +35,8 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
       samples = zeroOneNormalization(data)
     }
     // compute minority class
-    val minorityClassIndex: Array[Int] = minority(data.originalClasses)
-    val minorityClass: Any = data.originalClasses(minorityClassIndex(0))
+    val minorityClassIndex: Array[Int] = minority(data.y)
+    val minorityClass: Any = data.y(minorityClassIndex(0))
 
     // output with a size of |D|-t samples
     val output: Array[Array[Double]] = Array.fill(minorityClassIndex.length, samples(0).length)(0.0)
@@ -51,18 +51,18 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
     // for each minority class sample
     minorityClassIndex.foreach(i => {
       // compute k neighbors from p and save number of positive instances
-      neighbors = kNeighbors(samples, i, k, distance, this.data.fileInfo.nominal.length == 0, (samples, data.originalClasses))
+      neighbors = kNeighbors(samples, i, k, distance, this.data.fileInfo.nominal.length == 0, (samples, data.y))
       val n: Int = neighbors(r.nextInt(neighbors.length))
       val slp: Int = neighbors.map(neighbor => {
-        if (data.originalClasses(neighbor) == minorityClass) {
+        if (data.y(neighbor) == minorityClass) {
           1
         } else {
           0
         }
       }).sum
       // compute k neighbors from n and save number of positive instances
-      val sln: Int = kNeighbors(samples, n, k, distance, this.data.fileInfo.nominal.length == 0, (samples, data.originalClasses)).map(neighbor => {
-        if (data.originalClasses(neighbor) == minorityClass) {
+      val sln: Int = kNeighbors(samples, n, k, distance, this.data.fileInfo.nominal.length == 0, (samples, data.y)).map(neighbor => {
+        if (data.y(neighbor) == minorityClass) {
           1
         } else {
           0
@@ -103,11 +103,11 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
       data.resultData = dataShuffled map toNominal(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), data.nomToNum)
     }
-    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(minorityClass))
+    data.resultClasses = dataShuffled map Array.concat(data.y, Array.fill(output.length)(minorityClass))
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.originalData.length))
+      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
       this.logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
       this.logger.addMsg("NEW SAMPLES ARE:")
       dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))

@@ -35,16 +35,16 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = this.data.originalClasses.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = this.data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
   // Otherwise, minorityClass will be used as the minority one
   private[soul] val untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = this.random.shuffle(this.data.originalClasses.indices.toList)
+  private[soul] val index: List[Int] = this.random.shuffle(this.data.y.indices.toList)
   // Use normalized localTrainData and randomized localTrainData
   val dataToWorkWith: Array[Array[Double]] = (this.index map zeroOneNormalization(this.data)).toArray
   // and randomized localTrainClasses to match the randomized localTrainData
-  val classesToWorkWith: Array[Any] = (this.index map this.data.originalClasses).toArray
+  val classesToWorkWith: Array[Any] = (this.index map this.data.y).toArray
 
 
   /** Compute Iterative Instance Adjustment for Imbalanced Domains algorithm

@@ -25,19 +25,19 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = this.data.originalClasses.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = this.data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
   // Otherwise, minorityClass will be used as the minority one
   private[soul] val untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.originalClasses.indices.toList)
+  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
   // Use randomized data
   val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
     (this.index map zeroOneNormalization(this.data)).toArray else (this.index map this.data.processedData).toArray
   // and randomized classes to match the randomized data
-  val classesToWorkWith: Array[Any] = (this.index map this.data.originalClasses).toArray
+  val classesToWorkWith: Array[Any] = (this.index map this.data.y).toArray
   // Distances among the elements
-  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.fileInfo.nominal, this.data.originalClasses)
+  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.fileInfo.nominal, this.data.y)
 
   /** Undersampling method based in ClusterOSS
     *
@@ -75,8 +75,8 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
     val newData: Array[Int] = misclassified ++ train
 
     // Construct a data object to be passed to Tomek Link
-    val auxData: Data = new Data(originalData = toXData(newData map dataToWorkWith),
-      originalClasses = newData map classesToWorkWith, fileInfo = this.data.fileInfo)
+    val auxData: Data = new Data(x = toXData(newData map dataToWorkWith),
+      y = newData map classesToWorkWith, fileInfo = this.data.fileInfo)
     val tl = new TL(auxData, file = None, distance = distance, dists = Some((newData map this.distances).map(newData map _)))
     tl.untouchableClass_=(this.untouchableClass)
     val resultTL: Data = tl.compute()
@@ -85,8 +85,8 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
     val finishTime: Long = System.nanoTime()
 
     this.data.index = (finalIndex map this.index).sorted
-    this.data.resultData = this.data.index map this.data.originalData
-    this.data.resultClasses = this.data.index map this.data.originalClasses
+    this.data.resultData = this.data.index map this.data.x
+    this.data.resultClasses = this.data.index map this.data.y
 
     if (file.isDefined) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)

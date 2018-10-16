@@ -23,7 +23,7 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.originalClasses.indices.toList)
+  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
 
   /** Compute the SMOTE algorithm
     *
@@ -40,8 +40,8 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
     }
 
     val initTime: Long = System.nanoTime()
-    val minorityClassIndex: Array[Int] = minority(data.originalClasses)
-    val minorityClass: Any = data.originalClasses(minorityClassIndex(0))
+    val minorityClassIndex: Array[Int] = minority(data.y)
+    val minorityClass: Any = data.y(minorityClassIndex(0))
 
     // check if the percent is correct
     var T: Int = minorityClassIndex.length
@@ -64,7 +64,7 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
     // for each minority class sample
     minorityClassIndex.zipWithIndex.foreach(i => {
       neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, this.data.fileInfo.nominal.length == 0,
-        (samples, data.originalClasses)).map(minorityClassIndex(_))
+        (samples, data.y)).map(minorityClassIndex(_))
       // compute populate for the sample
       (0 until N).foreach(_ => {
         val nn: Int = r.nextInt(neighbors.length)
@@ -88,11 +88,11 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
       data.resultData = dataShuffled map toNominal(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), data.nomToNum)
     }
-    data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(minorityClass))
+    data.resultClasses = dataShuffled map Array.concat(data.y, Array.fill(output.length)(minorityClass))
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
-      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.originalData.length))
+      this.logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
       this.logger.addMsg("NEW DATA SIZE: %d".format(data.resultData.length))
       this.logger.addMsg("NEW SAMPLES ARE:")
       dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) this.logger.addMsg("%d".format(index._2)))

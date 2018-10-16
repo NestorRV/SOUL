@@ -512,9 +512,9 @@ object Utilities {
     * @return matrix of doubles containing the data
     */
   def processData(data: Data): (Array[Array[Double]], Array[mutable.Map[Double, Any]]) = {
-    val nomToNum: Array[mutable.Map[Double, Any]] = Array.fill(data.originalData(0).length)(mutable.Map[Double, Any]())
+    val nomToNum: Array[mutable.Map[Double, Any]] = Array.fill(data.x(0).length)(mutable.Map[Double, Any]())
     var nomToNumIndex = 0
-    val processedData: Array[Array[Double]] = data.originalData.transpose.zipWithIndex.map { column: (Array[Any], Int) =>
+    val processedData: Array[Array[Double]] = data.x.transpose.zipWithIndex.map { column: (Array[Any], Int) =>
       // let's look for the NA values
       val naIndex: Array[Int] = column._1.zipWithIndex.filter((_: (Any, Int))._1 == "soul_NA").map((_: (Any, Int))._2)
       // If they exist

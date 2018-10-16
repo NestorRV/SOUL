@@ -23,19 +23,19 @@ class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = this.data.originalClasses.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = this.data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
   // Otherwise, minorityClass will be used as the minority one
   private[soul] val untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.originalClasses.indices.toList)
+  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.y.indices.toList)
   // Use normalized data for EUCLIDEAN distance and randomized data
   val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
     (this.index map zeroOneNormalization(this.data)).toArray else (this.index map this.data.processedData).toArray
   // and randomized classes to match the randomized data
-  val classesToWorkWith: Array[Any] = (this.index map this.data.originalClasses).toArray
+  val classesToWorkWith: Array[Any] = (this.index map this.data.y).toArray
   // Distances among the elements
-  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.fileInfo.nominal, this.data.originalClasses)
+  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.fileInfo.nominal, this.data.y)
 
   /** Compute the Neighbourhood Cleaning Rule (NCL)
     *
@@ -61,8 +61,8 @@ class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val finishTime: Long = System.nanoTime()
 
     this.data.index = (finalIndex map this.index).sorted
-    this.data.resultData = this.data.index map this.data.originalData
-    this.data.resultClasses = this.data.index map this.data.originalClasses
+    this.data.resultData = this.data.index map this.data.x
+    this.data.resultClasses = this.data.index map this.data.y
 
     if (file.isDefined) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
