@@ -22,7 +22,7 @@ import scala.util.Random
 class Spider2(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
               relabel: String = "yes", ampl: String = "weak", k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN) {
 
-  // Logger object to log the execution of the algorithms
+  // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Index to shuffle (randomize) the data
   private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.originalClasses.indices.toList)

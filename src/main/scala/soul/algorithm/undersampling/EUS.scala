@@ -29,7 +29,7 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
           probHUX: Double = 0.25, recombination: Double = 0.35, prob0to1: Double = 0.05) {
 
   private[soul] val minorityClass: Any = -1
-  // Logger object to log the execution of the algorithms
+  // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = this.data.originalClasses.groupBy(identity).mapValues((_: Array[Any]).length)

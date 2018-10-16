@@ -22,7 +22,7 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
                  distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3, numClusters: Int = 15, restarts: Int = 5, minDispersion: Double = 0.0001, maxIterations: Int = 100) {
 
   private[soul] val minorityClass: Any = -1
-  // Logger object to log the execution of the algorithms
+  // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = this.data.originalClasses.groupBy(identity).mapValues((_: Array[Any]).length)

@@ -17,7 +17,7 @@ import soul.util.Utilities._
 class ENN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None, distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3) {
 
   private[soul] val minorityClass: Any = -1
-  // Logger object to log the execution of the algorithms
+  // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = this.data.originalClasses.groupBy(identity).mapValues((_: Array[Any]).length)

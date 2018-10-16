@@ -21,7 +21,7 @@ import scala.util.Random
 class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Double = -1, k: Int = 5,
               distance: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5) {
 
-  // Logger object to log the execution of the algorithms
+  // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Index to shuffle (randomize) the data
   private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.originalClasses.indices.toList)

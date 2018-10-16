@@ -23,7 +23,7 @@ import scala.util.Random
 class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
              N: Int = 500, k1: Int = 5, k2: Int = 5, k3: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN) {
 
-  // Logger object to log the execution of the algorithms
+  // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
   // Index to shuffle (randomize) the data
   private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.originalClasses.indices.toList)
