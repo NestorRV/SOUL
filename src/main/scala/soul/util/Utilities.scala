@@ -645,8 +645,8 @@ object Utilities {
   def zeroOneNormalization(d: Data): Array[Array[Double]] = {
     val maxV: Array[Double] = d.processedData.transpose.map((col: Array[Double]) => col.max)
     val minV: Array[Double] = d.processedData.transpose.map((col: Array[Double]) => col.min)
-    d.maxAttribs = maxV
-    d.minAttribs = minV
+    d.fileInfo.maxAttribs = maxV
+    d.fileInfo.minAttribs = minV
     val result: Array[Array[Double]] = d.processedData.transpose.clone()
 
     d.processedData.transpose.indices.diff(d.fileInfo.nominal).par.foreach { index: Int =>

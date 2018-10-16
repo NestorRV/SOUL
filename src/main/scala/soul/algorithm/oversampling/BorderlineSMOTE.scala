@@ -94,10 +94,10 @@ class BorderlineSMOTE(private[soul] val data: Data, private[soul] val seed: Long
     // check if the data is nominal or numerical
     if (this.data.fileInfo.nominal.length == 0) {
       data.resultData = dataShuffled map to2Decimals(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output))
+        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
     } else {
       data.resultData = dataShuffled map toNominal(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output), data.nomToNum)
+        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), data.nomToNum)
     }
     data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill(output.length)(minorityClass))
     val finishTime: Long = System.nanoTime()

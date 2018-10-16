@@ -124,10 +124,10 @@ class SMOTERSB(private[soul] val data: Data, private[soul] val seed: Long = Syst
     // check if the data is nominal or numerical
     if (this.data.fileInfo.nominal.length == 0) {
       data.resultData = dataShuffled map to2Decimals(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(result map output, data.maxAttribs, data.minAttribs) else result map output))
+        zeroOneDenormalization(result map output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else result map output))
     } else {
       data.resultData = dataShuffled map toNominal(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(result map output, data.maxAttribs, data.minAttribs) else result map output), data.nomToNum)
+        zeroOneDenormalization(result map output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else result map output), data.nomToNum)
     }
     data.resultClasses = dataShuffled map Array.concat(data.originalClasses, Array.fill((result map output).length)(minorityClass))
     val finishTime: Long = System.nanoTime()

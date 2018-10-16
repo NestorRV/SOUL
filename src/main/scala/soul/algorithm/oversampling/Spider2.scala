@@ -172,10 +172,10 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
     // check if the data is nominal or numerical
     if (this.data.fileInfo.nominal.length == 0) {
       data.resultData = dataShuffled map to2Decimals(if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output.toArray, data.maxAttribs, data.minAttribs) else output.toArray)
+        zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray)
     } else {
       data.resultData = dataShuffled map toNominal(if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output.toArray, data.maxAttribs, data.minAttribs) else output.toArray, data.nomToNum)
+        zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray, data.nomToNum)
     }
 
     data.resultClasses = dataShuffled map data.resultClasses

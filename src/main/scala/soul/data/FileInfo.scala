@@ -23,4 +23,8 @@ class FileInfo private[soul](private[soul] val _file: String, private[soul] val 
                              private[soul] val _attributesValues: mutable.Map[String, String],
                              private[soul] val nominal: Array[Int]) {
 
+  // data necessary to denormalize the data
+  private[soul] var maxAttribs: Array[Double] = _
+  private[soul] var minAttribs: Array[Double] = _
+
 }

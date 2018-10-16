@@ -20,7 +20,4 @@ class Data private[soul](private[soul] val originalData: Array[Array[Any]],
   private[soul] var resultClasses: Array[Any] = _
   // index representing the kept elements
   private[soul] var index: Array[Int] = _
-  // data necessary to denormalize the data
-  private[soul] var maxAttribs: Array[Double] = _
-  private[soul] var minAttribs: Array[Double] = _
 }

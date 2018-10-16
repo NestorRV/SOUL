@@ -104,9 +104,9 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
 
     // check if the data is nominal or numerical
     if (data.nomToNum(0).isEmpty) {
-      data.resultData = to2Decimals(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.maxAttribs, data.minAttribs))
+      data.resultData = to2Decimals(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs))
     } else {
-      data.resultData = toNominal(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.maxAttribs, data.minAttribs), data.nomToNum)
+      data.resultData = toNominal(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs), data.nomToNum)
     }
     this.data.resultClasses = (finalIndex map shuffle).sorted map resultClasses
     val finishTime: Long = System.nanoTime()
