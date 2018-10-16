@@ -41,7 +41,7 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
   private[soul] val counter: Map[Any, Int] = this.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
   // Otherwise, minorityClass will be used as the minority one
-  private[soul] var untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
+  private[soul] val untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
   private[soul] val index: List[Int] = this.random.shuffle(this.y.indices.toList)
   // Use normalized localTrainData and randomized localTrainData
