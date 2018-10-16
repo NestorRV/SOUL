@@ -19,24 +19,21 @@ class TL(private[soul] val data: Data, private[soul] val seed: Long = System.cur
          distance: Distances.Distance = Distances.EUCLIDEAN, ratio: String = "not minority") {
 
   private[soul] val minorityClass: Any = -1
-  // Remove NA values and change nominal values to numeric values
-  private[soul] val x: Array[Array[Double]] = this.data.processedData
-  private[soul] val y: Array[Any] = data.originalClasses
   // Logger object to log the execution of the algorithms
   private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = this.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = this.data.originalClasses.groupBy(identity).mapValues((_: Array[Any]).length)
   private[this] var untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
 
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.y.indices.toList)
+  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.originalClasses.indices.toList)
   // Use normalized data for EUCLIDEAN distance and randomized data
   val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
-    (this.index map zeroOneNormalization(this.data)).toArray else (this.index map this.x).toArray
+    (this.index map zeroOneNormalization(this.data)).toArray else (this.index map this.data.processedData).toArray
   // and randomized classes to match the randomized data
-  val classesToWorkWith: Array[Any] = (this.index map this.y).toArray
+  val classesToWorkWith: Array[Any] = (this.index map this.data.originalClasses).toArray
   // Distances among the elements
-  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.nominal, this.y)
+  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, this.data.nominal, this.data.originalClasses)
 
   /** untouchableClass setter
     *
