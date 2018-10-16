@@ -20,19 +20,10 @@ import scala.util.Random
 class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
               percent: Int = 500, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN) {
 
-  private[soul] val minorityClass: Any = -1
-  // Remove NA values and change nominal values to numeric values
-  private[soul] val x: Array[Array[Double]] = this.data._processedData
-  private[soul] val y: Array[Any] = data._originalClasses
   // Logger object to log the execution of the algorithms
   private[soul] val logger: Logger = new Logger
-  // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = this.y.groupBy(identity).mapValues((_: Array[Any]).length)
-  // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
-  // Otherwise, minorityClass will be used as the minority one
-  private[soul] var untouchableClass: Any = this.counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.y.indices.toList)
+  private[soul] val index: List[Int] = new util.Random(this.seed).shuffle(this.data.originalClasses.indices.toList)
 
   /** Compute the SMOTETL algorithm
     *
@@ -92,8 +83,8 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
 
     val result: Array[Array[Double]] = Array.concat(samples, output)
     val resultClasses: Array[Any] = Array.concat(data._originalClasses, Array.fill(output.length)(data._minorityClass))
-    // The following code correspond to TL and it has been made by Néstor Rodríguez Vico
 
+    // The following code correspond to TL and it has been made by Néstor Rodríguez Vico
     val shuffle: List[Int] = r.shuffle(resultClasses.indices.toList)
 
     val dataToWorkWith: Array[Array[Double]] = (shuffle map result).toArray
