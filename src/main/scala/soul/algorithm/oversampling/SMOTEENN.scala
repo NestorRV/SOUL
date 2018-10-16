@@ -63,7 +63,7 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
     val r: Random = new Random(this.seed)
     // for each minority class sample
     minorityClassIndex.zipWithIndex.foreach(i => {
-      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.nominal.length == 0,
+      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, this.data.fileInfo.nominal.length == 0,
         (samples, data.originalClasses)).map(minorityClassIndex(_))
       // compute populate for the sample
       (0 until N).foreach(_ => {
@@ -92,7 +92,7 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
     val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, Distances.EUCLIDEAN, this.data.fileInfo.nominal, resultClasses)
 
     val finalIndex: Array[Int] = classesToWorkWith.distinct.flatMap { targetClass: Any =>
-      if (targetClass != data.minorityClass) {
+      if (targetClass != minorityClass) {
         val sameClassIndex: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (c, i) if c == targetClass => i }
         boolToIndex(sameClassIndex.map { i: Int =>
           nnRule(distances = distances(i), selectedElements = sameClassIndex.indices.diff(List(i)).toArray, labels = classesToWorkWith, k = k)._1

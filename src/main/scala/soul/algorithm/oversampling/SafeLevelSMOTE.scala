@@ -51,7 +51,7 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
     // for each minority class sample
     minorityClassIndex.foreach(i => {
       // compute k neighbors from p and save number of positive instances
-      neighbors = kNeighbors(samples, i, k, distance, data.nominal.length == 0, (samples, data.originalClasses))
+      neighbors = kNeighbors(samples, i, k, distance, this.data.fileInfo.nominal.length == 0, (samples, data.originalClasses))
       val n: Int = neighbors(r.nextInt(neighbors.length))
       val slp: Int = neighbors.map(neighbor => {
         if (data.originalClasses(neighbor) == minorityClass) {
@@ -61,7 +61,7 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
         }
       }).sum
       // compute k neighbors from n and save number of positive instances
-      val sln: Int = kNeighbors(samples, n, k, distance, data.nominal.length == 0, (samples, data.originalClasses)).map(neighbor => {
+      val sln: Int = kNeighbors(samples, n, k, distance, this.data.fileInfo.nominal.length == 0, (samples, data.originalClasses)).map(neighbor => {
         if (data.originalClasses(neighbor) == minorityClass) {
           1
         } else {
@@ -96,7 +96,7 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
 
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
-    if (data.nominal.length == 0) {
+    if (this.data.fileInfo.nominal.length == 0) {
       data.resultData = dataShuffled map to2Decimals(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output))
     } else {

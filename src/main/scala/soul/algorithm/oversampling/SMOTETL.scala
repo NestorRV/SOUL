@@ -64,7 +64,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     val r: Random = new Random(this.seed)
     // for each minority class sample
     minorityClassIndex.zipWithIndex.foreach(i => {
-      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.nominal.length == 0,
+      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, this.data.fileInfo.nominal.length == 0,
         (samples, data.originalClasses)).map(minorityClassIndex(_))
       // compute populate for the sample
       (0 until N).foreach(_ => {

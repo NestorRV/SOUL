@@ -41,7 +41,7 @@ class BorderlineSMOTE(private[soul] val data: Data, private[soul] val seed: Long
 
     // compute minority class neighbors
     val minorityClassNeighbors: Array[Array[Int]] = minorityClassIndex.map(node => kNeighbors(samples, node, m, distance,
-      data.nominal.length == 0, (samples, data.originalClasses)))
+      this.data.fileInfo.nominal.length == 0, (samples, data.originalClasses)))
 
     //compute nodes in borderline
     val DangerNodes: Array[Int] = minorityClassNeighbors.map(neighbors => {
@@ -74,7 +74,7 @@ class BorderlineSMOTE(private[soul] val data: Data, private[soul] val seed: Long
     var newIndex: Int = 0
     // for each minority class sample
     DangerNodes.zipWithIndex.foreach(i => {
-      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.nominal.length == 0,
+      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, this.data.fileInfo.nominal.length == 0,
         (minorityClassIndex map samples, minorityClassIndex map data.originalClasses)).map(minorityClassIndex(_))
       val sNeighbors: Array[Int] = (0 until s).map(_ => r.nextInt(neighbors.length)).toArray.distinct
       neighbors = sNeighbors map neighbors
@@ -92,7 +92,7 @@ class BorderlineSMOTE(private[soul] val data: Data, private[soul] val seed: Long
 
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
-    if (data.nominal.length == 0) {
+    if (this.data.fileInfo.nominal.length == 0) {
       data.resultData = dataShuffled map to2Decimals(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output))
     } else {

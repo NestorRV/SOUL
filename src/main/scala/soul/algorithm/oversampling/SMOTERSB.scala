@@ -64,7 +64,7 @@ class SMOTERSB(private[soul] val data: Data, private[soul] val seed: Long = Syst
     val r: Random = new Random(this.seed)
     // for each minority class sample
     minorityClassIndex.zipWithIndex.foreach(i => {
-      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.nominal.length == 0,
+      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, this.data.fileInfo.nominal.length == 0,
         (samples, data.originalClasses)).map(minorityClassIndex(_))
       // calculate populate for the sample
       (0 until N).foreach(_ => {
@@ -122,7 +122,7 @@ class SMOTERSB(private[soul] val data: Data, private[soul] val seed: Long = Syst
 
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + result.length).indices.toList).toArray
     // check if the data is nominal or numerical
-    if (data.nominal.length == 0) {
+    if (this.data.fileInfo.nominal.length == 0) {
       data.resultData = dataShuffled map to2Decimals(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(result map output, data.maxAttribs, data.minAttribs) else result map output))
     } else {

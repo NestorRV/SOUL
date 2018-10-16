@@ -522,7 +522,7 @@ object Utilities {
         // Take the index of the elements that are not NA
         val nonNAIndex: Array[Int] = column._1.zipWithIndex.filter((_: (Any, Int))._1 != "soul_NA").map((_: (Any, Int))._2)
         // If the column is not a nominal value
-        if (!data.nominal.contains(column._2)) {
+        if (!data.fileInfo.nominal.contains(column._2)) {
           // compute the mean of the present values
           val arrayDouble: Array[Double] = (nonNAIndex map column._1).map((_: Any).asInstanceOf[Double])
           val mean: Double = arrayDouble.sum / arrayDouble.length
@@ -553,7 +553,7 @@ object Utilities {
       } else {
         // If there is no NA values
         // If the column is not a nominal value
-        if (data.nominal.contains(column._2)) {
+        if (data.fileInfo.nominal.contains(column._2)) {
           val array: Array[Any] = column._1.clone()
           // we change them to numerical values (0, 1, 2, ..., N)
           val uniqueValues: Array[Any] = array.distinct
@@ -649,7 +649,7 @@ object Utilities {
     d.minAttribs = minV
     val result: Array[Array[Double]] = d.processedData.transpose.clone()
 
-    d.processedData.transpose.indices.diff(d.nominal).par.foreach { index: Int =>
+    d.processedData.transpose.indices.diff(d.fileInfo.nominal).par.foreach { index: Int =>
       val aux: Array[Double] = result(index).map((element: Double) => (element - minV(index)).toFloat / (maxV(index) - minV(index)))
       result(index) = if (aux.count((_: Double).isNaN) == 0) aux else Array.fill[Double](aux.length)(0.0)
     }

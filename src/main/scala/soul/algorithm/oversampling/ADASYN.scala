@@ -53,7 +53,7 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
     val G: Int = ((ml - ms) * B).asInstanceOf[Int]
     // k neighbors of each minority sample
     val neighbors: Array[Array[Int]] = minorityClassIndex.indices.map(sample => {
-      kNeighbors(samples, minorityClassIndex(sample), k, distance, data.nominal.length == 0, (samples, data.originalClasses))
+      kNeighbors(samples, minorityClassIndex(sample), k, distance, this.data.fileInfo.nominal.length == 0, (samples, data.originalClasses))
     }).toArray
 
     // ratio of each minority sample
@@ -92,7 +92,7 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
 
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
-    if (data.nominal.length == 0) {
+    if (this.data.fileInfo.nominal.length == 0) {
       data.resultData = dataShuffled map to2Decimals(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output))
     } else {

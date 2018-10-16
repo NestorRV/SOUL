@@ -68,13 +68,13 @@ class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.
     (0 until percent / 100).foreach(_ => {
       // for each minority class sample
       minorityClassIndex.zipWithIndex.foreach(i => {
-        neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.nominal.length == 0,
+        neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, this.data.fileInfo.nominal.length == 0,
           (minorityClassIndex map samples, minorityClassIndex map data.originalClasses))
         // calculate first principal component axis of local data distribution
         val l2: Array[Double] = PCA((neighbors map minorityClassIndex) map samples)
         val n: Int = r.nextInt(neighbors.length)
         val D: Double = computeDistanceOversampling(samples(i._1), samples(minorityClassIndex(neighbors(n))), distance,
-          data.nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data.originalClasses))
+          this.data.fileInfo.nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data.originalClasses))
         // compute projection of n in l2, M is on l2
         val dotMN: Double = l2.indices.map(j => {
           samples(i._1)(j) - samples(minorityClassIndex(neighbors(n)))(j)
@@ -90,7 +90,7 @@ class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.
 
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
-    if (data.nominal.length == 0) {
+    if (this.data.fileInfo.nominal.length == 0) {
       data.resultData = dataShuffled map to2Decimals(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output))
     } else {

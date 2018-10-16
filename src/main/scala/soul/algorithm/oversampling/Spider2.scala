@@ -56,9 +56,9 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
   def amplify(x: Int, k: Int): Unit = {
     // compute the neighborhood for the majority and minority class
     val majNeighbors: Array[Int] = kNeighbors(majorityClassIndex map output, output(x), k, distance,
-      data.nominal.length == 0, (output.toArray, data.resultClasses))
+      this.data.fileInfo.nominal.length == 0, (output.toArray, data.resultClasses))
     val minNeighbors: Array[Int] = kNeighbors(minorityClassIndex map output, output(x), k, distance,
-      data.nominal.length == 0, (output.toArray, data.resultClasses))
+      this.data.fileInfo.nominal.length == 0, (output.toArray, data.resultClasses))
     // compute the number of copies to create
     val S: Int = Math.abs(majNeighbors.length - minNeighbors.length) + 1
     // need to know the size of the output to save the index of the elements inserted
@@ -86,7 +86,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
   def correct(x: Int, k: Int, out: Boolean): Boolean = {
     // compute the neighbors
     val neighbors: Array[Int] = kNeighbors(if (out) samples else output.toArray, if (out) samples(x) else output(x), k, distance,
-      data.nominal.length == 0, if (out) (samples, data.originalClasses) else (output.toArray, data.resultClasses))
+      this.data.fileInfo.nominal.length == 0, if (out) (samples, data.originalClasses) else (output.toArray, data.resultClasses))
     val classes: scala.collection.mutable.Map[Any, Int] = scala.collection.mutable.Map()
     // compute the number of samples for each class in the neighborhood
     neighbors.foreach(neighbor => classes += data.originalClasses(neighbor) -> 0)
@@ -170,7 +170,7 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
     val r: Random = new Random(this.seed)
     val dataShuffled: Array[Int] = r.shuffle(output.indices.toList).toArray
     // check if the data is nominal or numerical
-    if (data.nominal.length == 0) {
+    if (this.data.fileInfo.nominal.length == 0) {
       data.resultData = dataShuffled map to2Decimals(if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output.toArray, data.maxAttribs, data.minAttribs) else output.toArray)
     } else {

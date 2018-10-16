@@ -39,7 +39,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
   private def regionQuery(point: Int, eps: Double): Array[Int] = {
     (minorityClassIndex map samples).indices.map(sample => {
       if (computeDistanceOversampling(samples(minorityClassIndex(point)), samples(minorityClassIndex(sample)), distance,
-        data.nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data.originalClasses)) <= eps) {
+        this.data.fileInfo.nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data.originalClasses)) <= eps) {
         Some(sample)
       } else {
         None
@@ -123,7 +123,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     val graph: Array[Array[Boolean]] = Array.fill(cluster.length, cluster.length)(false)
     //distance between each par of nodes
     val distances: Array[Array[Double]] = cluster.map(i => cluster.map(j => computeDistanceOversampling(samples(minorityClassIndex(i)),
-      samples(minorityClassIndex(j)), distance, data.nominal.length == 0, (cluster map samples, cluster map data.originalClasses))))
+      samples(minorityClassIndex(j)), distance, this.data.fileInfo.nominal.length == 0, (cluster map samples, cluster map data.originalClasses))))
 
     // number of nodes connected to another which satisfied distance(a,b) <= eps
     val NNq: Array[Int] = distances.map(row => row.map(dist => if (dist <= eps) 1 else 0)).map(_.sum)
@@ -179,7 +179,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
       graph(u).indices.foreach(v => {
         if (graph(u)(v) && !nodeInfo(v)._3) {
           val alt = nodeInfo(u)._1 + computeDistanceOversampling(samples(minorityClassIndex(cluster(u))),
-            samples(minorityClassIndex(cluster(v))), distance, data.nominal.length == 0,
+            samples(minorityClassIndex(cluster(v))), distance, this.data.fileInfo.nominal.length == 0,
             (cluster map samples, cluster map data.originalClasses))
           if (alt < nodeInfo(v)._1) nodeInfo(v) = (alt, u, nodeInfo(v)._3)
         }
@@ -203,7 +203,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     //check if the user pass the epsilon parameter
     var eps2 = eps
     if (eps == -1) {
-      eps2 = samples.map(i => samples.map(j => computeDistanceOversampling(i, j, distance, data.nominal.length == 0,
+      eps2 = samples.map(i => samples.map(j => computeDistanceOversampling(i, j, distance, this.data.fileInfo.nominal.length == 0,
         (samples, data.originalClasses))).sum).sum / (samples.length * samples.length)
     }
 
@@ -225,7 +225,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
       var pseudoCentroid: (Int, Double) = (0, 99999999.0)
       //the pseudo-centroid is the sample that is closest to the centroid
       (c map samples).zipWithIndex.foreach(sample => {
-        val d = computeDistanceOversampling(sample._1, centroid, distance, data.nominal.length == 0,
+        val d = computeDistanceOversampling(sample._1, centroid, distance, this.data.fileInfo.nominal.length == 0,
           (c map samples, c map data.originalClasses))
         if (d < pseudoCentroid._2) pseudoCentroid = (sample._2, d)
       })
@@ -252,7 +252,7 @@ class DBSMOTE(private[soul] val data: Data, file: Option[String] = None, eps: Do
     r.setSeed(seed)
     val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
-    if (data.nominal.length == 0) {
+    if (this.data.fileInfo.nominal.length == 0) {
       data.resultData = dataShuffled map to2Decimals(Array.concat(data.processedData, if (distance == Distances.EUCLIDEAN)
         zeroOneDenormalization(output, data.maxAttribs, data.minAttribs) else output))
     } else {
