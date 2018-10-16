@@ -10,9 +10,9 @@ import scala.util.Random
 /** MDO algorithm. Original paper: "To combat multi-class imbalanced problems by means of over-sampling and boosting
   * techniques" by Lida Adbi and Sattar Hashemi.
   *
-  * @param data  data to work with
-  * @param seed  seed to use. If it is not provided, it will use the system time
-  * @param file  file to store the log. If its set to None, log process would not be done
+  * @param data     data to work with
+  * @param seed     seed to use. If it is not provided, it will use the system time
+  * @param file     file to store the log. If its set to None, log process would not be done
   * @param distance the type of distance to use, hvdm or euclidean
   * @author David López Pretel
   */
