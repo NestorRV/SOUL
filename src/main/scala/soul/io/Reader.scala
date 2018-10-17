@@ -142,7 +142,7 @@ class Reader {
     */
   def readDelimitedText(file: String, comment: String = "#", delimiter: String = ",", missing: String = "?", header: Boolean = true, columnClass: Int = -1): Data = {
     val reader: BufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(file)))
-    reader.mark(1000000000)
+    reader.mark(100)
     val firstLine: String = reader.readLine
     if (columnClass >= firstLine.split(delimiter).length) throw new ParseException("Invalid response variable index: " + columnClass, columnClass)
     val response: Int = if (columnClass == -1) firstLine.split(delimiter).length - 1 else columnClass
