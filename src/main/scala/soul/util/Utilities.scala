@@ -484,12 +484,37 @@ object Utilities {
     * @return the label associated to newPoint and the index of the k-nearest which, else None
     */
   def nnRule(distances: Array[Double], selectedElements: Array[Int], labels: Array[Any], k: Int, which: String = "nearest"): (Any, Array[Int]) = {
-    val elements: Array[(Double, Int)] = if (which == "nearest")
-      (selectedElements map distances.zipWithIndex).sortBy { case (d, _) => d } else
-      (selectedElements map distances.zipWithIndex).sortBy { case (d, _) => d }.reverse
-    val kBestNeighbours: Array[(Double, Int)] = elements.take(if (k > selectedElements.length) selectedElements.length else k)
-    val index: Array[Int] = kBestNeighbours.map((d: (Double, Int)) => d._2)
-    (mode(index map labels), index)
+    val targetNeighbours = selectedElements map distances.zipWithIndex
+    val kBest = List.fill(k)(0).toArray
+    val distancesKBest = if (which == "nearest") List.fill(k)(Double.PositiveInfinity).toArray else List.fill(k)(Double.NegativeInfinity).toArray
+    val compare: (Double, Double) => Boolean = if (which == "nearest") (a: Double, b: Double) => a < b else (a: Double, b: Double) => a > b
+
+    var i = 0
+    while (i < targetNeighbours.length) {
+      val neighbour = targetNeighbours(i)
+      var worstDistance = neighbour._1
+      var worstIndex = 0
+
+      var j = 0
+      var assigned = false
+      while (j < distancesKBest.length) {
+        if (!compare(distancesKBest(j), worstDistance)) {
+          worstDistance = distancesKBest(j)
+          worstIndex = j
+          assigned = true
+        }
+        j += 1
+      }
+
+      if (assigned) {
+        kBest(worstIndex) = selectedElements(i)
+        distancesKBest(worstIndex) = targetNeighbours(i)._1
+      }
+
+      i += 1
+    }
+
+    (mode(kBest map labels), kBest)
   }
 
   /** Compute the number of occurrences for each value x for attribute represented by array attribute and output class c, for each class c in classes
