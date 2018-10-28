@@ -101,8 +101,8 @@ object Utilities {
     *
     * @param n1                 sample1
     * @param n2                 sample2
-    * @param distance           specifies hvdm or euclideanDistance
-    * @param nominal            indicate nominal values in the instances
+    * @param distance           distance to use
+    * @param nominal            indicate nominal attributes in the instances
     * @param sds                standard deviations
     * @param attrCounter        counter attributes occurrences
     * @param attrClassesCounter number of occurrences for each value and output class c, for each class
@@ -113,7 +113,7 @@ object Utilities {
     if (distance == Distances.EUCLIDEAN) {
       var d: Double = 0.0
       var i: Int = 0
-      while (i < n1.size) {
+      while (i < n1.length) {
         val toPow2 = n1(i) - n2(i)
         d += toPow2 * toPow2
         i += 1
@@ -171,7 +171,14 @@ object Utilities {
     * @return Euclidean Distance between xs and ys
     */
   def euclideanDistance(xs: Array[Double], ys: Array[Double]): Double = {
-    sqrt((xs zip ys).map((pair: (Double, Double)) => pow(pair._2 - pair._1, 2)).sum)
+    var d: Double = 0.0
+    var i: Int = 0
+    while (i < xs.length) {
+      val toPow2 = xs(i) - ys(i)
+      d += toPow2 * toPow2
+      i += 1
+    }
+    sqrt(d)
   }
 
   /** Compute the soul ratio (number of instances of all the classes except the minority one divided by number of
@@ -196,7 +203,7 @@ object Utilities {
     * @param k                  number of neighbours to consider
     * @param nFolds             number of subsets to create
     * @param distance           distance to use when calling the NNRule
-    * @param nominal            indicate nominal values in the instances
+    * @param nominal            indicate nominal attributes in the instances
     * @param sds                standard deviations
     * @param attrCounter        counter attributes occurrences
     * @param attrClassesCounter number of occurrences for each value and output class c, for each class
@@ -297,7 +304,7 @@ object Utilities {
     * @param node               array with the attributes of the node
     * @param k                  number of neighbors
     * @param distance           specifies hvdm or euclideanDistance
-    * @param nominal            indicate nominal values in the instances
+    * @param nominal            indicate nominal attributes in the instances
     * @param sds                standard deviations
     * @param attrCounter        counter attributes occurrences
     * @param attrClassesCounter number of occurrences for each value and output class c, for each class
@@ -329,7 +336,7 @@ object Utilities {
     * @param node               index whom neighbors are going to be evaluated
     * @param k                  number of neighbors
     * @param distance           specifies hvdm or euclideanDistance
-    * @param nominal            indicate nominal values in the instances
+    * @param nominal            indicate nominal attributes in the instances
     * @param sds                standard deviations
     * @param attrCounter        counter attributes occurrences
     * @param attrClassesCounter number of occurrences for each value and output class c, for each class
@@ -410,7 +417,7 @@ object Utilities {
     * @param k                  number of neighbours to consider
     * @param which              if it's sets to "nearest", return the nearest which, if it sets "farthest", return the farthest which
     * @param distance           distance to use when calling the NNRule
-    * @param nominal            indicate nominal values in the instances
+    * @param nominal            indicate nominal attributes in the instances
     * @param sds                standard deviations
     * @param attrCounter        counter attributes occurrences
     * @param attrClassesCounter number of occurrences for each value and output class c, for each class
@@ -468,7 +475,7 @@ object Utilities {
     * @param k                  number of neighbours to consider
     * @param which              if it's sets to "nearest", return the nearest which, if it sets "farthest", return the farthest which
     * @param distance           distance to use when calling the NNRule
-    * @param nominal            indicate nominal values in the instances
+    * @param nominal            indicate nominal attributes in the instances
     * @param sds                standard deviations
     * @param attrCounter        counter attributes occurrences
     * @param attrClassesCounter number of occurrences for each value and output class c, for each class
