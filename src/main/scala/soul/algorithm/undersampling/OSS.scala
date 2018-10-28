@@ -68,6 +68,7 @@ class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
 
     val auxData: Data = new Data(x = toXData(finalC map dataToWorkWith),
       y = finalC map classesToWorkWith, fileInfo = data.fileInfo)
+    auxData.processedData = finalC map dataToWorkWith
     val tl = new TL(auxData, file = None, distance = distance)
     tl.untouchableClass_=(untouchableClass)
     val resultTL: Data = tl.compute()

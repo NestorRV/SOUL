@@ -85,6 +85,7 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
     val resultClasses: Array[Any] = Array.concat(data.y, Array.fill(output.length)(minorityClass))
 
     val ennData: Data = new Data(x = toXData(result), y = resultClasses, fileInfo = data.fileInfo)
+    ennData.processedData = result
     val enn = new ENN(ennData, file = None, distance = distance)
     val resultTL: Data = enn.compute()
     val finalIndex: Array[Int] = result.indices.diff(resultTL.index.get).toArray

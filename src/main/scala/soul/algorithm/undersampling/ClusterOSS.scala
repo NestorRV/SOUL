@@ -89,6 +89,7 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
     // Construct a data object to be passed to Tomek Link
     val auxData: Data = new Data(x = toXData(newDataIndex map dataToWorkWith),
       y = newDataIndex map classesToWorkWith, fileInfo = data.fileInfo)
+    auxData.processedData = newDataIndex map dataToWorkWith
     val tl = new TL(auxData, file = None, distance = distance)
     tl.untouchableClass_=(untouchableClass)
     val resultTL: Data = tl.compute()

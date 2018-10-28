@@ -86,6 +86,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     val resultClasses: Array[Any] = Array.concat(data.y, Array.fill(output.length)(minorityClass))
 
     val tlData: Data = new Data(x = toXData(result), y = resultClasses, fileInfo = data.fileInfo)
+    tlData.processedData = result
     val tl = new TL(tlData, file = None, distance = distance, ratio = "all")
     val resultTL: Data = tl.compute()
     val finalIndex: Array[Int] = result.indices.diff(resultTL.index.get).toArray

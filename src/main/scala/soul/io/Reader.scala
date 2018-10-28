@@ -4,6 +4,7 @@ import java.io.{BufferedReader, FileInputStream, InputStreamReader}
 import java.text.ParseException
 
 import soul.data.{Data, FileInfo}
+import soul.util.Utilities.processData
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -127,7 +128,11 @@ class Reader {
 
     val fileInfo = new FileInfo(_file = file, _comment = "%", _columnClass = response, _delimiter = null, _missing = "?", _header = null,
       _relationName = relationName, _attributes = attributes, _attributesValues = attributesValues, nominal = readNominal.distinct.toArray)
-    new Data(x = finalData.toArray, y = readClasses.toArray, fileInfo = fileInfo)
+    val data: Data = new Data(x = finalData.toArray, y = readClasses.toArray, fileInfo = fileInfo)
+    val (processedData, nomToNum) = processData(data)
+    data.processedData = processedData
+    data.nomToNum = nomToNum
+    data
   }
 
   /** Parse a delimited text data file
@@ -189,6 +194,10 @@ class Reader {
 
     val fileInfo = new FileInfo(_file = file, _comment = "%", _columnClass = response, _delimiter = delimiter, _missing = missing, _header = headerArray, _relationName = null,
       _attributes = null, _attributesValues = attributesValues, nominal = readNominal.distinct.toArray)
-    new Data(x = readData.toArray, y = readClasses.toArray, fileInfo = fileInfo)
+    val data: Data = new Data(x = readData.toArray, y = readClasses.toArray, fileInfo = fileInfo)
+    val (processedData, nomToNum) = processData(data)
+    data.processedData = processedData
+    data.nomToNum = nomToNum
+    data
   }
 }

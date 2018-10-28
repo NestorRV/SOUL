@@ -533,7 +533,7 @@ object Utilities {
     * @author Néstor Rodríguez Vico, modified by David López Pretel
     * @param data data to process
     */
-  def processData(data: Data): Unit = {
+  def processData(data: Data): (Array[Array[Double]], Array[mutable.Map[Double, Any]]) = {
     val nomToNum: Array[mutable.Map[Double, Any]] = Array.fill(data.x(0).length)(mutable.Map[Double, Any]())
     var nomToNumIndex = 0
     val processedData: Array[Array[Double]] = data.x.transpose.zipWithIndex.map { column: (Array[Any], Int) =>
@@ -592,8 +592,7 @@ object Utilities {
         }
       }
     }
-    data.processedData = processedData.transpose
-    data.nomToNum = nomToNum
+    (processedData.transpose, nomToNum)
   }
 
   /** Compute the standard deviation for an array
