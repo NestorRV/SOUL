@@ -533,7 +533,6 @@ object Utilities {
     * Missing data was treated using the most frequent value for nominal variables and the median for numeric variables.
     * Nominal columns are converted to doubles.
     *
-    * @author Néstor Rodríguez Vico, modified by David López Pretel
     * @param data data to process
     */
   def processData(data: Data): (Array[Array[Double]], Array[mutable.Map[Double, Any]]) = {
@@ -664,7 +663,6 @@ object Utilities {
   /** Normalize the data as follow: for each column, x, (x-min(x))/(max(x)-min(x))
     * This method only normalize not nominal columns
     *
-    * @author Néstor Rodríguez Vico
     * @return normalized data
     */
   def zeroOneNormalization(d: Data, x: Array[Array[Double]]): Array[Array[Double]] = {
@@ -689,5 +687,4 @@ object Utilities {
   def zeroOneToIndex(data: Array[Int]): Array[Int] = {
     data.zipWithIndex.collect { case (v, i) if v == 1 => i }
   }
-
 }
