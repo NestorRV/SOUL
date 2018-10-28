@@ -110,12 +110,15 @@ object Utilities {
     */
   def computeDistance(n1: Array[Double], n2: Array[Double], distance: Distances.Distance, nominal: Array[Int], sds: Array[Double],
                       attrCounter: Array[Map[Double, Int]], attrClassesCounter: Array[Map[Double, Map[Any, Int]]]): Double = {
-    if (n1.length != n2.length) {
-      throw new Exception("Error: the length of both nodes must be the same")
-    }
-
     if (distance == Distances.EUCLIDEAN) {
-      sqrt((n1 zip n2).map((pair: (Double, Double)) => pow(pair._2 - pair._1, 2)).sum)
+      var d: Double = 0.0
+      var i: Int = 0
+      while (i < n1.size) {
+        val toPow2 = n1(i) - n2(i)
+        d += toPow2 * toPow2
+        i += 1
+      }
+      sqrt(d)
     } else if (distance == Distances.HVDM) {
       def normalized_diff(x: Double, y: Double, sd: Double): Double = abs(x - y) / (4 * sd)
 
