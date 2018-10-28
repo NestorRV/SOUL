@@ -11,25 +11,20 @@ import scala.util.Random
   * approach based on oversampling and undersampling for high imbalanced data-sets using SMOTE and rough sets theory"
   * by Enislay Ramentol, Yailé Caballero, Rafael Bello and Francisco Herrera.
   *
-  * @param data     data to work with
-  * @param seed     seed to use. If it is not provided, it will use the system time
-  * @param file     file to store the log. If its set to None, log process would not be done
-  * @param percent  amount of Smote N%
-  * @param k        number of minority class nearest neighbors
-  * @param distance the type of distance to use, hvdm or euclidean
+  * @param data      data to work with
+  * @param seed      seed to use. If it is not provided, it will use the system time
+  * @param file      file to store the log. If its set to None, log process would not be done
+  * @param percent   amount of Smote N%
+  * @param k         number of minority class nearest neighbors
+  * @param distance  distance to use when calling the NNRule
+  * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class SMOTERSB(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-               percent: Int = 500, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN) {
+               percent: Int = 500, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN, val normalize: Boolean = false) {
 
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
-  // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
-  // Data without NA values and with nominal values transformed to numeric values
-  private[soul] val (processedData, nomToNum) = processData(data)
-  // Samples to work with
-  private[soul] val samples: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN) zeroOneNormalization(data, processedData) else processedData
 
   /** Compute the SMOTERSB algorithm
     *
@@ -41,8 +36,17 @@ class SMOTERSB(private[soul] val data: Data, private[soul] val seed: Long = Syst
     }
 
     val initTime: Long = System.nanoTime()
+    val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))
+
+    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
+      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+        samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
+        samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
+    } else {
+      (null, null, null)
+    }
 
     // check if the percent is correct
     var T: Int = minorityClassIndex.length
@@ -64,8 +68,7 @@ class SMOTERSB(private[soul] val data: Data, private[soul] val seed: Long = Syst
     val r: Random = new Random(seed)
     // for each minority class sample
     minorityClassIndex.zipWithIndex.foreach(i => {
-      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.fileInfo.nominal.length == 0,
-        (samples, data.y)).map(minorityClassIndex(_))
+      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter).map(minorityClassIndex(_))
       // calculate populate for the sample
       (0 until N).foreach(_ => {
         val nn: Int = r.nextInt(neighbors.length)
@@ -90,7 +93,7 @@ class SMOTERSB(private[soul] val data: Data, private[soul] val seed: Long = Syst
     val similarityMatrix: Array[Array[Double]] = output.map(i => {
       (majorityClassIndex map samples).map(j => {
         i.indices.map(k => {
-          if (nomToNum(0).isEmpty) {
+          if (data.nomToNum(0).isEmpty) {
             1 - (Math.abs(i(k) - j(k)) / (Amax(k) - Amin(k))) // this expression must be multiplied by wk
           } else { // but all the features are included, so wk is 1
             if (i(k) == j(k)) 1 else 0
@@ -120,23 +123,17 @@ class SMOTERSB(private[soul] val data: Data, private[soul] val seed: Long = Syst
       result = Array.range(0, output.length)
     }
 
-    val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + result.length).indices.toList).toArray
     // check if the data is nominal or numerical
     val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
-      dataShuffled map to2Decimals(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(result map output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else result map output))
+      to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(result map output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else result map output))
     } else {
-      dataShuffled map toNominal(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(result map output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else result map output), nomToNum)
-    }, dataShuffled map Array.concat(data.y, Array.fill((result map output).length)(minorityClass)),
-      Some(dataShuffled.zipWithIndex.collect { case (c, i) if c >= samples.length => i }), data.fileInfo)
+      toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(result map output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else result map output), data.nomToNum)
+    }, Array.concat(data.y, Array.fill((result map output).length)(minorityClass)), None, data.fileInfo)
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
       logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
       logger.addMsg("NEW DATA SIZE: %d".format(newData.x.length))
-      logger.addMsg("NEW SAMPLES ARE:")
-      dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) logger.addMsg("%d".format(index._2)))
       logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
       logger.storeFile(file.get)
     }

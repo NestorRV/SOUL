@@ -10,128 +10,22 @@ import scala.util.Random
 /** MWMOTE algorithm. Original paper: "MWMOTE—Majority Weighted Minority Oversampling Technique for Imbalanced Data Set
   * Learning" by Sukarna Barua, Md. Monirul Islam, Xin Yao, Fellow, IEEE, and Kazuyuki Muras.
   *
-  * @param data     data to work with
-  * @param seed     seed to use. If it is not provided, it will use the system time
-  * @param file     file to store the log. If its set to None, log process would not be done
-  * @param N        number of synthetic samples to be generated
-  * @param k1       number of neighbors used for predicting noisy minority class samples
-  * @param k2       number of majority neighbors used for constructing informative minority set
-  * @param k3       number of minority neighbors used for constructing informative minority set
-  * @param distance the type of distance to use, hvdm or euclidean
+  * @param data      data to work with
+  * @param seed      seed to use. If it is not provided, it will use the system time
+  * @param file      file to store the log. If its set to None, log process would not be done
+  * @param N         number of synthetic samples to be generated
+  * @param k1        number of neighbors used for predicting noisy minority class samples
+  * @param k2        number of majority neighbors used for constructing informative minority set
+  * @param k3        number of minority neighbors used for constructing informative minority set
+  * @param distance  distance to use when calling the NNRule
+  * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-             N: Int = 500, k1: Int = 5, k2: Int = 5, k3: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN) {
+             N: Int = 500, k1: Int = 5, k2: Int = 5, k3: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN, val normalize: Boolean = false) {
 
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
-  // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
-  // Data without NA values and with nominal values transformed to numeric values
-  private[soul] val (processedData, nomToNum) = processData(data)
-  // Samples to work with
-  private[soul] val samples: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN) zeroOneNormalization(data, processedData) else processedData
-
-  /** cut-off function
-    *
-    * @param value value to be checked
-    * @param cut   cut-off value
-    * @return the value cutted-off
-    */
-  private def f(value: Double, cut: Double): Double = {
-    if (value < cut) value else cut
-  }
-
-  /**
-    * Compute the closeness factor
-    *
-    * @param x    index of one node to work with
-    * @param y    index of another node to work with
-    * @param Nmin neighbors of 'y' necessaries to calculate the closeness factor
-    * @return the closeness factor
-    */
-
-  private def Cf(y: (Int, Int), x: Int, Nmin: Array[Array[Int]]): Double = {
-    val cut: Double = 5 // values used in the paper
-    val CMAX: Double = 2
-
-    if (!Nmin(y._2).contains(x))
-      f(samples(0).length / computeDistanceOversampling(samples(y._1), samples(x), distance, data.fileInfo.nominal.length == 0,
-        (samples, data.y)), cut) * CMAX
-    else
-      0.0
-  }
-
-  /** Compute the information weight
-    *
-    * @param x     index of one node to work with
-    * @param y     index of another node to work with
-    * @param Nmin  neighbors of 'y' necessaries to calculate the closeness factor
-    * @param Simin informative minority set necessary to calculate density factor
-    * @return the information weight
-    */
-  private def Iw(y: (Int, Int), x: Int, Nmin: Array[Array[Int]], Simin: Array[Int]): Double = {
-    val cf = Cf(y, x, Nmin)
-    val df = cf / Simin.map(Cf(y, _, Nmin)).sum
-    cf + df
-  }
-
-  /**
-    * compute distance between two clusters based in the distance between their centroids
-    *
-    * @param cluster1 index of the elements in the cluster
-    * @param cluster2 index of the elements in the cluster
-    * @return distance between the two clusters
-    */
-  private def clusterDistance(cluster1: Array[Int], cluster2: Array[Int]): Double = {
-    val centroid1: Array[Double] = (cluster1 map samples).transpose.map(_.sum / cluster1.length)
-    val centroid2: Array[Double] = (cluster2 map samples).transpose.map(_.sum / cluster2.length)
-    computeDistanceOversampling(centroid1, centroid2, distance, data.fileInfo.nominal.length == 0,
-      (Array.concat(cluster1, cluster2) map samples, Array.concat(cluster1, cluster2) map data.y))
-  }
-
-  /**
-    * search the minimum distance between each pair of clusters
-    *
-    * @param cluster clusters to work with
-    * @return index of the two clusters and the distance
-    */
-  private def minDistance(cluster: ArrayBuffer[ArrayBuffer[Int]]): (Int, Int, Double) = {
-    var minDist: (Int, Int, Double) = (0, 0, 99999999)
-    cluster.indices.foreach(i => cluster.indices.foreach(j => {
-      if (i != j) {
-        val dist = clusterDistance(cluster(i).toArray, cluster(j).toArray)
-        if (dist < minDist._3) minDist = (i, j, dist)
-      }
-    }))
-    minDist
-  }
-
-  /**
-    * average-linkage agglomerative clustering
-    *
-    * @param Sminf necessary to compute the cut-off Th
-    * @return the data divided in clusters
-    */
-  private def cluster(Sminf: Array[Int]): Array[Array[Int]] = {
-    val dist: Array[Array[Double]] = Array.fill(Sminf.length, Sminf.length)(9999999.0)
-    Sminf.indices.foreach(i => Sminf.indices.foreach(j => if (i != j) dist(i)(j) = computeDistanceOversampling(samples(Sminf(i)),
-      samples(Sminf(j)), distance, data.fileInfo.nominal.length == 0, (Sminf map samples, Sminf map data.y))))
-
-    val Cp: Double = 3 // used in paper
-    val Th: Double = dist.map(_.min).sum / Sminf.length * Cp
-    var minDist: (Int, Int, Double) = (0, 0, 0.0)
-    val clusters: ArrayBuffer[ArrayBuffer[Int]] = Sminf.map(ArrayBuffer(_)).to[ArrayBuffer]
-    while (minDist._3 < Th) {
-      //compute the min distance between each cluster
-      minDist = minDistance(clusters)
-      //merge the two more proximal clusters
-      clusters(minDist._1) ++= clusters(minDist._2)
-      clusters -= clusters(minDist._2)
-    }
-
-    clusters.map(_.toArray).toArray
-  }
 
   /** Compute the MWMOTE algorithm
     *
@@ -139,6 +33,75 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
+    val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
+
+    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
+      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+        samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
+        samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
+    } else {
+      (null, null, null)
+    }
+
+    def f(value: Double, cut: Double): Double = {
+      if (value < cut) value else cut
+    }
+
+    def Cf(y: (Int, Int), x: Int, Nmin: Array[Array[Int]]): Double = {
+      val cut: Double = 5 // values used in the paper
+      val CMAX: Double = 2
+
+      if (!Nmin(y._2).contains(x)) {
+        val D: Double = computeDistance(samples(y._1), samples(x), distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+        f(samples(0).length / D, cut) * CMAX
+      } else
+        0.0
+    }
+
+    def Iw(y: (Int, Int), x: Int, Nmin: Array[Array[Int]], Simin: Array[Int]): Double = {
+      val cf = Cf(y, x, Nmin)
+      val df = cf / Simin.map(Cf(y, _, Nmin)).sum
+      cf + df
+    }
+
+    def clusterDistance(cluster1: Array[Int], cluster2: Array[Int]): Double = {
+      val centroid1: Array[Double] = (cluster1 map samples).transpose.map(_.sum / cluster1.length)
+      val centroid2: Array[Double] = (cluster2 map samples).transpose.map(_.sum / cluster2.length)
+
+      computeDistance(centroid1, centroid2, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+    }
+
+    def minDistance(cluster: ArrayBuffer[ArrayBuffer[Int]]): (Int, Int, Double) = {
+      var minDist: (Int, Int, Double) = (0, 0, 99999999)
+      cluster.indices.foreach(i => cluster.indices.foreach(j => {
+        if (i != j) {
+          val dist = clusterDistance(cluster(i).toArray, cluster(j).toArray)
+          if (dist < minDist._3) minDist = (i, j, dist)
+        }
+      }))
+      minDist
+    }
+
+    def cluster(Sminf: Array[Int]): Array[Array[Int]] = {
+      val dist: Array[Array[Double]] = Array.fill(Sminf.length, Sminf.length)(9999999.0)
+      Sminf.indices.foreach(i => Sminf.indices.foreach(j => if (i != j) dist(i)(j) = computeDistance(samples(Sminf(i)), samples(Sminf(j)),
+        distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)))
+
+      val Cp: Double = 3 // used in paper
+      val Th: Double = dist.map(_.min).sum / Sminf.length * Cp
+      var minDist: (Int, Int, Double) = (0, 0, 0.0)
+      val clusters: ArrayBuffer[ArrayBuffer[Int]] = Sminf.map(ArrayBuffer(_)).to[ArrayBuffer]
+      while (minDist._3 < Th) {
+        //compute the min distance between each cluster
+        minDist = minDistance(clusters)
+        //merge the two more proximal clusters
+        clusters(minDist._1) ++= clusters(minDist._2)
+        clusters -= clusters(minDist._2)
+      }
+
+      clusters.map(_.toArray).toArray
+    }
+
     // compute minority class
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))
@@ -147,7 +110,7 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
 
     // construct the filtered minority set
     val Sminf: Array[Int] = minorityClassIndex.map(index => {
-      val neighbors = kNeighbors(samples, index, k1, distance, data.fileInfo.nominal.length == 0, (samples, data.y))
+      val neighbors = kNeighbors(samples, index, k1, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       if (neighbors map data.y contains data.y(minorityClassIndex(0))) {
         Some(index)
       } else {
@@ -157,10 +120,10 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
 
     //for each sample in Sminf compute the nearest majority set
     val Sbmaj: Array[Int] = Sminf.flatMap(x => kNeighbors(majorityClassIndex map samples, samples(x), k2, distance,
-      data.fileInfo.nominal.length == 0, (majorityClassIndex map samples, majorityClassIndex map data.y))).distinct.map(majorityClassIndex(_))
+      data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)).distinct.map(majorityClassIndex(_))
     // for each majority example in Sbmaj , compute the nearest minority set
     val Nmin: Array[Array[Int]] = Sbmaj.map(x => kNeighbors(minorityClassIndex map samples, samples(x), k3, distance,
-      data.fileInfo.nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data.y)).map(minorityClassIndex(_)))
+      data.fileInfo.nominal, sds, attrCounter, attrClassesCounter).map(minorityClassIndex(_)))
 
     // find the informative minority set (union of all Nmin)
     val Simin: Array[Int] = Nmin.flatten.distinct
@@ -194,23 +157,17 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
       })
     })
 
-    val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
     val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
-      dataShuffled map to2Decimals(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
+      to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
     } else {
-      dataShuffled map toNominal(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), nomToNum)
-    }, dataShuffled map Array.concat(data.y, Array.fill(output.length)(minorityClass)),
-      Some(dataShuffled.zipWithIndex.collect { case (c, i) if c >= samples.length => i }), data.fileInfo)
+      toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), data.nomToNum)
+    }, Array.concat(data.y, Array.fill(output.length)(minorityClass)), None, data.fileInfo)
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
       logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
       logger.addMsg("NEW DATA SIZE: %d".format(newData.x.length))
-      logger.addMsg("NEW SAMPLES ARE:")
-      dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) logger.addMsg("%d".format(index._2)))
       logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
       logger.storeFile(file.get)
     }

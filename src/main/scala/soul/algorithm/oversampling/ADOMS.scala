@@ -10,25 +10,20 @@ import scala.util.Random
 /** ADOMS algorithm. Original paper: "The Generation Mechanism of Synthetic Minority Class Examples" by Sheng TANG
   * and Si-ping CHEN.
   *
-  * @param data     data to work with
-  * @param seed     seed to use. If it is not provided, it will use the system time
-  * @param file     file to store the log. If its set to None, log process would not be done
-  * @param percent  amount of samples N%
-  * @param k        number of neighbors
-  * @param distance the type of distance to use, hvdm or euclidean
+  * @param data      data to work with
+  * @param seed      seed to use. If it is not provided, it will use the system time
+  * @param file      file to store the log. If its set to None, log process would not be done
+  * @param percent   amount of samples N%
+  * @param k         number of neighbors
+  * @param distance  distance to use when calling the NNRule
+  * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-            percent: Int = 300, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN) {
+            percent: Int = 300, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN, val normalize: Boolean = false) {
 
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
-  // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
-  // Data without NA values and with nominal values transformed to numeric values
-  private[soul] val (processedData, nomToNum) = processData(data)
-  // Samples to work with
-  private[soul] val samples: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN) zeroOneNormalization(data, processedData) else processedData
 
   /** Compute the first principal component axis
     *
@@ -55,6 +50,7 @@ class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
+    val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))
     // output with a size of T*N samples
@@ -64,16 +60,23 @@ class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.
     var newIndex: Int = 0
     val r: Random = new Random(seed)
 
+    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
+      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+        samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
+        samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
+    } else {
+      (null, null, null)
+    }
+
     (0 until percent / 100).foreach(_ => {
       // for each minority class sample
       minorityClassIndex.zipWithIndex.foreach(i => {
-        neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.fileInfo.nominal.length == 0,
-          (minorityClassIndex map samples, minorityClassIndex map data.y))
+        neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
         // calculate first principal component axis of local data distribution
         val l2: Array[Double] = PCA((neighbors map minorityClassIndex) map samples)
         val n: Int = r.nextInt(neighbors.length)
-        val D: Double = computeDistanceOversampling(samples(i._1), samples(minorityClassIndex(neighbors(n))), distance,
-          data.fileInfo.nominal.length == 0, (minorityClassIndex map samples, minorityClassIndex map data.y))
+        val D: Double = computeDistance(samples(i._1), samples(minorityClassIndex(neighbors(n))), distance, data.fileInfo.nominal,
+          sds, attrCounter, attrClassesCounter)
         // compute projection of n in l2, M is on l2
         val dotMN: Double = l2.indices.map(j => {
           samples(i._1)(j) - samples(minorityClassIndex(neighbors(n)))(j)
@@ -87,23 +90,17 @@ class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.
       })
     })
 
-    val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
     val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
-      dataShuffled map to2Decimals(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
+      to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
     } else {
-      dataShuffled map toNominal(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), nomToNum)
-    }, dataShuffled map Array.concat(data.y, Array.fill(output.length)(minorityClass)),
-      Some(dataShuffled.zipWithIndex.collect { case (c, i) if c >= samples.length => i }), data.fileInfo)
+      toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), data.nomToNum)
+    }, Array.concat(data.y, Array.fill(output.length)(minorityClass)), None, data.fileInfo)
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
       logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
       logger.addMsg("NEW DATA SIZE: %d".format(newData.x.length))
-      logger.addMsg("NEW SAMPLES ARE:")
-      dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) logger.addMsg("%d".format(index._2)))
       logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
       logger.storeFile(file.get)
     }

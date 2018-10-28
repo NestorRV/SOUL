@@ -10,23 +10,18 @@ import scala.util.Random
 /** MDO algorithm. Original paper: "To combat multi-class imbalanced problems by means of over-sampling and boosting
   * techniques" by Lida Adbi and Sattar Hashemi.
   *
-  * @param data     data to work with
-  * @param seed     seed to use. If it is not provided, it will use the system time
-  * @param file     file to store the log. If its set to None, log process would not be done
-  * @param distance the type of distance to use, hvdm or euclidean
+  * @param data      data to work with
+  * @param seed      seed to use. If it is not provided, it will use the system time
+  * @param file      file to store the log. If its set to None, log process would not be done
+  * @param distance  distance to use when calling the NNRule
+  * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-          distance: Distances.Distance = Distances.EUCLIDEAN) {
+          distance: Distances.Distance = Distances.EUCLIDEAN, val normalize: Boolean = false) {
 
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
-  // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
-  // Data without NA values and with nominal values transformed to numeric values
-  private[soul] val (processedData, nomToNum) = processData(data)
-  // Samples to work with
-  private[soul] val samples: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN) zeroOneNormalization(data, processedData) else processedData
 
   /** create the new samples for MDO algorithm
     *
@@ -34,11 +29,10 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     * @param mean  the mean of every characteristic
     * @param V     the vector of coefficients
     * @param Orate majoritySamples - minoritySamples
-    * @param seed  seed for the random
+    * @param seed  seed to use. If it is not provided, it will use the system time
     * @return return the new samples generated
     */
-  def MDO_oversampling(Ti: DenseMatrix[Double], mean: Array[Double], V: DenseVector[Double], Orate: Int,
-                       seed: Long): Array[Array[Double]] = {
+  def MDO_oversampling(Ti: DenseMatrix[Double], mean: Array[Double], V: DenseVector[Double], Orate: Int, seed: Long): Array[Array[Double]] = {
     // check the number of new samples to be created
     var I: Int = Ti.rows
     var N: Int = Orate / I
@@ -83,6 +77,7 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
+    val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
     // compute minority class
     val minorityClassIndex: Array[Int] = minority(data.y)
     // compute majority class
@@ -116,25 +111,17 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     // the output
     val output: Array[Array[Double]] = Array.range(0, samplesWithMean.rows).map(i => samplesWithMean(i, ::).t.toArray)
 
-    val r: Random = new Random(seed)
-    val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
-
     // check if the data is nominal or numerical
     val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
-      dataShuffled map to2Decimals(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
+      to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
     } else {
-      dataShuffled map toNominal(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), nomToNum)
-    }, dataShuffled map Array.concat(data.y, Array.fill(output.length)(minorityClass)),
-      Some(dataShuffled.zipWithIndex.collect { case (c, i) if c >= samples.length => i }), data.fileInfo)
+      toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), data.nomToNum)
+    }, Array.concat(data.y, Array.fill(output.length)(minorityClass)), None, data.fileInfo)
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
       logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
       logger.addMsg("NEW DATA SIZE: %d".format(newData.x.length))
-      logger.addMsg("NEW SAMPLES ARE:")
-      dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) logger.addMsg("%d".format(index._2)))
       logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
       logger.storeFile(file.get)
     }

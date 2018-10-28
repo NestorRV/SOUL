@@ -4,8 +4,6 @@ import soul.data.Data
 import soul.io.Logger
 import soul.util.Utilities._
 
-import scala.util.Random
-
 /** Easy Ensemble algorithm. Original paper: "Exploratory Undersampling for Class-Imbalance Learning" by Xu-Ying Liu,
   * Jianxin Wu and Zhi-Hua Zhou.
   *
@@ -17,10 +15,12 @@ import scala.util.Random
   *                    numMinorityInstances * ratio
   * @param replacement whether or not to sample randomly with replacement or not. false by default
   * @param nTimes      times to perform the random algorithm
+  * @param normalize   normalize the data or not
+  * @param randomData  iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
 class EE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-         ratio: Double = 1.0, replacement: Boolean = false, nTimes: Int = 5) {
+         ratio: Double = 1.0, replacement: Boolean = false, nTimes: Int = 5, val normalize: Boolean = false, val randomData: Boolean = false) {
 
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
@@ -28,14 +28,6 @@ class EE(private[soul] val data: Data, private[soul] val seed: Long = System.cur
   private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
   private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
-  // Index to shuffle (randomize) the data
-  private[soul] val randomIndex: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
-  // Data without NA values and with nominal values transformed to numeric values
-  private[soul] val (processedData, _) = processData(data)
-  // Use randomized data
-  val dataToWorkWith: Array[Array[Double]] = (randomIndex map processedData).toArray
-  // and randomized classes to match the randomized data
-  val classesToWorkWith: Array[Any] = (randomIndex map data.y).toArray
 
   /** Compute the EE algorithm.
     *
@@ -43,8 +35,20 @@ class EE(private[soul] val data: Data, private[soul] val seed: Long = System.cur
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
+    val random: scala.util.Random = new scala.util.Random(seed)
+
+    var dataToWorkWith: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
+    var randomIndex: List[Int] = data.x.indices.toList
+    val classesToWorkWith: Array[Any] = if (randomData) {
+      // Index to shuffle (randomize) the data
+      randomIndex = random.shuffle(data.y.indices.toList)
+      dataToWorkWith = (randomIndex map dataToWorkWith).toArray
+      (randomIndex map data.y).toArray
+    } else {
+      data.y
+    }
+
     val minorityIndex: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label == untouchableClass => i }
-    val random: Random = new Random(seed)
     val majIndex: List[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label != untouchableClass => i }.toList
     val majElements: Array[Int] = (0 until nTimes).flatMap { _: Int =>
       val majorityIndex: Array[Int] = random.shuffle(majIndex).toArray

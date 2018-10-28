@@ -25,10 +25,13 @@ import scala.collection.mutable.ArrayBuffer
   * @param iterations   number of iterations used in Differential Evolution
   * @param strategy     strategy used in the mutation process of Differential Evolution
   * @param randomChoice whether to choose a random individual or not
+  * @param normalize    normalize the data or not
+  * @param randomData   iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
 class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-            iterations: Int = 100, strategy: Int = 1, randomChoice: Boolean = true) {
+            iterations: Int = 100, strategy: Int = 1, randomChoice: Boolean = true, val normalize: Boolean = false,
+            val randomData: Boolean = false) {
 
   private[soul] val random: scala.util.Random = new scala.util.Random(seed)
   // Logger object to log the execution of the algorithm
@@ -37,21 +40,14 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
   private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
   private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
-  // Index to shuffle (randomize) the data
-  private[soul] val randomIndex: List[Int] = random.shuffle(data.y.indices.toList)
-  // Data without NA values and with nominal values transformed to numeric values
-  private[soul] val (processedData, _) = processData(data)
-  // Use normalized localTrainData and randomized localTrainData
-  val dataToWorkWith: Array[Array[Double]] = (randomIndex map zeroOneNormalization(data, processedData)).toArray
-  // and randomized localTrainClasses to match the randomized localTrainData
-  val classesToWorkWith: Array[Any] = (randomIndex map data.y).toArray
-
 
   /** Compute the IPADE algorithm.
     *
     * @return undersampled data structure
     */
   def compute(): Data = {
+    val random: scala.util.Random = new scala.util.Random(seed)
+
     def accuracy(trainData: Array[Array[Double]], trainClasses: Array[Any], testData: Array[Array[Double]], testClasses: Array[Any]): Double = {
       val trainInstances: Instances = buildInstances(data = trainData, classes = trainClasses, fileInfo = data.fileInfo)
       val testInstances: Instances = buildInstances(data = testData, classes = testClasses, fileInfo = data.fileInfo)
@@ -360,6 +356,18 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
     }
 
     val initTime: Long = System.nanoTime()
+
+    var dataToWorkWith: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
+    var randomIndex: List[Int] = data.x.indices.toList
+    val classesToWorkWith: Array[Any] = if (randomData) {
+      // Index to shuffle (randomize) the data
+      randomIndex = random.shuffle(data.y.indices.toList)
+      dataToWorkWith = (randomIndex map dataToWorkWith).toArray
+      (randomIndex map data.y).toArray
+    } else {
+      data.y
+    }
+
     var counterAux: Double = -1.0
     val classesTranslation: Map[Any, Double] = classesToWorkWith.distinct.map { value: Any => counterAux += 1.0; value -> counterAux }.toMap
 

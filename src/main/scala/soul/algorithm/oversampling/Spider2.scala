@@ -5,103 +5,34 @@ import soul.io.Logger
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
-import scala.util.Random
 
 /** Spider2 algorithm. Original paper: "Learning from Imbalanced Data in Presence of Noisy and Borderline Examples" by
   * Krystyna Napiera la, Jerzy Stefanowski and Szymon Wilk.
   *
-  * @param data     data to work with
-  * @param seed     seed to use. If it is not provided, it will use the system time
-  * @param file     file to store the log. If its set to None, log process would not be done
-  * @param relabel  relabeling option
-  * @param ampl     amplification option
-  * @param k        number of minority class nearest neighbors
-  * @param distance the type of distance to use, hvdm or euclidean
+  * @param data      data to work with
+  * @param seed      seed to use. If it is not provided, it will use the system time
+  * @param file      file to store the log. If its set to None, log process would not be done
+  * @param relabel   relabeling option
+  * @param ampl      amplification option
+  * @param k         number of minority class nearest neighbors
+  * @param distance  distance to use when calling the NNRule
+  * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class Spider2(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-              relabel: String = "yes", ampl: String = "weak", k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN) {
+              relabel: String = "yes", ampl: String = "weak", k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN,
+              val normalize: Boolean = false) {
 
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
-  // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
-  // Data without NA values and with nominal values transformed to numeric values
-  private[soul] val (processedData, nomToNum) = processData(data)
-
   // array with the index of the minority class
   private var minorityClassIndex: Array[Int] = minority(data.y)
   private val minorityClass: Any = data.y(minorityClassIndex(0))
   // array with the index of the majority class
-  private var majorityClassIndex: Array[Int] = processedData.indices.diff(minorityClassIndex.toList).toArray
+  private var majorityClassIndex: Array[Int] = data.processedData.indices.diff(minorityClassIndex.toList).toArray
   // the samples computed by the algorithm
   private val output: ArrayBuffer[Array[Double]] = ArrayBuffer()
-  // Samples to work with
-  private[soul] val samples: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN) zeroOneNormalization(data, processedData) else processedData
   private var resultClasses: Array[Any] = _
-
-  /**
-    * @param c array of index of samples that belongs to a determined class
-    * @param f array of flags that represent if a sample is safe or not
-    * @return return a subset of examples that belong to class c and are flagged as f
-    */
-  def flagged(c: Array[Int], f: Array[Boolean]): Array[Int] = {
-    c.map(classes => {
-      if (!f(classes)) Some(classes) else None
-    }).filterNot(_.forall(_ == None)).map(_.get)
-  }
-
-  /** amplifies example x by creating its n-copies
-    *
-    * @param x index of the element
-    * @param k number of neighbors
-    * @return x amplified
-    */
-  def amplify(x: Int, k: Int): Unit = {
-    // compute the neighborhood for the majority and minority class
-    val majNeighbors: Array[Int] = kNeighbors(majorityClassIndex map output, output(x), k, distance,
-      data.fileInfo.nominal.length == 0, (output.toArray, resultClasses))
-    val minNeighbors: Array[Int] = kNeighbors(minorityClassIndex map output, output(x), k, distance,
-      data.fileInfo.nominal.length == 0, (output.toArray, resultClasses))
-    // compute the number of copies to create
-    val S: Int = Math.abs(majNeighbors.length - minNeighbors.length) + 1
-    // need to know the size of the output to save the randomIndex of the elements inserted
-    val outputSize: Int = output.length
-    (0 until S).foreach(_ => {
-      output ++= Traversable(output(x))
-    })
-    // add n copies to the output
-    if (resultClasses(x) == minorityClass) {
-      minorityClassIndex = minorityClassIndex ++ (outputSize until outputSize + S)
-    } else {
-      majorityClassIndex = majorityClassIndex ++ (outputSize until outputSize + S)
-    }
-    resultClasses = resultClasses ++ Array.fill(S)(resultClasses(x))
-  }
-
-  /** classifies example x using its k-nearest neighbors and returns true
-    * or false for correct and incorrect classification respectively
-    *
-    * @param x   randomIndex of the element
-    * @param k   number of minority class nearest neighbors
-    * @param out indicate if use the output or the input data, true = input data
-    * @return true or false
-    */
-  def correct(x: Int, k: Int, out: Boolean): Boolean = {
-    // compute the neighbors
-    val neighbors: Array[Int] = kNeighbors(if (out) samples else output.toArray, if (out) samples(x) else output(x), k, distance,
-      data.fileInfo.nominal.length == 0, if (out) (samples, data.y) else (output.toArray, resultClasses))
-    val classes: scala.collection.mutable.Map[Any, Int] = scala.collection.mutable.Map()
-    // compute the number of samples for each class in the neighborhood
-    neighbors.foreach(neighbor => classes += data.y(neighbor) -> 0)
-    neighbors.foreach(neighbor => classes(data.y(neighbor)) += 1)
-
-    // if the majority class in neighborhood is the minority class return true
-    if (classes.reduceLeft((x: (Any, Int), y: (Any, Int)) => if (x._2 > y._2) x else y)._1 == data.y(x))
-      true
-    else
-      false
-  }
 
   /** Compute the Spider2 algorithm
     *
@@ -117,6 +48,58 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
     }
 
     val initTime: Long = System.nanoTime()
+    val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
+
+    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
+      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+        samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
+        samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
+    } else {
+      (null, null, null)
+    }
+
+    def flagged(c: Array[Int], f: Array[Boolean]): Array[Int] = {
+      c.map(classes => {
+        if (!f(classes)) Some(classes) else None
+      }).filterNot(_.forall(_ == None)).map(_.get)
+    }
+
+    def amplify(x: Int, k: Int): Unit = {
+      // compute the neighborhood for the majority and minority class
+      val majNeighbors: Array[Int] = kNeighbors(majorityClassIndex map output, output(x), k, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      val minNeighbors: Array[Int] = kNeighbors(minorityClassIndex map output, output(x), k, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      // compute the number of copies to create
+      val S: Int = Math.abs(majNeighbors.length - minNeighbors.length) + 1
+      // need to know the size of the output to save the randomIndex of the elements inserted
+      val outputSize: Int = output.length
+      (0 until S).foreach(_ => {
+        output ++= Traversable(output(x))
+      })
+      // add n copies to the output
+      if (resultClasses(x) == minorityClass) {
+        minorityClassIndex = minorityClassIndex ++ (outputSize until outputSize + S)
+      } else {
+        majorityClassIndex = majorityClassIndex ++ (outputSize until outputSize + S)
+      }
+      resultClasses = resultClasses ++ Array.fill(S)(resultClasses(x))
+    }
+
+    def correct(x: Int, k: Int, out: Boolean): Boolean = {
+      // compute the neighbors
+      val neighbors: Array[Int] = kNeighbors(if (out) samples else output.toArray, if (out) samples(x) else output(x), k, distance,
+        data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      val classes: scala.collection.mutable.Map[Any, Int] = scala.collection.mutable.Map()
+      // compute the number of samples for each class in the neighborhood
+      neighbors.foreach(neighbor => classes += data.y(neighbor) -> 0)
+      neighbors.foreach(neighbor => classes(data.y(neighbor)) += 1)
+
+      // if the majority class in neighborhood is the minority class return true
+      if (classes.reduceLeft((x: (Any, Int), y: (Any, Int)) => if (x._2 > y._2) x else y)._1 == data.y(x))
+        true
+      else
+        false
+    }
+
     // array with the randomIndex of each sample
     var DS: Array[Int] = Array.range(0, samples.length)
     // at the beginning there are not safe samples
@@ -167,24 +150,18 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
       })
     }
 
-    val r: Random = new Random(seed)
-    val dataShuffled: Array[Int] = r.shuffle(output.indices.toList).toArray
     // check if the data is nominal or numerical
     val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
-      dataShuffled map to2Decimals(if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray)
+      to2Decimals(if (normalize) zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray)
     } else {
-      dataShuffled map toNominal(if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray, nomToNum)
-    }, dataShuffled map resultClasses, Some(dataShuffled.zipWithIndex.collect { case (c, i) if c >= samples.length => i }), data.fileInfo)
+      toNominal(if (normalize) zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray, data.nomToNum)
+    }, resultClasses, None, data.fileInfo)
 
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
       logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
       logger.addMsg("NEW DATA SIZE: %d".format(newData.x.length))
-      logger.addMsg("NEW SAMPLES ARE:")
-      dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) logger.addMsg("%d".format(index._2)))
       logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
       logger.storeFile(file.get)
     }

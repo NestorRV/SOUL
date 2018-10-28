@@ -6,7 +6,6 @@ import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.math.{abs, sqrt}
-import scala.util.Random
 
 /** Evolutionary Under Sampling. Original paper: "Evolutionary Under-Sampling for Classification with Imbalanced Data
   * Sets: Proposals and Taxonomy" by Salvador Garcia and Francisco Herrera.
@@ -18,15 +17,18 @@ import scala.util.Random
   * @param maxEvaluations number of evaluations
   * @param algorithm      version of core to execute. One of: EBUSGSGM, EBUSMSGM, EBUSGSAUC, EBUSMSAUC,
   *                       EUSCMGSGM, EUSCMMSGM, EUSCMGSAUC or EUSCMMSAUC
-  * @param distance       distance to use when calling the NNRule core
+  * @param distance       distance to use when calling the NNRule
   * @param probHUX        probability of changing a gen from 0 to 1 (used in crossover)
   * @param recombination  recombination threshold (used in reinitialization)
   * @param prob0to1       probability of changing a gen from 0 to 1 (used in reinitialization)
+  * @param normalize      normalize the data or not
+  * @param randomData     iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
 class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
           populationSize: Int = 50, maxEvaluations: Int = 1000, algorithm: String = "EBUSMSGM", distance: Distances.Distance = Distances.EUCLIDEAN,
-          probHUX: Double = 0.25, recombination: Double = 0.35, prob0to1: Double = 0.05) {
+          probHUX: Double = 0.25, recombination: Double = 0.35, prob0to1: Double = 0.05,
+          val normalize: Boolean = false, val randomData: Boolean = false) {
 
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
@@ -34,17 +36,6 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
   private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
-  // Index to shuffle (randomize) the data
-  private[soul] val randomIndex: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
-  // Data without NA values and with nominal values transformed to numeric values
-  private[soul] val (processedData, _) = processData(data)
-  // Use randomized data
-  val dataToWorkWith: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN)
-    (randomIndex map zeroOneNormalization(data, processedData)).toArray else (randomIndex map processedData).toArray
-  // and randomized classes to match the randomized data
-  val classesToWorkWith: Array[Any] = (randomIndex map data.y).toArray
-  // Distances among the elements
-  val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, distance, data.fileInfo.nominal, data.y)
 
   /** Compute the EUS algorithm.
     *
@@ -52,14 +43,38 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
+    val random: scala.util.Random = new scala.util.Random(seed)
+
+    var dataToWorkWith: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
+    var randomIndex: List[Int] = data.x.indices.toList
+    val classesToWorkWith: Array[Any] = if (randomData) {
+      // Index to shuffle (randomize) the data
+      randomIndex = random.shuffle(data.y.indices.toList)
+      dataToWorkWith = (randomIndex map dataToWorkWith).toArray
+      (randomIndex map data.y).toArray
+    } else {
+      data.y
+    }
+
+    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
+      (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+        dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
+        dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
+    } else {
+      (null, null, null)
+    }
+
     val majoritySelection: Boolean = algorithm.contains("MS")
     val targetInstances: Array[Int] = classesToWorkWith.indices.toArray
     val minorityElements: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (c, i) if c == untouchableClass => i }
 
     def fitnessFunction(instance: Array[Int]): Double = {
       val index: Array[Int] = zeroOneToIndex(instance) map targetInstances
-      val predicted: Array[Any] = dataToWorkWith.indices.map((e: Int) => nnRule(distances = distances(e),
-        selectedElements = index.diff(Array(e)), labels = classesToWorkWith, k = 1)._1).toArray
+      val neighbours: Array[Array[Double]] = index map dataToWorkWith
+      val classes: Array[Any] = index map classesToWorkWith
+      val predicted: Array[Any] = dataToWorkWith.indices.map((e: Int) => nnRule(neighbours = neighbours,
+        instance = dataToWorkWith(e), id = e, labels = classes, k = 1, distance = distance, nominal = data.fileInfo.nominal,
+        sds = sds, attrCounter = attrCounter, attrClassesCounter = attrClassesCounter)._1).toArray
 
       val matrix: (Int, Int, Int, Int) = confusionMatrix(originalLabels = index map classesToWorkWith,
         predictedLabels = predicted, minorityClass = untouchableClass)
@@ -105,7 +120,6 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       fitness
     }
 
-    val random: Random = new Random(seed)
     val population: Array[Array[Int]] = new Array[Array[Int]](populationSize)
     (0 until populationSize).foreach { i: Int =>
       val individual: Array[Int] = targetInstances.indices.map((_: Int) => random.nextInt(2)).toArray

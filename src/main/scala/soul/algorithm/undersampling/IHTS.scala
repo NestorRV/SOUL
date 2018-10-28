@@ -6,19 +6,20 @@ import soul.util.Utilities._
 import weka.classifiers.trees.J48
 import weka.core.Instances
 
-import scala.util.Random
-
 
 /** Instance Hardness Threshold. Original paper: "An Empirical Study of Instance Hardness" by Michael R. Smith,
   * Tony Martinez and Christophe Giraud-Carrier.
   *
-  * @param data   data to work with
-  * @param seed   seed to use. If it is not provided, it will use the system time
-  * @param file   file to store the log. If its set to None, log process would not be done
-  * @param nFolds number of subsets to create when applying cross-validation
+  * @param data       data to work with
+  * @param seed       seed to use. If it is not provided, it will use the system time
+  * @param file       file to store the log. If its set to None, log process would not be done
+  * @param nFolds     number of subsets to create when applying cross-validation
+  * @param normalize  normalize the data or not
+  * @param randomData iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
-class IHTS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None, nFolds: Int = 5) {
+class IHTS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None, nFolds: Int = 5,
+           val normalize: Boolean = false, val randomData: Boolean = false) {
 
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
@@ -26,14 +27,6 @@ class IHTS(private[soul] val data: Data, private[soul] val seed: Long = System.c
   private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
   private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
-  // Index to shuffle (randomize) the data
-  private[soul] val randomIndex: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
-  // Data without NA values and with nominal values transformed to numeric values
-  private[soul] val (processedData, _) = processData(data)
-  // Use randomized data
-  val dataToWorkWith: Array[Array[Double]] = (randomIndex map processedData).toArray
-  // and randomized classes to match the randomized data
-  val classesToWorkWith: Array[Any] = (randomIndex map data.y).toArray
 
   /** Compute the IHTS algorithm.
     *
@@ -41,7 +34,19 @@ class IHTS(private[soul] val data: Data, private[soul] val seed: Long = System.c
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
-    val random: Random = new Random(seed)
+    val random: scala.util.Random = new scala.util.Random(seed)
+
+    var dataToWorkWith: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
+    var randomIndex: List[Int] = data.x.indices.toList
+    val classesToWorkWith: Array[Any] = if (randomData) {
+      // Index to shuffle (randomize) the data
+      randomIndex = random.shuffle(data.y.indices.toList)
+      dataToWorkWith = (randomIndex map dataToWorkWith).toArray
+      (randomIndex map data.y).toArray
+    } else {
+      data.y
+    }
+
     // Each element is the index of test elements
     val indices: Array[Array[Int]] = random.shuffle(classesToWorkWith.indices.toList).toArray.grouped((classesToWorkWith.length.toFloat / nFolds).ceil.toInt).toArray
     val probabilities: Array[Double] = new Array[Double](classesToWorkWith.length)

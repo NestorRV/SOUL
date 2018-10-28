@@ -9,26 +9,21 @@ import scala.util.Random
 /** ADASYN algorithm. Original paper: "ADASYN: Adaptive Synthetic Sampling Approach for Imbalanced Learning" by Haibo He,
   * Yang Bai, Edwardo A. Garcia, and Shutao Li.
   *
-  * @param data     data to work with
-  * @param seed     seed to use. If it is not provided, it will use the system time
-  * @param file     file to store the log. If its set to None, log process would not be done
-  * @param d        preset threshold for the maximum tolerated degree of class imbalance radio
-  * @param B        balance level after generation of synthetic data
-  * @param k        number of neighbors
-  * @param distance the type of distance to use, hvdm or euclidean
+  * @param data      data to work with
+  * @param seed      seed to use. If it is not provided, it will use the system time
+  * @param file      file to store the log. If its set to None, log process would not be done
+  * @param d         preset threshold for the maximum tolerated degree of class imbalance radio
+  * @param B         balance level after generation of synthetic data
+  * @param k         number of neighbors
+  * @param distance  distance to use when calling the NNRule
+  * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-             d: Double = 1, B: Double = 1, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN) {
+             d: Double = 1, B: Double = 1, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN, val normalize: Boolean = false) {
 
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
-  // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
-  // Data without NA values and with nominal values transformed to numeric values
-  private[soul] val (processedData, nomToNum) = processData(data)
-  // Samples to work with
-  private[soul] val samples: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN) zeroOneNormalization(data, processedData) else processedData
 
   /** Compute the ADASYN algorithm
     *
@@ -44,6 +39,16 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
     }
 
     val initTime: Long = System.nanoTime()
+    val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
+
+    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
+      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+        samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
+        samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
+    } else {
+      (null, null, null)
+    }
+
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))
 
@@ -53,7 +58,7 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
     val G: Int = ((ml - ms) * B).asInstanceOf[Int]
     // k neighbors of each minority sample
     val neighbors: Array[Array[Int]] = minorityClassIndex.indices.map(sample => {
-      kNeighbors(samples, minorityClassIndex(sample), k, distance, data.fileInfo.nominal.length == 0, (samples, data.y))
+      kNeighbors(samples, minorityClassIndex(sample), k, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
     }).toArray
 
     // ratio of each minority sample
@@ -86,24 +91,18 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
       })
     })
 
-    val dataShuffled: Array[Int] = r.shuffle((0 until samples.length + output.length).indices.toList).toArray
     // check if the data is nominal or numerical
     val newData = new Data(if (data.fileInfo.nominal.length == 0) {
-      dataShuffled map to2Decimals(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
+      to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
     } else {
-      dataShuffled map toNominal(Array.concat(processedData, if (distance == Distances.EUCLIDEAN)
-        zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), nomToNum)
-    }, dataShuffled map Array.concat(data.y, Array.fill(output.length)(minorityClass)),
-      Some(dataShuffled.zipWithIndex.collect { case (c, i) if c >= samples.length => i }), data.fileInfo)
+      toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), data.nomToNum)
+    }, Array.concat(data.y, Array.fill(output.length)(minorityClass)), None, data.fileInfo)
 
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
       logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
       logger.addMsg("NEW DATA SIZE: %d".format(newData.x.length))
-      logger.addMsg("NEW SAMPLES ARE:")
-      dataShuffled.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) logger.addMsg("%d".format(index._2)))
       logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
       logger.storeFile(file.get)
     }

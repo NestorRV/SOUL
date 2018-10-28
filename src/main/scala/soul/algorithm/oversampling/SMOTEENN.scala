@@ -1,5 +1,6 @@
 package soul.algorithm.oversampling
 
+import soul.algorithm.undersampling.ENN
 import soul.data.Data
 import soul.io.Logger
 import soul.util.Utilities._
@@ -9,25 +10,20 @@ import scala.util.Random
 /** SMOTEENN algorithm. Original paper: "A Study of the Behavior of Several Methods for Balancing Machine Learning
   * Training Data" by Gustavo E. A. P. A. Batista, Ronaldo C. Prati and Maria Carolina Monard.
   *
-  * @param data     data to work with
-  * @param seed     seed to use. If it is not provided, it will use the system time
-  * @param file     file to store the log. If its set to None, log process would not be done
-  * @param percent  amount of Smote N%
-  * @param k        number of minority class nearest neighbors
-  * @param distance the type of distance to use, hvdm or euclidean
+  * @param data      data to work with
+  * @param seed      seed to use. If it is not provided, it will use the system time
+  * @param file      file to store the log. If its set to None, log process would not be done
+  * @param percent   amount of Smote N%
+  * @param k         number of minority class nearest neighbors
+  * @param distance  distance to use when calling the NNRule
+  * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-               percent: Int = 500, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN) {
+               percent: Int = 500, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN, val normalize: Boolean = false) {
 
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
-  // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
-  // Data without NA values and with nominal values transformed to numeric values
-  private[soul] val (processedData, nomToNum) = processData(data)
-  // Samples to work with
-  private[soul] val samples: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN) zeroOneNormalization(data, processedData) else processedData
 
   /** Compute the SMOTEENN algorithm
     *
@@ -39,8 +35,17 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
     }
 
     val initTime: Long = System.nanoTime()
+    val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))
+
+    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
+      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+        samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
+        samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
+    } else {
+      (null, null, null)
+    }
 
     // check if the percent is correct
     var T: Int = minorityClassIndex.length
@@ -62,8 +67,7 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
     val r: Random = new Random(seed)
     // for each minority class sample
     minorityClassIndex.zipWithIndex.foreach(i => {
-      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.fileInfo.nominal.length == 0,
-        (samples, data.y)).map(minorityClassIndex(_))
+      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter).map(minorityClassIndex(_))
       // compute populate for the sample
       (0 until N).foreach(_ => {
         val nn: Int = r.nextInt(neighbors.length)
@@ -79,42 +83,23 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
 
     val result: Array[Array[Double]] = Array.concat(samples, output)
     val resultClasses: Array[Any] = Array.concat(data.y, Array.fill(output.length)(minorityClass))
-    // The following code correspond to ENN and it has been made by Néstor Rodríguez Vico
 
-    val shuffle: List[Int] = r.shuffle(resultClasses.indices.toList)
-
-    val dataToWorkWith: Array[Array[Double]] = (shuffle map result).toArray
-    // and randomized classes to match the randomized data
-    val classesToWorkWith: Array[Any] = (shuffle map resultClasses).toArray
-
-    // Distances among the elements
-    val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, Distances.EUCLIDEAN, data.fileInfo.nominal, resultClasses)
-
-    val finalIndex: Array[Int] = classesToWorkWith.distinct.flatMap { targetClass: Any =>
-      if (targetClass != minorityClass) {
-        val sameClassIndex: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (c, i) if c == targetClass => i }
-        boolToIndex(sameClassIndex.map { i: Int =>
-          nnRule(distances = distances(i), selectedElements = sameClassIndex.indices.diff(List(i)).toArray, labels = classesToWorkWith, k = k)._1
-        }.map((c: Any) => targetClass == c)) map sameClassIndex
-      } else {
-        classesToWorkWith.zipWithIndex.collect { case (c, i) if c == targetClass => i }
-      }
-    }
+    val ennData: Data = new Data(x = toXData(result), y = resultClasses, fileInfo = data.fileInfo)
+    val enn = new ENN(ennData, file = None, distance = distance)
+    val resultTL: Data = enn.compute()
+    val finalIndex: Array[Int] = result.indices.diff(resultTL.index.get).toArray
 
     // check if the data is nominal or numerical
-    val newData: Data = new Data(if (nomToNum(0).isEmpty) {
-      to2Decimals(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs))
+    val newData: Data = new Data(if (data.nomToNum(0).isEmpty) {
+      to2Decimals(zeroOneDenormalization(finalIndex map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs))
     } else {
-      toNominal(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs), nomToNum)
-    }, (finalIndex map shuffle).sorted map resultClasses,
-      Some(shuffle.zipWithIndex.collect { case (c, i) if c >= samples.length => i }.toArray), data.fileInfo)
+      toNominal(zeroOneDenormalization(finalIndex map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs), data.nomToNum)
+    }, finalIndex map resultClasses, None, data.fileInfo)
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
       logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
       logger.addMsg("NEW DATA SIZE: %d".format(newData.x.length))
-      logger.addMsg("NEW SAMPLES ARE:")
-      shuffle.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) logger.addMsg("%d".format(index._2)))
       logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
       logger.storeFile(file.get)
     }

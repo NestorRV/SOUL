@@ -1,5 +1,6 @@
 package soul.algorithm.oversampling
 
+import soul.algorithm.undersampling.TL
 import soul.data.Data
 import soul.io.Logger
 import soul.util.Utilities._
@@ -9,25 +10,20 @@ import scala.util.Random
 /** SMOTETL algorithm. Original paper: "A Study of the Behavior of Several Methods for Balancing Machine Learning
   * Training Data" by Gustavo E. A. P. A. Batista, Ronaldo C. Prati and Maria Carolina Monard.
   *
-  * @param data     data to work with
-  * @param seed     seed to use. If it is not provided, it will use the system time
-  * @param file     file to store the log. If its set to None, log process would not be done
-  * @param percent  Amount of Smote N%
-  * @param k        Number of minority class nearest neighbors
-  * @param distance the type of distance to use, hvdm or euclidean
+  * @param data      data to work with
+  * @param seed      seed to use. If it is not provided, it will use the system time
+  * @param file      file to store the log. If its set to None, log process would not be done
+  * @param percent   Amount of Smote N%
+  * @param k         Number of minority class nearest neighbors
+  * @param distance  distance to use when calling the NNRule
+  * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-              percent: Int = 500, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN) {
+              percent: Int = 500, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN, val normalize: Boolean = false) {
 
   // Logger object to log the execution of the algorithm
   private[soul] val logger: Logger = new Logger
-  // Index to shuffle (randomize) the data
-  private[soul] val index: List[Int] = new util.Random(seed).shuffle(data.y.indices.toList)
-  // Data without NA values and with nominal values transformed to numeric values
-  private[soul] val (processedData, nomToNum) = processData(data)
-  // Samples to work with
-  private[soul] val samples: Array[Array[Double]] = if (distance == Distances.EUCLIDEAN) zeroOneNormalization(data, processedData) else processedData
 
   /** Compute the SMOTETL algorithm
     *
@@ -39,9 +35,18 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     }
 
     val initTime: Long = System.nanoTime()
+    val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
     // compute minority class
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))
+
+    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
+      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+        samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
+        samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
+    } else {
+      (null, null, null)
+    }
 
     // check if the percent is correct
     var T: Int = minorityClassIndex.length
@@ -63,8 +68,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     val r: Random = new Random(seed)
     // for each minority class sample
     minorityClassIndex.zipWithIndex.foreach(i => {
-      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.fileInfo.nominal.length == 0,
-        (samples, data.y)).map(minorityClassIndex(_))
+      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter).map(minorityClassIndex(_))
       // compute populate for the sample
       (0 until N).foreach(_ => {
         val nn: Int = r.nextInt(neighbors.length)
@@ -81,46 +85,22 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     val result: Array[Array[Double]] = Array.concat(samples, output)
     val resultClasses: Array[Any] = Array.concat(data.y, Array.fill(output.length)(minorityClass))
 
-    // The following code correspond to TL and it has been made by Néstor Rodríguez Vico
-    val shuffle: List[Int] = r.shuffle(resultClasses.indices.toList)
-
-    val dataToWorkWith: Array[Array[Double]] = (shuffle map result).toArray
-    // and randomized classes to match the randomized data
-    val classesToWorkWith: Array[Any] = (shuffle map resultClasses).toArray
-    // Distances among the elements
-    val distances: Array[Array[Double]] = computeDistances(dataToWorkWith, Distances.EUCLIDEAN, data.fileInfo.nominal, resultClasses)
-
-    // Take the index of the elements that have a different class
-    val candidates: Map[Any, Array[Int]] = classesToWorkWith.distinct.map { c: Any =>
-      c -> classesToWorkWith.zipWithIndex.collect { case (a, b) if a != c => b }
-    }.toMap
-
-    // Look for the nearest neighbour in the rest of the classes
-    val nearestNeighbour: Array[Int] = distances.zipWithIndex.map((row: (Array[Double], Int)) => row._1.indexOf((candidates(classesToWorkWith(row._2)) map row._1).min))
-
-    // For each instance, I: If my nearest neighbour is J and the nearest neighbour of J it's me, I, I and J form a Tomek link
-    val tomekLinks: Array[(Int, Int)] = nearestNeighbour.zipWithIndex.filter((pair: (Int, Int)) => nearestNeighbour(pair._1) == pair._2)
-
-    // Instances that form a Tomek link are going to be removed
-    val targetInstances: Array[Int] = tomekLinks.flatMap((x: (Int, Int)) => List(x._1, x._2)).distinct
-    // but the user can choose which of them should be removed
-    val removedInstances: Array[Int] = targetInstances
-    // Get the final index
-    val finalIndex: Array[Int] = dataToWorkWith.indices.diff(removedInstances).toArray
+    val tlData: Data = new Data(x = toXData(result), y = resultClasses, fileInfo = data.fileInfo)
+    val tl = new TL(tlData, file = None, distance = distance, ratio = "all")
+    val resultTL: Data = tl.compute()
+    val finalIndex: Array[Int] = result.indices.diff(resultTL.index.get).toArray
 
     // check if the data is nominal or numerical
-    val newData: Data = new Data(if (nomToNum(0).isEmpty) {
-      to2Decimals(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs))
+    val newData: Data = new Data(if (data.nomToNum(0).isEmpty) {
+      to2Decimals(zeroOneDenormalization(finalIndex map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs))
     } else {
-      toNominal(zeroOneDenormalization((finalIndex map shuffle).sorted map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs), nomToNum)
-    }, (finalIndex map shuffle).sorted map resultClasses, Some(shuffle.zipWithIndex.collect { case (c, i) if c >= samples.length => i }.toArray), data.fileInfo)
+      toNominal(zeroOneDenormalization(finalIndex map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs), data.nomToNum)
+    }, finalIndex map resultClasses, None, data.fileInfo)
     val finishTime: Long = System.nanoTime()
 
     if (file.isDefined) {
       logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
       logger.addMsg("NEW DATA SIZE: %d".format(newData.x.length))
-      logger.addMsg("NEW SAMPLES ARE:")
-      shuffle.zipWithIndex.foreach((index: (Int, Int)) => if (index._1 >= samples.length) logger.addMsg("%d".format(index._2)))
       logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
       logger.storeFile(file.get)
     }
