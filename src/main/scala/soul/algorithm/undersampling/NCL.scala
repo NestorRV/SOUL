@@ -4,6 +4,8 @@ import soul.data.Data
 import soul.io.Logger
 import soul.util.Utilities._
 
+import scala.collection.mutable.ArrayBuffer
+
 /** Neighbourhood Cleaning Rule. Original paper: "Improving Identification of Difficult Small Classes by Balancing Class
   * Distribution" by J. Laurikkala.
   *
@@ -36,6 +38,7 @@ class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   def compute(): Data = {
     // Note: the notation used to refers the subsets of data is the used in the original paper.
     val initTime: Long = System.nanoTime()
+    val start = System.currentTimeMillis
     val random: scala.util.Random = new scala.util.Random(seed)
 
     var dataToWorkWith: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
@@ -57,22 +60,44 @@ class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       (null, null, null)
     }
 
-    val enn = new ENN(data, file = None, distance = distance, k = k)
+    val minorityIndex: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
+    val majorityIndex: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
+
+    var i = 0
+    while (i < classesToWorkWith.length) {
+      if (classesToWorkWith(i) == untouchableClass) minorityIndex += i else majorityIndex += i
+      i += 1
+    }
+
+    val ennData = new Data(toXData((majorityIndex map dataToWorkWith).toArray), (majorityIndex map classesToWorkWith).toArray, None, data.fileInfo)
+    ennData.processedData = (majorityIndex map dataToWorkWith).toArray
+    val enn = new ENN(ennData, file = None, distance = distance, k = k)
     val resultENN: Data = enn.compute()
-    val indexA1: Array[Int] = classesToWorkWith.indices.diff(resultENN.index.toList).toArray
-    val minorityClassIndex: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (c, i) if c == untouchableClass => i }
-    val targetNeighbours: Array[Array[Double]] = minorityClassIndex map dataToWorkWith
-    val classes: Array[Any] = minorityClassIndex map classesToWorkWith
-    val (predictedLabels, selectedNeighbours): (Array[Any], Array[Array[Int]]) = minorityClassIndex.map { i: Int =>
-      nnRule(neighbours = targetNeighbours, instance = dataToWorkWith(i), id = i, labels = classes, k = k, distance = distance,
-        nominal = data.fileInfo.nominal, sds = sds, attrCounter = attrCounter, attrClassesCounter = attrClassesCounter)
-    }.unzip
-    val neighbourhoodBooleanIndex: Array[Boolean] = (predictedLabels zip (minorityClassIndex map classesToWorkWith)).map((c: (Any, Any)) => c._1 != c._2)
-    val finalNeighbours: Array[Int] = (boolToIndex(neighbourhoodBooleanIndex) map selectedNeighbours).flatten.distinct
-    val classesToUnderSample: Array[Any] = counter.collect { case (c, num_values) if c != untouchableClass &&
-      num_values > dataToWorkWith.length * threshold => c
-    }.toArray
-    val indexA2: Array[AnyVal] = finalNeighbours.map((i: Int) => if (classesToUnderSample.indexOf(classesToWorkWith(i)) != -1) i)
+    val indexA1: Array[Int] = resultENN.index.get map majorityIndex
+
+    val indexA2: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
+    val uniqueMajClasses = (majorityIndex map classesToWorkWith).distinct
+    val minorityElements = (minorityIndex map dataToWorkWith).toArray
+    var j = 0
+    while (j < uniqueMajClasses.length) {
+      var l = 0
+      while (l < minorityElements.length) {
+        val (label, nNeighbours) = nnRule(neighbours = dataToWorkWith, instance = minorityElements(l), id = l, labels = classesToWorkWith, k = k, distance = distance,
+          nominal = data.fileInfo.nominal, sds = sds, attrCounter = attrCounter, attrClassesCounter = attrClassesCounter)
+        if (label != classesToWorkWith(j)) {
+          var m = 0
+          while (m < nNeighbours.length) {
+            if (classesToWorkWith(nNeighbours(m)) != untouchableClass && counter(classesToWorkWith(nNeighbours(m))) > (dataToWorkWith.length * threshold)) {
+              indexA2 += nNeighbours(m)
+            }
+            m += 1
+          }
+        }
+        l += 1
+      }
+      j += 1
+    }
+
     val finalIndex: Array[Int] = classesToWorkWith.indices.diff((indexA1 ++ indexA2).toList).toArray
     val finishTime: Long = System.nanoTime()
 
