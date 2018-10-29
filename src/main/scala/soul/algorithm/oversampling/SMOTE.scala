@@ -65,20 +65,26 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
     var newIndex: Int = 0
     val r: Random = new Random(seed)
     // for each minority class sample
-    minorityClassIndex.zipWithIndex.foreach(i => {
-      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter).map(minorityClassIndex(_))
+    var i: Int = 0
+    while (i < minorityClassIndex.length) {
+      neighbors = kNeighbors(minorityClassIndex map samples, i, k, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter).map(minorityClassIndex(_))
       // compute populate for the sample
-      (0 until N).foreach(_ => {
+      var j: Int = 0
+      while (j < N) {
         val nn: Int = r.nextInt(neighbors.length)
         // compute attributes of the sample
-        samples(i._1).indices.foreach(atrib => {
-          val diff: Double = samples(neighbors(nn))(atrib) - samples(i._1)(atrib)
+        var atrib: Int = 0
+        while (atrib < samples(0).length) {
+          val diff: Double = samples(neighbors(nn))(atrib) - samples(minorityClassIndex(i))(atrib)
           val gap: Float = r.nextFloat
-          output(newIndex)(atrib) = samples(i._1)(atrib) + gap * diff
-        })
+          output(newIndex)(atrib) = samples(minorityClassIndex(i))(atrib) + gap * diff
+          atrib = atrib + 1
+        }
         newIndex = newIndex + 1
-      })
-    })
+        j = j + 1
+      }
+      i = i + 1
+    }
 
     // check if the data is nominal or numerical
     val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {

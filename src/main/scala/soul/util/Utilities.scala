@@ -344,20 +344,34 @@ object Utilities {
     */
   def kNeighbors(data: Array[Array[Double]], node: Int, k: Int, distance: Distances.Distance, nominal: Array[Int], sds: Array[Double],
                  attrCounter: Array[Map[Double, Int]], attrClassesCounter: Array[Map[Double, Map[Any, Int]]]): Array[Int] = {
-    val distances: Array[Double] = new Array[Double](data.length)
+    val distances: Array[Double] = Array.fill[Double](data.length)(99999999)
 
-    data.indices.foreach(i => {
-      distances(i) = computeDistance(data(node), data(i), distance, nominal, sds, attrCounter, attrClassesCounter)
-    })
-    distances(node) = 9999999
-    val result = distances.toList.view.zipWithIndex.sortBy(_._1)
-    val index = result.unzip._2
-
-    var kk: Int = k
-    if (k > distances.length) {
-      kk = distances.length
+    val kNeighbors: Array[Int] = (0 until k).toArray
+    var i: Int = 0
+    var j: Int = 0
+    var found: Boolean = false
+    //compute distances
+    while (i < data.length) {
+      if (i != node) {
+        j = 0
+        found = false
+        distances(i) = computeDistance(data(i), data(node), distance, nominal, sds, attrCounter, attrClassesCounter)
+        //save the best neighbors
+        while (j < kNeighbors.length && !found) {
+          if (distances(i) < distances(kNeighbors(j))) {
+            found = true
+          } else {
+            j = j + 1
+          }
+        }
+        if (found) {
+          kNeighbors(j) = i
+        }
+      }
+      i = i + 1
     }
-    range(0, kk).map(i => index.toList(i))
+
+    kNeighbors
   }
 
   /** Calculate minority class
@@ -365,26 +379,38 @@ object Utilities {
     * @return the elements in the minority class
     */
   def minority(data: Array[Any]): Array[Int] = {
-    val classes: mutable.Map[Any, Array[Int]] = mutable.Map[Any, Array[Int]]()
-    data.distinct.foreach(clss => {
-      classes.update(clss, Array())
-    })
-    //save the index for each class
-    var index: Int = -1
-    data.foreach(clss => {
-      index += 1
-      classes.update(clss, classes(clss) :+ index)
-    })
+    val classes: mutable.Map[Any, Int] = mutable.Map[Any, Int]()
+    var i: Int = 0
 
-    val min = (x: (Any, Array[Int]), y: (Any, Array[Int])) => {
-      if (x._2.length < y._2.length) {
+    while (i < data.length) {
+      if ((classes get data(i)) == None) {
+        classes.update(data(i), 1)
+      } else {
+        classes.update(data(i), classes(data(i)) + 1)
+      }
+      i = i + 1
+    }
+
+    val min = (x: (Any, Int), y: (Any, Int)) => {
+      if (x._2 < y._2) {
         x
       } else {
         y
       }
     }
 
-    classes.reduceLeft(min)._2
+    val minorityClass: (Any, Int) = classes.reduceLeft(min)
+    val minority: Array[Int] = new Array(minorityClass._2)
+    i = 0
+    var classIndex: Int = 0
+    while (i < data.length) {
+      if (data(i) == minorityClass._1) {
+        minority(classIndex) = i
+        classIndex = classIndex + 1
+      }
+      i = i + 1
+    }
+    minority
   }
 
   /** Compute the mode of an array
