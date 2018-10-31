@@ -74,31 +74,35 @@ class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val resultENN: Data = enn.compute()
     val indexA1: Array[Int] = resultENN.index.get map majorityIndex
 
-    val indexA2: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
     val uniqueMajClasses = (majorityIndex map classesToWorkWith).distinct
-    val minorityElements = (minorityIndex map dataToWorkWith).toArray
     val ratio: Double = dataToWorkWith.length * threshold
-    var j = 0
-    while (j < uniqueMajClasses.length) {
-      var l = 0
-      while (l < minorityElements.length) {
-        val (label, nNeighbours) = nnRule(neighbours = dataToWorkWith, instance = minorityElements(l), id = l, labels = classesToWorkWith, k = k, distance = distance,
-          nominal = data.fileInfo.nominal, sds = sds, attrCounter = attrCounter, attrClassesCounter = attrClassesCounter)
-        if (label != classesToWorkWith(j)) {
-          var m = 0
-          while (m < nNeighbours.length) {
-            if (classesToWorkWith(nNeighbours(m)) != untouchableClass && counter(classesToWorkWith(nNeighbours(m))) > ratio) {
-              indexA2 += nNeighbours(m)
-            }
-            m += 1
+
+    def selectNeighbours(l: Int, targetClass: Any): ArrayBuffer[Int] = {
+      val selected = new ArrayBuffer[Int]()
+      val (label, nNeighbours) = nnRule(neighbours = dataToWorkWith, instance = dataToWorkWith(l), id = l, labels = classesToWorkWith, k = k, distance = distance,
+        nominal = data.fileInfo.nominal, sds = sds, attrCounter = attrCounter, attrClassesCounter = attrClassesCounter)
+      if (label != targetClass) {
+        nNeighbours.foreach { n =>
+          val nNeighbourClass: Any = classesToWorkWith(n)
+          if (nNeighbourClass != untouchableClass && counter(nNeighbourClass) > ratio) {
+            selected += n
           }
         }
-        l += 1
+      }
+      selected
+    }
+
+    var j = 0
+    val indexA2 = new Array[ArrayBuffer[Int]](minorityIndex.length)
+    while (j < uniqueMajClasses.length) {
+      val targetClass: Any = classesToWorkWith(j)
+      minorityIndex.zipWithIndex.par.foreach { l =>
+        indexA2(l._2) = selectNeighbours(l._1, targetClass)
       }
       j += 1
     }
 
-    val finalIndex: Array[Int] = classesToWorkWith.indices.diff((indexA1 ++ indexA2).toList).toArray
+    val finalIndex: Array[Int] = classesToWorkWith.indices.diff((indexA1 ++ indexA2.flatten.toList).toList).toArray
     val finishTime: Long = System.nanoTime()
 
     val index: Array[Int] = (finalIndex map randomIndex).sorted
