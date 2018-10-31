@@ -77,6 +77,7 @@ class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val indexA2: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
     val uniqueMajClasses = (majorityIndex map classesToWorkWith).distinct
     val minorityElements = (minorityIndex map dataToWorkWith).toArray
+    val ratio: Double = dataToWorkWith.length * threshold
     var j = 0
     while (j < uniqueMajClasses.length) {
       var l = 0
@@ -86,7 +87,7 @@ class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.cu
         if (label != classesToWorkWith(j)) {
           var m = 0
           while (m < nNeighbours.length) {
-            if (classesToWorkWith(nNeighbours(m)) != untouchableClass && counter(classesToWorkWith(nNeighbours(m))) > (dataToWorkWith.length * threshold)) {
+            if (classesToWorkWith(nNeighbours(m)) != untouchableClass && counter(classesToWorkWith(nNeighbours(m))) > ratio) {
               indexA2 += nNeighbours(m)
             }
             m += 1
