@@ -61,11 +61,7 @@ class ENN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     var j = 0
     val majorityClassIndex = new ArrayBuffer[Int]()
     while (j < classesToWorkWith.length) {
-      if (classesToWorkWith(j) == untouchableClass) {
-        finalIndex += j
-      } else {
-        majorityClassIndex += j
-      }
+      if (classesToWorkWith(j) == untouchableClass) finalIndex += j else majorityClassIndex += j
       j += 1
     }
 
