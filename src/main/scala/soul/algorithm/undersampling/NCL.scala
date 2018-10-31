@@ -38,7 +38,6 @@ class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   def compute(): Data = {
     // Note: the notation used to refers the subsets of data is the used in the original paper.
     val initTime: Long = System.nanoTime()
-    val start = System.currentTimeMillis
     val random: scala.util.Random = new scala.util.Random(seed)
 
     var dataToWorkWith: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
