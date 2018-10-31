@@ -172,7 +172,7 @@ class Reader {
         for (e <- elements.zipWithIndex) {
           if (e._2 == response)
             readClasses += e._1
-          else if (e._1.replaceAll("\\s", "").matches("-?\\d+(\\.\\d+)?"))
+          else if (e._1.replaceAll("\\s", "").matches("[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?"))
             row += e._1.replaceAll("\\s", "").toDouble
           else {
             if (e._1 == missing)
