@@ -1,8 +1,8 @@
 package soul.algorithm.oversampling
 
 import breeze.linalg.{DenseMatrix, eigSym}
+import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
-import soul.io.Logger
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -12,19 +12,15 @@ import scala.util.Random
   *
   * @param data      data to work with
   * @param seed      seed to use. If it is not provided, it will use the system time
-  * @param file      file to store the log. If its set to None, log process would not be done
   * @param percent   amount of samples N%
   * @param k         number of neighbors
   * @param distance  distance to use when calling the NNRule
   * @param normalize normalize the data or not
   * @author David López Pretel
   */
-class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-            percent: Int = 300, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN, val normalize: Boolean = false) {
-
-  // Logger object to log the execution of the algorithm
-  private[soul] val logger: Logger = new Logger
-
+class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
+            percent: Int = 300, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN,
+            val normalize: Boolean = false) extends LazyLogging {
   /** Compute the first principal component axis
     *
     * @param A the data
@@ -98,11 +94,10 @@ class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.
     }, Array.concat(data.y, Array.fill(output.length)(minorityClass)), None, data.fileInfo)
     val finishTime: Long = System.nanoTime()
 
-    if (file.isDefined) {
-      logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
-      logger.addMsg("NEW DATA SIZE: %d".format(newData.x.length))
-      logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-      logger.storeFile(file.get)
+    logger.whenInfoEnabled {
+      logger.info("ORIGINAL SIZE: %d".format(data.x.length))
+      logger.info("NEW DATA SIZE: %d".format(newData.x.length))
+      logger.info("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
     newData

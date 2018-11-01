@@ -1,8 +1,8 @@
 package soul.algorithm.oversampling
 
+import com.typesafe.scalalogging.LazyLogging
 import soul.algorithm.undersampling.TL
 import soul.data.Data
-import soul.io.Logger
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -20,10 +20,8 @@ import scala.util.Random
   * @author David López Pretel
   */
 class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-              percent: Int = 500, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN, val normalize: Boolean = false) {
-
-  // Logger object to log the execution of the algorithm
-  private[soul] val logger: Logger = new Logger
+              percent: Int = 500, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN,
+              val normalize: Boolean = false) extends LazyLogging {
 
   /** Compute the SMOTETL algorithm
     *
@@ -87,7 +85,7 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
 
     val tlData: Data = new Data(x = toXData(result), y = resultClasses, fileInfo = data.fileInfo)
     tlData.processedData = result
-    val tl = new TL(tlData, file = None, distance = distance, ratio = "all")
+    val tl = new TL(tlData, distance = distance, ratio = "all")
     val resultTL: Data = tl.compute()
     val finalIndex: Array[Int] = result.indices.diff(resultTL.index.get).toArray
 
@@ -99,11 +97,10 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     }, finalIndex map resultClasses, None, data.fileInfo)
     val finishTime: Long = System.nanoTime()
 
-    if (file.isDefined) {
-      logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
-      logger.addMsg("NEW DATA SIZE: %d".format(newData.x.length))
-      logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-      logger.storeFile(file.get)
+    logger.whenInfoEnabled {
+      logger.info("ORIGINAL SIZE: %d".format(data.x.length))
+      logger.info("NEW DATA SIZE: %d".format(newData.x.length))
+      logger.info("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
     newData

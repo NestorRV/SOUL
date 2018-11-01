@@ -4,8 +4,8 @@ import java.io.ByteArrayInputStream
 import java.util
 
 import com.paypal.digraph.parser.{GraphEdge, GraphNode, GraphParser}
+import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
-import soul.io.Logger
 import soul.util.Utilities._
 import weka.classifiers.Evaluation
 import weka.classifiers.trees.J48
@@ -21,7 +21,6 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @param data         localTrainData to work with
   * @param seed         seed to use. If it is not provided, it will use the system time
-  * @param file         file to store the log. If its set to None, log process would not be done
   * @param iterations   number of iterations used in Differential Evolution
   * @param strategy     strategy used in the mutation process of Differential Evolution
   * @param randomChoice whether to choose a random individual or not
@@ -29,13 +28,11 @@ import scala.collection.mutable.ArrayBuffer
   * @param randomData   iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
-class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
+class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
             iterations: Int = 100, strategy: Int = 1, randomChoice: Boolean = true, val normalize: Boolean = false,
-            val randomData: Boolean = false) {
+            val randomData: Boolean = false) extends LazyLogging {
 
   private[soul] val random: scala.util.Random = new scala.util.Random(seed)
-  // Logger object to log the execution of the algorithm
-  private[soul] val logger: Logger = new Logger
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
@@ -483,15 +480,14 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
 
     val newData: Data = new Data(population.map((row: Array[Double]) => row.map((e: Double) => e.asInstanceOf[Any])), classes, None, data.fileInfo)
 
-    if (file.isDefined) {
+    logger.whenInfoEnabled {
       val newCounter: Map[Any, Int] = classes.groupBy(identity).mapValues((_: Array[Any]).length)
-      logger.addMsg("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
-      logger.addMsg("NEW DATA SIZE: %d".format(classes.length))
-      logger.addMsg("REDUCTION PERCENTAGE: %s".format(100 - (classes.length.toFloat / dataToWorkWith.length) * 100))
-      logger.addMsg("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(counter, untouchableClass)))
-      logger.addMsg("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, untouchableClass)))
-      logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-      logger.storeFile(file.get)
+      logger.info("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
+      logger.info("NEW DATA SIZE: %d".format(classes.length))
+      logger.info("REDUCTION PERCENTAGE: %s".format(100 - (classes.length.toFloat / dataToWorkWith.length) * 100))
+      logger.info("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(counter, untouchableClass)))
+      logger.info("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, untouchableClass)))
+      logger.info("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
     newData

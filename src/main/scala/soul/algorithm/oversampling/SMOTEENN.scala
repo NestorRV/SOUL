@@ -1,8 +1,8 @@
 package soul.algorithm.oversampling
 
+import com.typesafe.scalalogging.LazyLogging
 import soul.algorithm.undersampling.ENN
 import soul.data.Data
-import soul.io.Logger
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -12,18 +12,15 @@ import scala.util.Random
   *
   * @param data      data to work with
   * @param seed      seed to use. If it is not provided, it will use the system time
-  * @param file      file to store the log. If its set to None, log process would not be done
   * @param percent   amount of Smote N%
   * @param k         number of minority class nearest neighbors
   * @param distance  distance to use when calling the NNRule
   * @param normalize normalize the data or not
   * @author David López Pretel
   */
-class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-               percent: Int = 500, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN, val normalize: Boolean = false) {
-
-  // Logger object to log the execution of the algorithm
-  private[soul] val logger: Logger = new Logger
+class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
+               percent: Int = 500, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN,
+               val normalize: Boolean = false) extends LazyLogging {
 
   /** Compute the SMOTEENN algorithm
     *
@@ -86,7 +83,7 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
 
     val ennData: Data = new Data(x = toXData(result), y = resultClasses, fileInfo = data.fileInfo)
     ennData.processedData = result
-    val enn = new ENN(ennData, file = None, distance = distance)
+    val enn = new ENN(ennData, distance = distance)
     val resultTL: Data = enn.compute()
     val finalIndex: Array[Int] = result.indices.diff(resultTL.index.get).toArray
 
@@ -98,11 +95,10 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
     }, finalIndex map resultClasses, None, data.fileInfo)
     val finishTime: Long = System.nanoTime()
 
-    if (file.isDefined) {
-      logger.addMsg("ORIGINAL SIZE: %d".format(data.x.length))
-      logger.addMsg("NEW DATA SIZE: %d".format(newData.x.length))
-      logger.addMsg("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-      logger.storeFile(file.get)
+    logger.whenInfoEnabled {
+      logger.info("ORIGINAL SIZE: %d".format(data.x.length))
+      logger.info("NEW DATA SIZE: %d".format(newData.x.length))
+      logger.info("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
     newData

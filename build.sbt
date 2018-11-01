@@ -16,6 +16,7 @@ scalacOptions += "-feature"
 
 libraryDependencies += "nz.ac.waikato.cms.weka" % "weka-stable" % "3.8.2"
 libraryDependencies += "com.paypal.digraph" % "digraph-parser" % "1.0"
+libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0"
 
 libraryDependencies ++= Seq(
   "org.scalanlp" %% "breeze" % "0.13.2",
