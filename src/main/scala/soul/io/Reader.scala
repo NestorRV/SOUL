@@ -13,7 +13,7 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @author Néstor Rodríguez Vico
   */
-class Reader {
+object Reader {
   /** Parse a arff file
     *
     * @param file        file containing the data

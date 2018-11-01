@@ -10,7 +10,7 @@ import scala.collection.immutable.ListMap
   *
   * @author Néstor Rodríguez Vico
   */
-class Writer {
+object Writer {
   /** Store data into a delimited text file
     *
     * @param file filename where to store the data
