@@ -383,7 +383,7 @@ object Utilities {
     var i: Int = 0
 
     while (i < data.length) {
-      if ((classes get data(i)) == None) {
+      if ((classes get data(i)).isEmpty) {
         classes.update(data(i), 1)
       } else {
         classes.update(data(i), classes(data(i)) + 1)
