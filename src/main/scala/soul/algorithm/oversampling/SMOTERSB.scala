@@ -15,13 +15,14 @@ import scala.util.Random
   * @param seed      seed to use. If it is not provided, it will use the system time
   * @param percent   amount of Smote N%
   * @param k         number of minority class nearest neighbors
-  * @param distance  distance to use when calling the NNRule
+  * @param dist      distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
   * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class SMOTERSB(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-               percent: Int = 500, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN,
-               val normalize: Boolean = false) extends LazyLogging {
+               percent: Int = 500, k: Int = 5, dist: Any, val normalize: Boolean = false) extends LazyLogging {
+
+  private[soul] val distance: Distances.Distance = getDistance(dist)
 
   /** Compute the SMOTERSB algorithm
     *
@@ -65,7 +66,11 @@ class SMOTERSB(private[soul] val data: Data, private[soul] val seed: Long = Syst
     val r: Random = new Random(seed)
     // for each minority class sample
     minorityClassIndex.zipWithIndex.foreach(i => {
-      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter).map(minorityClassIndex(_))
+      neighbors = (if (distance == Distances.USER) {
+        kNeighbors(minorityClassIndex map samples, i._2, k, dist)
+      } else {
+        kNeighborsHVDM(minorityClassIndex map samples, i._2, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      }).map(minorityClassIndex(_))
       // calculate populate for the sample
       (0 until N).foreach(_ => {
         val nn: Int = r.nextInt(neighbors.length)

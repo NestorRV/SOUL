@@ -16,13 +16,14 @@ import scala.util.Random
   * @param k1        number of neighbors used for predicting noisy minority class samples
   * @param k2        number of majority neighbors used for constructing informative minority set
   * @param k3        number of minority neighbors used for constructing informative minority set
-  * @param distance  distance to use when calling the NNRule
+  * @param dist      distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
   * @param normalize normalize the data or not
   * @author David López Pretel
   */
-class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-             N: Int = 500, k1: Int = 5, k2: Int = 5, k3: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN,
-             val normalize: Boolean = false) extends LazyLogging {
+class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), N: Int = 500, k1: Int = 5,
+             k2: Int = 5, k3: Int = 5, dist: Any, val normalize: Boolean = false) extends LazyLogging {
+
+  private[soul] val distance: Distances.Distance = getDistance(dist)
 
   /** Compute the MWMOTE algorithm
     *
@@ -49,7 +50,11 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
       val CMAX: Double = 2
 
       if (!Nmin(y._2).contains(x)) {
-        val D: Double = computeDistance(samples(y._1), samples(x), distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+        val D: Double = if (distance == Distances.USER) {
+          dist.asInstanceOf[(Array[Double], Array[Double]) => Double](samples(y._1), samples(x))
+        } else {
+          HVDM(samples(y._1), samples(x), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+        }
         f(samples(0).length / D, cut) * CMAX
       } else
         0.0
@@ -65,7 +70,11 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
       val centroid1: Array[Double] = (cluster1 map samples).transpose.map(_.sum / cluster1.length)
       val centroid2: Array[Double] = (cluster2 map samples).transpose.map(_.sum / cluster2.length)
 
-      computeDistance(centroid1, centroid2, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      if (distance == Distances.USER) {
+        dist.asInstanceOf[(Array[Double], Array[Double]) => Double](centroid1, centroid2)
+      } else {
+        HVDM(centroid1, centroid2, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      }
     }
 
     def minDistance(cluster: ArrayBuffer[ArrayBuffer[Int]]): (Int, Int, Double) = {
@@ -80,12 +89,21 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
     }
 
     def cluster(Sminf: Array[Int]): Array[Array[Int]] = {
-      val dist: Array[Array[Double]] = Array.fill(Sminf.length, Sminf.length)(9999999.0)
-      Sminf.indices.foreach(i => Sminf.indices.foreach(j => if (i != j) dist(i)(j) = computeDistance(samples(Sminf(i)), samples(Sminf(j)),
-        distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)))
+      val distances: Array[Array[Double]] = Array.fill(Sminf.length, Sminf.length)(9999999.0)
+      Sminf.indices.foreach { i =>
+        Sminf.indices.foreach { j =>
+          if (i != j) {
+            distances(i)(j) = if (distance == Distances.USER) {
+              dist.asInstanceOf[(Array[Double], Array[Double]) => Double](samples(Sminf(i)), samples(Sminf(j)))
+            } else {
+              HVDM(samples(Sminf(i)), samples(Sminf(j)), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+            }
+          }
+        }
+      }
 
       val Cp: Double = 3 // used in paper
-      val Th: Double = dist.map(_.min).sum / Sminf.length * Cp
+      val Th: Double = distances.map(_.min).sum / Sminf.length * Cp
       var minDist: (Int, Int, Double) = (0, 0, 0.0)
       val clusters: ArrayBuffer[ArrayBuffer[Int]] = Sminf.map(ArrayBuffer(_)).to[ArrayBuffer]
       while (minDist._3 < Th) {
@@ -107,7 +125,11 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
 
     // construct the filtered minority set
     val Sminf: Array[Int] = minorityClassIndex.map(index => {
-      val neighbors = kNeighbors(samples, index, k1, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      val neighbors = if (distance == Distances.USER) {
+        kNeighbors(samples, index, k1, dist)
+      } else {
+        kNeighborsHVDM(samples, index, k1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      }
       if (neighbors map data.y contains data.y(minorityClassIndex(0))) {
         Some(index)
       } else {
@@ -116,11 +138,22 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
     }).filterNot(_.forall(_ == None)).map(_.get)
 
     //for each sample in Sminf compute the nearest majority set
-    val Sbmaj: Array[Int] = Sminf.flatMap(x => kNeighbors(majorityClassIndex map samples, samples(x), k2, distance,
-      data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)).distinct.map(majorityClassIndex(_))
+    val Sbmaj: Array[Int] = Sminf.flatMap { x =>
+      if (distance == Distances.USER) {
+        kNeighbors(majorityClassIndex map samples, samples(x), k2, dist)
+      } else {
+        kNeighborsHVDM(majorityClassIndex map samples, samples(x), k2, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      }
+    }.distinct.map(majorityClassIndex(_))
+
     // for each majority example in Sbmaj , compute the nearest minority set
-    val Nmin: Array[Array[Int]] = Sbmaj.map(x => kNeighbors(minorityClassIndex map samples, samples(x), k3, distance,
-      data.fileInfo.nominal, sds, attrCounter, attrClassesCounter).map(minorityClassIndex(_)))
+    val Nmin: Array[Array[Int]] = Sbmaj.map { x =>
+      (if (distance == Distances.USER) {
+        kNeighbors(minorityClassIndex map samples, samples(x), k3, dist)
+      } else {
+        kNeighborsHVDM(minorityClassIndex map samples, samples(x), k3, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      }).map(minorityClassIndex(_))
+    }
 
     // find the informative minority set (union of all Nmin)
     val Simin: Array[Int] = Nmin.flatten.distinct

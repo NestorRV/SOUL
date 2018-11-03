@@ -10,6 +10,7 @@ import scala.Array.range
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.{immutable, mutable}
 import scala.math.{abs, pow, sqrt}
+import scala.reflect.runtime.universe._
 import scala.util.Random
 
 /** Set of utilities functions
@@ -20,15 +21,13 @@ object Utilities {
 
   /** Enumeration to store the possible distances
     *
-    * EUCLIDEAN: Euclidean Distance for numeric values plus Nominal Distance (minimum distance, 0,
-    * if the two elements are equal, maximum distance, 1, otherwise) for nominal values.
-    *
+    * USER: Distance specified by the user
     * HVDM: Proposed in "Improved Heterogeneous Distance Functions" by "D. Randall Wilson and Tony R. Martinez"
     *
     */
   object Distances extends Enumeration {
     type Distance = Value
-    val EUCLIDEAN: Distances.Value = Value
+    val USER: Distances.Value = Value
     val HVDM: Distances.Value = Value
   }
 
@@ -97,46 +96,6 @@ object Utilities {
     probs(Math.max(0, i - 1))._2
   }
 
-  /** Compute distance of two nodes
-    *
-    * @param n1                 sample1
-    * @param n2                 sample2
-    * @param distance           distance to use
-    * @param nominal            indicate nominal attributes in the instances
-    * @param sds                standard deviations
-    * @param attrCounter        counter attributes occurrences
-    * @param attrClassesCounter number of occurrences for each value and output class c, for each class
-    * @return euclidean distance of two nodes
-    */
-  def computeDistance(n1: Array[Double], n2: Array[Double], distance: Distances.Distance, nominal: Array[Int], sds: Array[Double],
-                      attrCounter: Array[Map[Double, Int]], attrClassesCounter: Array[Map[Double, Map[Any, Int]]]): Double = {
-    if (distance == Distances.EUCLIDEAN) {
-      var d: Double = 0.0
-      var i: Int = 0
-      while (i < n1.length) {
-        val toPow2 = n1(i) - n2(i)
-        d += toPow2 * toPow2
-        i += 1
-      }
-      sqrt(d)
-    } else if (distance == Distances.HVDM) {
-      def normalized_diff(x: Double, y: Double, sd: Double): Double = abs(x - y) / (4 * sd)
-
-      def normalized_vdm(nax: Double, nay: Double, naxClasses: Map[Any, Int], nayClasses: Map[Any, Int]): Double = {
-        sqrt((naxClasses.values zip nayClasses.values).map((element: (Int, Int)) => pow(abs(element._1 / nax - element._2 / nay), 2)).sum)
-      }
-
-      (n1 zip n2).zipWithIndex.map((element: ((Double, Double), Int)) =>
-        if (nominal.contains(element._2))
-          normalized_vdm(nax = attrCounter(element._2)(element._1._1), nay = attrCounter(element._2)(element._1._1),
-            naxClasses = attrClassesCounter(element._2)(element._1._1), nayClasses = attrClassesCounter(element._2)(element._1._2)) else
-          normalized_diff(element._1._1, element._1._2, sds(element._2))).sum
-
-    } else {
-      throw new Exception("Invalid distance type")
-    }
-  }
-
   /** Compute the number of true positives (tp), false positives (fp), true negatives (tn) and false negatives (fn)
     *
     * @param originalLabels  original labels
@@ -181,6 +140,46 @@ object Utilities {
     sqrt(d)
   }
 
+  /** Check if the distance is valid and get it
+    *
+    * @param distance desired distance
+    * @tparam A any value
+    * @return distance to be used by the algorithm
+    */
+  def getDistance[A: TypeTag](distance: A): Distances.Distance = {
+    val msg: String = "Incorrect distance. It should be \"HVDM\" or a function of the type: (Array[Double], Array[Double]) => Double."
+    typeOf[A] match {
+      case f if f =:= typeOf[(Array[Double], Array[Double]) => Double] => Distances.USER
+      case _ if distance.equals("HVDM") => Distances.HVDM
+      case _ => throw new Exception(msg)
+    }
+  }
+
+  /** Compute HVDM distance of two nodes
+    *
+    * @param n1                 sample1
+    * @param n2                 sample2
+    * @param nominal            indicate nominal attributes in the instances
+    * @param sds                standard deviations
+    * @param attrCounter        counter attributes occurrences
+    * @param attrClassesCounter number of occurrences for each value and output class c, for each class
+    * @return HVDM distance of two nodes
+    */
+  def HVDM(n1: Array[Double], n2: Array[Double], nominal: Array[Int], sds: Array[Double],
+           attrCounter: Array[Map[Double, Int]], attrClassesCounter: Array[Map[Double, Map[Any, Int]]]): Double = {
+    def normalized_diff(x: Double, y: Double, sd: Double): Double = abs(x - y) / (4 * sd)
+
+    def normalized_vdm(nax: Double, nay: Double, naxClasses: Map[Any, Int], nayClasses: Map[Any, Int]): Double = {
+      sqrt((naxClasses.values zip nayClasses.values).map((element: (Int, Int)) => pow(abs(element._1 / nax - element._2 / nay), 2)).sum)
+    }
+
+    (n1 zip n2).zipWithIndex.map((element: ((Double, Double), Int)) =>
+      if (nominal.contains(element._2))
+        normalized_vdm(nax = attrCounter(element._2)(element._1._1), nay = attrCounter(element._2)(element._1._1),
+          naxClasses = attrClassesCounter(element._2)(element._1._1), nayClasses = attrClassesCounter(element._2)(element._1._2)) else
+        normalized_diff(element._1._1, element._1._2, sds(element._2))).sum
+  }
+
   /** Compute the soul ratio (number of instances of all the classes except the minority one divided by number of
     * instances of the minority class)
     *
@@ -198,28 +197,53 @@ object Utilities {
 
   /** Split the data into nFolds folds and predict the labels using the test
     *
-    * @param data               target data
-    * @param labels             labels associated to each point in data
-    * @param k                  number of neighbours to consider
-    * @param nFolds             number of subsets to create
-    * @param distance           distance to use when calling the NNRule
-    * @param nominal            indicate nominal attributes in the instances
-    * @param sds                standard deviations
-    * @param attrCounter        counter attributes occurrences
-    * @param attrClassesCounter number of occurrences for each value and output class c, for each class
+    * @param data   target data
+    * @param labels labels associated to each point in data
+    * @param k      number of neighbours to consider
+    * @param nFolds number of subsets to create
+    * @param dist   distance function
+    * @param which  if it's sets to "nearest", return the nearest which, otherwise, return the farthest
     * @return the predictedLabels with less error
     */
-  def kFoldPrediction(data: Array[Array[Double]], labels: Array[Any], k: Int, nFolds: Int, distance: Distances.Distance = Distances.EUCLIDEAN,
-                      nominal: Array[Int], sds: Array[Double], attrCounter: Array[Map[Double, Int]],
-                      attrClassesCounter: Array[Map[Double, Map[Any, Int]]]): Array[Any] = {
+  def kFoldPrediction(data: Array[Array[Double]], labels: Array[Any], k: Int, nFolds: Int, dist: Any, which: String): Array[Any] = {
 
     val indices: List[List[Int]] = labels.indices.toList.grouped((labels.length.toFloat / nFolds).ceil.toInt).toList
     val predictedLabels: Array[(Int, Array[Any])] = indices.par.map { index: List[Int] =>
       val neighbours: Array[Array[Double]] = (index map data).toArray
       val classes: Array[Any] = (index map labels).toArray
       val predictedLabels: Array[(Int, Any)] = labels.indices.diff(index).map { i: Int =>
-        (i, nnRule(neighbours = neighbours, instance = data(i), id = i, labels = classes, k = k, distance = distance, nominal = nominal,
-          sds = sds, attrCounter = attrCounter, attrClassesCounter = attrClassesCounter)._1)
+        (i, nnRule(neighbours, data(i), i, classes, k, dist, which))
+      }.toArray
+
+      val error: Int = predictedLabels.count((e: (Int, Any)) => e._2 != labels(e._1))
+      (error, predictedLabels.sortBy((_: (Int, Any))._1).unzip._2)
+    }.toArray
+
+    predictedLabels.minBy((_: (Int, Array[Any]))._1)._2
+  }
+
+  /** Split the data into nFolds folds and predict the labels using the test
+    *
+    * @param data               target data
+    * @param labels             labels associated to each point in data
+    * @param k                  number of neighbours to consider
+    * @param nFolds             number of subsets to create
+    * @param nominal            indicate nominal attributes in the instances
+    * @param sds                standard deviations
+    * @param attrCounter        counter attributes occurrences
+    * @param attrClassesCounter number of occurrences for each value and output class c, for each class
+    * @param which              if it's sets to "nearest", return the nearest which, otherwise, return the farthest
+    * @return the predictedLabels with less error
+    */
+  def kFoldPredictionHVDM(data: Array[Array[Double]], labels: Array[Any], k: Int, nFolds: Int, nominal: Array[Int], sds: Array[Double],
+                          attrCounter: Array[Map[Double, Int]], attrClassesCounter: Array[Map[Double, Map[Any, Int]]], which: String): Array[Any] = {
+
+    val indices: List[List[Int]] = labels.indices.toList.grouped((labels.length.toFloat / nFolds).ceil.toInt).toList
+    val predictedLabels: Array[(Int, Array[Any])] = indices.par.map { index: List[Int] =>
+      val neighbours: Array[Array[Double]] = (index map data).toArray
+      val classes: Array[Any] = (index map labels).toArray
+      val predictedLabels: Array[(Int, Any)] = labels.indices.diff(index).map { i: Int =>
+        (i, nnRuleHVDM(neighbours, data(i), i, classes, k, nominal, sds, attrCounter, attrClassesCounter, which)._1)
       }.toArray
 
       val error: Int = predictedLabels.count((e: (Int, Any)) => e._2 != labels(e._1))
@@ -300,22 +324,17 @@ object Utilities {
 
   /** Compute kNN core
     *
-    * @param data               array of samples
-    * @param node               array with the attributes of the node
-    * @param k                  number of neighbors
-    * @param distance           specifies hvdm or euclideanDistance
-    * @param nominal            indicate nominal attributes in the instances
-    * @param sds                standard deviations
-    * @param attrCounter        counter attributes occurrences
-    * @param attrClassesCounter number of occurrences for each value and output class c, for each class
+    * @param data array of samples
+    * @param node array with the attributes of the node
+    * @param k    number of neighbors
+    * @param dist distance function
     * @return index of the neighbors of node
     */
-  def kNeighbors(data: Array[Array[Double]], node: Array[Double], k: Int, distance: Distances.Distance, nominal: Array[Int], sds: Array[Double],
-                 attrCounter: Array[Map[Double, Int]], attrClassesCounter: Array[Map[Double, Map[Any, Int]]]): Array[Int] = {
+  def kNeighbors(data: Array[Array[Double]], node: Array[Double], k: Int, dist: Any): Array[Int] = {
     val distances: Array[Double] = new Array[Double](data.length)
 
     data.indices.foreach(i => {
-      distances(i) = computeDistance(node, data(i), distance, nominal, sds, attrCounter, attrClassesCounter)
+      distances(i) = dist.asInstanceOf[(Array[Double], Array[Double]) => Double](node, data(i))
       if (distances(i) == 0) {
         distances(i) = 9999999
       }
@@ -333,17 +352,43 @@ object Utilities {
   /** Compute kNN core
     *
     * @param data               array of samples
-    * @param node               index whom neighbors are going to be evaluated
+    * @param node               array with the attributes of the node
     * @param k                  number of neighbors
-    * @param distance           specifies hvdm or euclideanDistance
     * @param nominal            indicate nominal attributes in the instances
     * @param sds                standard deviations
     * @param attrCounter        counter attributes occurrences
     * @param attrClassesCounter number of occurrences for each value and output class c, for each class
     * @return index of the neighbors of node
     */
-  def kNeighbors(data: Array[Array[Double]], node: Int, k: Int, distance: Distances.Distance, nominal: Array[Int], sds: Array[Double],
-                 attrCounter: Array[Map[Double, Int]], attrClassesCounter: Array[Map[Double, Map[Any, Int]]]): Array[Int] = {
+  def kNeighborsHVDM(data: Array[Array[Double]], node: Array[Double], k: Int, nominal: Array[Int], sds: Array[Double],
+                     attrCounter: Array[Map[Double, Int]], attrClassesCounter: Array[Map[Double, Map[Any, Int]]]): Array[Int] = {
+    val distances: Array[Double] = new Array[Double](data.length)
+
+    data.indices.foreach(i => {
+      distances(i) = HVDM(node, data(i), nominal, sds, attrCounter, attrClassesCounter)
+      if (distances(i) == 0) {
+        distances(i) = 9999999
+      }
+    })
+    val result = distances.toList.view.zipWithIndex.sortBy(_._1)
+    val index = result.unzip._2
+
+    var kk: Int = k
+    if (k > distances.length) {
+      kk = distances.length
+    }
+    range(0, kk).map(i => index.toList(i))
+  }
+
+  /** Compute kNN core
+    *
+    * @param data array of samples
+    * @param node index whom neighbors are going to be evaluated
+    * @param k    number of neighbors
+    * @param dist distance function
+    * @return index of the neighbors of node
+    */
+  def kNeighbors(data: Array[Array[Double]], node: Int, k: Int, dist: Any): Array[Int] = {
     val distances: Array[Double] = Array.fill[Double](data.length)(99999999)
 
     val kNeighbors: Array[Int] = (0 until k).toArray
@@ -355,7 +400,50 @@ object Utilities {
       if (i != node) {
         j = 0
         found = false
-        distances(i) = computeDistance(data(i), data(node), distance, nominal, sds, attrCounter, attrClassesCounter)
+        distances(i) = dist.asInstanceOf[(Array[Double], Array[Double]) => Double](data(i), data(node))
+        //save the best neighbors
+        while (j < kNeighbors.length && !found) {
+          if (distances(i) < distances(kNeighbors(j))) {
+            found = true
+          } else {
+            j = j + 1
+          }
+        }
+        if (found) {
+          kNeighbors(j) = i
+        }
+      }
+      i = i + 1
+    }
+
+    kNeighbors
+  }
+
+  /** Compute kNN core
+    *
+    * @param data               array of samples
+    * @param node               index whom neighbors are going to be evaluated
+    * @param k                  number of neighbors
+    * @param nominal            indicate nominal attributes in the instances
+    * @param sds                standard deviations
+    * @param attrCounter        counter attributes occurrences
+    * @param attrClassesCounter number of occurrences for each value and output class c, for each class
+    * @return index of the neighbors of node
+    */
+  def kNeighborsHVDM(data: Array[Array[Double]], node: Int, k: Int, nominal: Array[Int], sds: Array[Double],
+                     attrCounter: Array[Map[Double, Int]], attrClassesCounter: Array[Map[Double, Map[Any, Int]]]): Array[Int] = {
+    val distances: Array[Double] = Array.fill[Double](data.length)(99999999)
+
+    val kNeighbors: Array[Int] = (0 until k).toArray
+    var i: Int = 0
+    var j: Int = 0
+    var found: Boolean = false
+    //compute distances
+    while (i < data.length) {
+      if (i != node) {
+        j = 0
+        found = false
+        distances(i) = HVDM(data(i), data(node), nominal, sds, attrCounter, attrClassesCounter)
         //save the best neighbors
         while (j < kNeighbors.length && !found) {
           if (distances(i) < distances(kNeighbors(j))) {
@@ -436,27 +524,21 @@ object Utilities {
 
   /** Decide the label using the NNRule considering k neighbours of data set
     *
-    * @param neighbours         neighbours of the element
-    * @param instance           target instance
-    * @param id                 id of the instance
-    * @param labels             labels associated to each point in data
-    * @param k                  number of neighbours to consider
-    * @param which              if it's sets to "nearest", return the nearest which, if it sets "farthest", return the farthest which
-    * @param distance           distance to use when calling the NNRule
-    * @param nominal            indicate nominal attributes in the instances
-    * @param sds                standard deviations
-    * @param attrCounter        counter attributes occurrences
-    * @param attrClassesCounter number of occurrences for each value and output class c, for each class
+    * @param neighbours neighbours of the element
+    * @param instance   target instance
+    * @param id         id of the instance
+    * @param labels     labels associated to each point in data
+    * @param k          number of neighbours to consider
+    * @param dist       distance function
+    * @param which      if it's sets to "nearest", return the nearest which, if it sets "farthest", return the farthest which
     * @return the label associated to newPoint and the index of the k-nearest which
     */
-  def nnRule(neighbours: Array[Array[Double]], instance: Array[Double], id: Int, labels: Array[Any], k: Int, which: String = "nearest",
-             distance: Distances.Distance = Distances.EUCLIDEAN, nominal: Array[Int], sds: Array[Double], attrCounter: Array[Map[Double, Int]],
-             attrClassesCounter: Array[Map[Double, Map[Any, Int]]]): (Any, Array[Int]) = {
+  def nnRule(neighbours: Array[Array[Double]], instance: Array[Double], id: Int, labels: Array[Any], k: Int, dist: Any, which: String): (Any, Array[Int], Array[Double]) = {
     val distances: Array[Double] = new Array[Double](neighbours.length)
 
     var i = 0
     while (i < neighbours.length) {
-      distances(i) = computeDistance(instance, neighbours(i), distance, nominal, sds, attrCounter, attrClassesCounter)
+      distances(i) = dist.asInstanceOf[(Array[Double], Array[Double]) => Double](instance, neighbours(i))
       i += 1
     }
     distances(id) = Double.MaxValue
@@ -489,7 +571,7 @@ object Utilities {
       j += 1
     }
 
-    (mode(kBest map labels), kBest)
+    (mode(kBest map labels), kBest, distances)
   }
 
   /** Decide the label using the NNRule considering k neighbours of data set
@@ -499,22 +581,21 @@ object Utilities {
     * @param id                 id of the instance
     * @param labels             labels associated to each point in data
     * @param k                  number of neighbours to consider
-    * @param which              if it's sets to "nearest", return the nearest which, if it sets "farthest", return the farthest which
-    * @param distance           distance to use when calling the NNRule
     * @param nominal            indicate nominal attributes in the instances
     * @param sds                standard deviations
     * @param attrCounter        counter attributes occurrences
     * @param attrClassesCounter number of occurrences for each value and output class c, for each class
-    * @return the label associated to newPoint, the index of the k-nearest which and the distances
+    * @param which              if it's sets to "nearest", return the nearest which, otherwise, return the farthest
+    * @return the label associated to newPoint and the index of the k-nearest which
     */
-  def nnRuleDistances(neighbours: Array[Array[Double]], instance: Array[Double], id: Int, labels: Array[Any], k: Int, which: String = "nearest",
-                      distance: Distances.Distance = Distances.EUCLIDEAN, nominal: Array[Int], sds: Array[Double], attrCounter: Array[Map[Double, Int]],
-                      attrClassesCounter: Array[Map[Double, Map[Any, Int]]]): (Any, Array[Int], Array[Double]) = {
+  def nnRuleHVDM(neighbours: Array[Array[Double]], instance: Array[Double], id: Int, labels: Array[Any], k: Int,
+                 nominal: Array[Int], sds: Array[Double], attrCounter: Array[Map[Double, Int]],
+                 attrClassesCounter: Array[Map[Double, Map[Any, Int]]], which: String): (Any, Array[Int], Array[Double]) = {
     val distances: Array[Double] = new Array[Double](neighbours.length)
 
     var i = 0
     while (i < neighbours.length) {
-      distances(i) = computeDistance(instance, neighbours(i), distance, nominal, sds, attrCounter, attrClassesCounter)
+      distances(i) = HVDM(instance, neighbours(i), nominal, sds, attrCounter, attrClassesCounter)
       i += 1
     }
     distances(id) = Double.MaxValue

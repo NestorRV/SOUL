@@ -10,7 +10,7 @@ import soul.util.Utilities._
   * @param data          data to work with
   * @param seed          seed to use. If it is not provided, it will use the system time
   * @param file          file to store the log. If its set to None, log process would not be done
-  * @param distance      distance to use when calling the NNRule
+  * @param dist          distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
   * @param k             number of neighbours to use when computing k-NN rule (normally 3 neighbours)
   * @param numClusters   number of clusters to be created by KMeans core
   * @param restarts      number of times to relaunch KMeans core
@@ -21,9 +21,10 @@ import soul.util.Utilities._
   * @author Néstor Rodríguez Vico
   */
 class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-                 distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3, numClusters: Int = 15, restarts: Int = 5,
-                 minDispersion: Double = 0.0001, maxIterations: Int = 100, val normalize: Boolean = false,
-                 val randomData: Boolean = false) extends LazyLogging {
+                 dist: Any, k: Int = 3, numClusters: Int = 15, restarts: Int = 5, minDispersion: Double = 0.0001, maxIterations: Int = 100,
+                 val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
+
+  private[soul] val distance: Distances.Distance = getDistance(dist)
 
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
@@ -77,8 +78,12 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
     val neighbours: Array[Array[Double]] = test map dataToWorkWith
     val classes: Array[Any] = test map classesToWorkWith
     val calculatedLabels: Array[(Int, Any)] = test.map { i: Int =>
-      (i, nnRule(neighbours = neighbours, instance = dataToWorkWith(i), id = i, labels = classes, k = 1, distance = distance, nominal = data.fileInfo.nominal,
-        sds = sds, attrCounter = attrCounter, attrClassesCounter = attrClassesCounter)._1)
+      val label: Any = if (distance == Distances.USER) {
+        nnRule(neighbours, dataToWorkWith(i), i, classes, 1, dist, "nearet")._1
+      } else {
+        nnRuleHVDM(neighbours, dataToWorkWith(i), i, classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
+      }
+      (i, label)
     }
 
     // if the label matches (it is well classified) the element is useful
@@ -89,7 +94,7 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
     val auxData: Data = new Data(x = toXData(newDataIndex map dataToWorkWith),
       y = newDataIndex map classesToWorkWith, fileInfo = data.fileInfo)
     auxData.processedData = newDataIndex map dataToWorkWith
-    val tl = new TL(auxData, distance = distance)
+    val tl = new TL(auxData, dist = dist)
     tl.untouchableClass_=(untouchableClass)
     val resultTL: Data = tl.compute()
     // The final randomIndex is the result of applying Tomek Link to the content of newDataIndex

@@ -12,15 +12,15 @@ import scala.math.min
   *
   * @param data       data to work with
   * @param seed       seed to use. If it is not provided, it will use the system time
-  * @param distance   distance to use when calling the NNRule
+  * @param dist       distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
   * @param normalize  normalize the data or not
   * @param randomData iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
 class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-          distance: Distances.Distance = Distances.EUCLIDEAN, val normalize: Boolean = false,
-          val randomData: Boolean = false) extends LazyLogging {
+          dist: Any, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
 
+  private[soul] val distance: Distances.Distance = getDistance(dist)
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
@@ -51,6 +51,14 @@ class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val impurity: Double = posElements.asInstanceOf[Double] / negElements.asInstanceOf[Double]
     val cluster: Array[Int] = new Array[Int](dataToWorkWith.length).indices.toArray
 
+    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
+      (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+        dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
+        dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
+    } else {
+      (null, null, null)
+    }
+
     def purityMaximization(parentImpurity: Double, parentCluster: Array[Int], center: Int): Unit = {
       val classes: Array[Any] = (randomIndex map data.y).toArray
 
@@ -79,9 +87,22 @@ class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.cu
         center1 = pairs(pointer)._1
         center2 = pairs(pointer)._2
 
-        parentCluster.foreach((element: Int) => if (euclideanDistance(dataToWorkWith(element), dataToWorkWith(center1)) <
-          euclideanDistance(dataToWorkWith(element), dataToWorkWith(center2)))
-          cluster1 += element else cluster2 += element)
+        parentCluster.foreach { element: Int =>
+          val d1: Double = if (distance == Distances.USER) {
+            dist.asInstanceOf[(Array[Double], Array[Double]) => Double](dataToWorkWith(element), dataToWorkWith(center1))
+          } else {
+            HVDM(dataToWorkWith(element), dataToWorkWith(center1), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+          }
+
+          val d2: Double = if (distance == Distances.USER) {
+            dist.asInstanceOf[(Array[Double], Array[Double]) => Double](dataToWorkWith(element), dataToWorkWith(center2))
+          } else {
+            HVDM(dataToWorkWith(element), dataToWorkWith(center2), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+          }
+
+          if (d1 < d2)
+            cluster1 += element else cluster2 += element
+        }
 
         if (cluster1.nonEmpty)
           impurity1 = cluster1.count((element: Int) => classes(element) == untouchableClass).toDouble / cluster1.length

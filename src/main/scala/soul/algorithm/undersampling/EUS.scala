@@ -16,7 +16,7 @@ import scala.math.{abs, sqrt}
   * @param maxEvaluations number of evaluations
   * @param algorithm      version of core to execute. One of: EBUSGSGM, EBUSMSGM, EBUSGSAUC, EBUSMSAUC,
   *                       EUSCMGSGM, EUSCMMSGM, EUSCMGSAUC or EUSCMMSAUC
-  * @param distance       distance to use when calling the NNRule
+  * @param dist           distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
   * @param probHUX        probability of changing a gen from 0 to 1 (used in crossover)
   * @param recombination  recombination threshold (used in reinitialization)
   * @param prob0to1       probability of changing a gen from 0 to 1 (used in reinitialization)
@@ -25,10 +25,10 @@ import scala.math.{abs, sqrt}
   * @author Néstor Rodríguez Vico
   */
 class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-          populationSize: Int = 50, maxEvaluations: Int = 1000, algorithm: String = "EBUSMSGM", distance: Distances.Distance = Distances.EUCLIDEAN,
-          probHUX: Double = 0.25, recombination: Double = 0.35, prob0to1: Double = 0.05,
-          val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
+          populationSize: Int = 50, maxEvaluations: Int = 1000, algorithm: String = "EBUSMSGM", dist: Any, probHUX: Double = 0.25,
+          recombination: Double = 0.35, prob0to1: Double = 0.05, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
 
+  private[soul] val distance: Distances.Distance = getDistance(dist)
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
@@ -69,9 +69,13 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       val index: Array[Int] = zeroOneToIndex(instance) map targetInstances
       val neighbours: Array[Array[Double]] = index map dataToWorkWith
       val classes: Array[Any] = index map classesToWorkWith
-      val predicted: Array[Any] = dataToWorkWith.indices.map((e: Int) => nnRule(neighbours = neighbours,
-        instance = dataToWorkWith(e), id = e, labels = classes, k = 1, distance = distance, nominal = data.fileInfo.nominal,
-        sds = sds, attrCounter = attrCounter, attrClassesCounter = attrClassesCounter)._1).toArray
+      val predicted: Array[Any] = dataToWorkWith.indices.map { e: Int =>
+        if (distance == Distances.USER) {
+          nnRule(neighbours, dataToWorkWith(e), e, classes, 1, dist, "nearest")._1
+        } else {
+          nnRuleHVDM(neighbours, dataToWorkWith(e), e, classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
+        }
+      }.toArray
 
       val matrix: (Int, Int, Int, Int) = confusionMatrix(originalLabels = index map classesToWorkWith,
         predictedLabels = predicted, minorityClass = untouchableClass)

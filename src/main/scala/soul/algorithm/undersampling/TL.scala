@@ -8,7 +8,7 @@ import soul.util.Utilities._
   *
   * @param data       data to work with
   * @param seed       seed to use. If it is not provided, it will use the system time
-  * @param distance   distance to use when calling the NNRule
+  * @param dist       distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
   * @param ratio      indicates the instances of the Tomek Links that are going to be remove. "all" will remove all instances,
   *                   "minority" will remove instances of the minority class and "not minority" will remove all the instances
   *                   except the ones of the minority class.
@@ -16,10 +16,10 @@ import soul.util.Utilities._
   * @param randomData iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
-class TL(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-         distance: Distances.Distance = Distances.EUCLIDEAN, ratio: String = "not minority",
+class TL(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), dist: Any, ratio: String = "not minority",
          val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
 
+  private[soul] val distance: Distances.Distance = getDistance(dist)
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   private[this] var untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
@@ -51,6 +51,14 @@ class TL(private[soul] val data: Data, private[soul] val seed: Long = System.cur
       data.y
     }
 
+    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
+      (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+        dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
+        dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
+    } else {
+      (null, null, null)
+    }
+
     val candidates: Map[Any, Array[Int]] = classesToWorkWith.distinct.map {
       c: Any =>
         c -> classesToWorkWith.zipWithIndex.collect {
@@ -60,10 +68,19 @@ class TL(private[soul] val data: Data, private[soul] val seed: Long = System.cur
 
     val distances: Array[Array[Double]] = Array.fill[Array[Double]](dataToWorkWith.length)(new Array[Double](dataToWorkWith.length))
 
-    dataToWorkWith.indices.par.foreach { i: Int =>
-      dataToWorkWith.indices.drop(i).par.foreach { j: Int =>
-        distances(i)(j) = euclideanDistance(dataToWorkWith(i), dataToWorkWith(j))
-        distances(j)(i) = distances(i)(j)
+    if (distance == Distances.USER) {
+      dataToWorkWith.indices.par.foreach { i: Int =>
+        dataToWorkWith.indices.drop(i).par.foreach { j: Int =>
+          distances(i)(j) = euclideanDistance(dataToWorkWith(i), dataToWorkWith(j))
+          distances(j)(i) = distances(i)(j)
+        }
+      }
+    } else {
+      dataToWorkWith.indices.par.foreach { i: Int =>
+        dataToWorkWith.indices.drop(i).par.foreach { j: Int =>
+          distances(i)(j) = HVDM(dataToWorkWith(i), dataToWorkWith(j), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+          distances(j)(i) = distances(i)(j)
+        }
       }
     }
 

@@ -12,12 +12,10 @@ import scala.util.Random
   *
   * @param data      data to work with
   * @param seed      seed to use. If it is not provided, it will use the system time
-  * @param distance  distance to use when calling the NNRule
   * @param normalize normalize the data or not
   * @author David López Pretel
   */
-class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-          distance: Distances.Distance = Distances.EUCLIDEAN, val normalize: Boolean = false) extends LazyLogging {
+class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), val normalize: Boolean = false) extends LazyLogging {
 
   /** create the new samples for MDO algorithm
     *

@@ -14,13 +14,15 @@ import scala.util.Random
   * @param seed      seed to use. If it is not provided, it will use the system time
   * @param percent   amount of samples N%
   * @param k         number of neighbors
-  * @param distance  distance to use when calling the NNRule
+  * @param dist      distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
   * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-            percent: Int = 300, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN,
-            val normalize: Boolean = false) extends LazyLogging {
+            percent: Int = 300, k: Int = 5, dist: Any, val normalize: Boolean = false) extends LazyLogging {
+
+  private[soul] val distance: Distances.Distance = getDistance(dist)
+
   /** Compute the first principal component axis
     *
     * @param A the data
@@ -67,12 +69,22 @@ class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.
     (0 until percent / 100).foreach(_ => {
       // for each minority class sample
       minorityClassIndex.zipWithIndex.foreach(i => {
-        neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+        neighbors = if (distance == Distances.USER) {
+          kNeighbors(minorityClassIndex map samples, i._2, k, dist)
+        } else {
+          kNeighborsHVDM(minorityClassIndex map samples, i._2, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+        }
+
+        val n: Int = r.nextInt(neighbors.length)
+
+        val D: Double = if (distance == Distances.USER) {
+          dist.asInstanceOf[(Array[Double], Array[Double]) => Double](samples(i._1), samples(minorityClassIndex(neighbors(n))))
+        } else {
+          HVDM(samples(i._1), samples(minorityClassIndex(neighbors(n))), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+        }
+
         // calculate first principal component axis of local data distribution
         val l2: Array[Double] = PCA((neighbors map minorityClassIndex) map samples)
-        val n: Int = r.nextInt(neighbors.length)
-        val D: Double = computeDistance(samples(i._1), samples(minorityClassIndex(neighbors(n))), distance, data.fileInfo.nominal,
-          sds, attrCounter, attrClassesCounter)
         // compute projection of n in l2, M is on l2
         val dotMN: Double = l2.indices.map(j => {
           samples(i._1)(j) - samples(minorityClassIndex(neighbors(n)))(j)

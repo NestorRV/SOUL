@@ -11,7 +11,7 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @param data       data to work with
   * @param seed       seed to use. If it is not provided, it will use the system time
-  * @param distance   distance to use when calling the NNRule
+  * @param dist       distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
   * @param k          number of neighbours to use when computing k-NN rule (normally 3 neighbours)
   * @param threshold  consider a class to be undersampled if the number of instances of this class is
   *                   greater than data.size * threshold
@@ -20,9 +20,10 @@ import scala.collection.mutable.ArrayBuffer
   * @author Néstor Rodríguez Vico
   */
 class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-          distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3, threshold: Double = 0.5,
+          dist: Any, k: Int = 3, threshold: Double = 0.5,
           val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
 
+  private[soul] val distance: Distances.Distance = getDistance(dist)
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
@@ -67,7 +68,7 @@ class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.cu
 
     val ennData = new Data(toXData((majorityIndex map dataToWorkWith).toArray), (majorityIndex map classesToWorkWith).toArray, None, data.fileInfo)
     ennData.processedData = (majorityIndex map dataToWorkWith).toArray
-    val enn = new ENN(ennData, distance = distance, k = k)
+    val enn = new ENN(ennData, dist = dist, k = k)
     val resultENN: Data = enn.compute()
     val indexA1: Array[Int] = resultENN.index.get map majorityIndex
 
@@ -76,8 +77,12 @@ class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.cu
 
     def selectNeighbours(l: Int, targetClass: Any): ArrayBuffer[Int] = {
       val selected = new ArrayBuffer[Int]()
-      val (label, nNeighbours) = nnRule(neighbours = dataToWorkWith, instance = dataToWorkWith(l), id = l, labels = classesToWorkWith, k = k, distance = distance,
-        nominal = data.fileInfo.nominal, sds = sds, attrCounter = attrCounter, attrClassesCounter = attrClassesCounter)
+      val (label, nNeighbours, _) = if (distance == Distances.USER) {
+        nnRule(dataToWorkWith, dataToWorkWith(l), l, classesToWorkWith, k, dist, "nearest")
+      } else {
+        nnRuleHVDM(dataToWorkWith, dataToWorkWith(l), l, classesToWorkWith, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
+      }
+
       if (label != targetClass) {
         nNeighbours.foreach { n =>
           val nNeighbourClass: Any = classesToWorkWith(n)

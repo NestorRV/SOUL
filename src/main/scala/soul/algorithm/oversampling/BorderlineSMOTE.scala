@@ -2,6 +2,7 @@ package soul.algorithm.oversampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
+import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -13,13 +14,14 @@ import scala.util.Random
   * @param seed      seed to use. If it is not provided, it will use the system time
   * @param m         number of nearest neighbors
   * @param k         number of minority class nearest neighbors
-  * @param distance  distance to use when calling the NNRule
+  * @param dist      distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
   * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class BorderlineSMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-                      m: Int = 10, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN,
-                      val normalize: Boolean = false) extends LazyLogging {
+                      m: Int = 10, k: Int = 5, dist: Any = Utilities.euclideanDistance _, val normalize: Boolean = false) extends LazyLogging {
+
+  private[soul] val distance: Distances.Distance = getDistance(dist)
 
   /** Compute the BorderlineSMOTE algorithm
     *
@@ -40,8 +42,11 @@ class BorderlineSMOTE(private[soul] val data: Data, private[soul] val seed: Long
     }
 
     // compute minority class neighbors
-    val minorityClassNeighbors: Array[Array[Int]] = minorityClassIndex.map(node => kNeighbors(samples, node, m, distance,
-      data.fileInfo.nominal, sds, attrCounter, attrClassesCounter))
+    val minorityClassNeighbors: Array[Array[Int]] = if (distance == Distances.USER) {
+      minorityClassIndex.map(node => kNeighbors(samples, node, m, dist))
+    } else {
+      minorityClassIndex.map(node => kNeighborsHVDM(samples, node, m, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter))
+    }
 
     //compute nodes in borderline
     val DangerNodes: Array[Int] = minorityClassNeighbors.map(neighbors => {
@@ -74,7 +79,11 @@ class BorderlineSMOTE(private[soul] val data: Data, private[soul] val seed: Long
     var newIndex: Int = 0
     // for each minority class sample
     DangerNodes.zipWithIndex.foreach(i => {
-      neighbors = kNeighbors(minorityClassIndex map samples, i._2, k, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter).map(minorityClassIndex(_))
+      neighbors = if (distance == Distances.USER) {
+        kNeighbors(minorityClassIndex map samples, i._2, k, dist)
+      } else {
+        kNeighborsHVDM(minorityClassIndex map samples, i._2, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter).map(minorityClassIndex(_))
+      }
       val sNeighbors: Array[Int] = (0 until s).map(_ => r.nextInt(neighbors.length)).toArray.distinct
       neighbors = sNeighbors map neighbors
       // calculate populate for the sample

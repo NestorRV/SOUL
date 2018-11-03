@@ -11,7 +11,7 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @param data        data to work with
   * @param seed        seed to use. If it is not provided, it will use the system time
-  * @param distance    distance to use when calling the NNRule
+  * @param dist        distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
   * @param k           number of neighbours to use when computing k-NN rule (normally 3 neighbours)
   * @param nMaxSubsets maximum number of subsets to generate
   * @param nFolds      number of subsets to create when applying cross-validation
@@ -23,8 +23,10 @@ import scala.collection.mutable.ArrayBuffer
   * @author Néstor Rodríguez Vico
   */
 class BC(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-         distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3, nMaxSubsets: Int = 5, nFolds: Int = 5, ratio: Double = 1.0,
-         val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
+         dist: Any, k: Int = 3, nMaxSubsets: Int = 5, nFolds: Int = 5, ratio: Double = 1.0, val normalize: Boolean = false,
+         val randomData: Boolean = false) extends LazyLogging {
+
+  private[soul] val distance: Distances.Distance = getDistance(dist)
 
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
@@ -90,8 +92,11 @@ class BC(private[soul] val data: Data, private[soul] val seed: Long = System.cur
 
       val classesToWorkWithSubset: Array[Any] = subset map classesToWorkWith
       val dataToWorkWithSubset: Array[Array[Double]] = subset map dataToWorkWith
-      val prediction: Array[Any] = kFoldPrediction(data = dataToWorkWithSubset, labels = classesToWorkWithSubset, k = k,
-        nFolds = nFolds, distance = distance, nominal = data.fileInfo.nominal, sds, attrCounter, attrClassesCounter).take(indexToUnderSample.length)
+      val prediction: Array[Any] = (if (distance == Distances.USER) {
+        kFoldPrediction(dataToWorkWithSubset, classesToWorkWithSubset, k, nFolds, dist, "nearest")
+      } else {
+        kFoldPredictionHVDM(dataToWorkWithSubset, classesToWorkWithSubset, k, nFolds, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
+      }).take(indexToUnderSample.length)
 
       val classifiedInstances: Array[Boolean] = ((indexToUnderSample.indices map classesToWorkWithSubset)
         zip prediction).map((e: (Any, Any)) => e._1 == e._2).toArray
@@ -113,7 +118,7 @@ class BC(private[soul] val data: Data, private[soul] val seed: Long = System.cur
     val index: Array[Int] = (finalIndex map randomIndex).sorted
     val newData: Data = new Data(index map data.x, index map data.y, Some(index), data.fileInfo)
 
-    logger.whenInfoEnabled{
+    logger.whenInfoEnabled {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
       logger.info("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
       logger.info("NEW DATA SIZE: %d".format(finalIndex.length))

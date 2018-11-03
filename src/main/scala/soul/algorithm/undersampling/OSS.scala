@@ -9,15 +9,15 @@ import soul.util.Utilities._
   *
   * @param data       data to work with
   * @param seed       seed to use. If it is not provided, it will use the system time
-  * @param distance   distance to use when calling the NNRule
+  * @param dist       distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
   * @param normalize  normalize the data or not
   * @param randomData iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
-class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-          distance: Distances.Distance = Distances.EUCLIDEAN, val normalize: Boolean = false,
+class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), dist: Any, val normalize: Boolean = false,
           val randomData: Boolean = false) extends LazyLogging {
 
+  private[soul] val distance: Distances.Distance = getDistance(dist)
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if minorityClass is set to -1.
@@ -58,8 +58,12 @@ class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val neighbours = c map dataToWorkWith
     val classes = c map classesToWorkWith
     val labels: Seq[(Int, Any)] = dataToWorkWith.indices.map { i: Int =>
-      (i, nnRule(neighbours = neighbours, instance = dataToWorkWith(i), id = i, labels = classes, k = 1, distance = distance,
-        nominal = data.fileInfo.nominal, sds = sds, attrCounter = attrCounter, attrClassesCounter = attrClassesCounter)._1)
+      val label: Any = if (distance == Distances.USER) {
+        nnRule(neighbours, dataToWorkWith(i), i, classes, 1, dist, "nearest")._1
+      } else {
+        nnRuleHVDM(neighbours, dataToWorkWith(i), i, classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
+      }
+      (i, label)
     }
     val misclassified: Array[Int] = labels.collect { case (i, label) if label != classesToWorkWith(i) => i }.toArray
     val finalC: Array[Int] = (misclassified ++ c).distinct
@@ -67,7 +71,7 @@ class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val auxData: Data = new Data(x = toXData(finalC map dataToWorkWith),
       y = finalC map classesToWorkWith, fileInfo = data.fileInfo)
     auxData.processedData = finalC map dataToWorkWith
-    val tl = new TL(auxData, distance = distance)
+    val tl = new TL(auxData, dist = dist)
     tl.untouchableClass_=(untouchableClass)
     val resultTL: Data = tl.compute()
     val finalIndex: Array[Int] = (resultTL.index.get.toList map finalC).toArray

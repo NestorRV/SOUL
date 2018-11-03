@@ -14,13 +14,14 @@ import scala.util.Random
   * @param d         preset threshold for the maximum tolerated degree of class imbalance radio
   * @param B         balance level after generation of synthetic data
   * @param k         number of neighbors
-  * @param distance  distance to use when calling the NNRule
+  * @param dist      distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
   * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-             d: Double = 1, B: Double = 1, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN,
-             val normalize: Boolean = false) extends LazyLogging {
+             d: Double = 1, B: Double = 1, k: Int = 5, dist: Any, val normalize: Boolean = false) extends LazyLogging {
+
+  private[soul] val distance: Distances.Distance = getDistance(dist)
 
   /** Compute the ADASYN algorithm
     *
@@ -54,9 +55,13 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
     val ml: Int = data.y.length - ms
     val G: Int = ((ml - ms) * B).asInstanceOf[Int]
     // k neighbors of each minority sample
-    val neighbors: Array[Array[Int]] = minorityClassIndex.indices.map(sample => {
-      kNeighbors(samples, minorityClassIndex(sample), k, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
-    }).toArray
+    val neighbors: Array[Array[Int]] = minorityClassIndex.indices.map { sample =>
+      if (distance == Distances.USER) {
+        kNeighbors(samples, minorityClassIndex(sample), k, dist)
+      } else {
+        kNeighborsHVDM(samples, minorityClassIndex(sample), k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      }
+    }.toArray
 
     // ratio of each minority sample
     var ratio: Array[Double] = neighbors.map(neighborsOfX => {

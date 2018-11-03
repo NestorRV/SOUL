@@ -8,14 +8,15 @@ import soul.util.Utilities._
   *
   * @param data       data to work with
   * @param seed       seed to use. If it is not provided, it will use the system time
-  * @param distance   distance to use when calling the NNRule
+  * @param dist       distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
   * @param normalize  normalize the data or not
   * @param randomData iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
 class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-          distance: Distances.Distance = Distances.EUCLIDEAN, val normalize: Boolean = false,
-          val randomData: Boolean = false) extends LazyLogging {
+          dist: Any, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
+
+  private[soul] val distance: Distances.Distance = getDistance(dist)
 
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
@@ -66,9 +67,11 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       val index: Array[Int] = location.zipWithIndex.collect { case (a, b) if a == 1 => b }
       val neighbours: Array[Array[Double]] = index map dataToWorkWith
       val classes: Array[Any] = index map classesToWorkWith
-      val label: (Any, Array[Int]) = nnRule(neighbours = neighbours, instance = element._1, id = element._2, labels = classes,
-        k = 1, distance = distance, nominal = data.fileInfo.nominal, sds = sds, attrCounter = attrCounter,
-        attrClassesCounter = attrClassesCounter)
+      val label: (Any, Array[Int], Array[Double]) = if (distance == Distances.USER) {
+        nnRule(neighbours, element._1, element._2, classes, 1, dist, "nearest")
+      } else {
+        nnRuleHVDM(neighbours, element._1, element._2, classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
+      }
       // If it is misclassified or is a element of the untouchable class it is added to store; otherwise, it is added to grabbag
       location(element._2) = if (label._1 != classesToWorkWith(element._2)) 1 else -1
     }
@@ -89,8 +92,11 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
         val index: Array[Int] = location.zipWithIndex.collect { case (a, b) if a == 1 => b }
         val neighbours: Array[Array[Double]] = index map dataToWorkWith
         val classes: Array[Any] = index map classesToWorkWith
-        val label: Any = nnRule(neighbours = neighbours, instance = dataToWorkWith(element._2), id = element._2, labels = classes,
-          k = 1, distance = distance, nominal = data.fileInfo.nominal, sds = sds, attrCounter = attrCounter, attrClassesCounter = attrClassesCounter)._1
+        val label: Any = if (distance == Distances.USER) {
+          nnRule(neighbours, dataToWorkWith(element._2), element._2, classes, 1, dist, "nearest")._1
+        } else {
+          nnRuleHVDM(neighbours, dataToWorkWith(element._2), element._2, classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
+        }
         // If it is misclassified or is a element of the untouchable class it is added to store; otherwise, it is added to grabbag
         location(element._2) = if (label != classesToWorkWith(element._2)) {
           changed = true

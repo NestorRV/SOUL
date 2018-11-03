@@ -11,16 +11,16 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @param data       data to work with
   * @param seed       seed to use. If it is not provided, it will use the system time
-  * @param distance   distance to use when calling the NNRule
+  * @param dist       distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
   * @param k          number of neighbours to use when computing k-NN rule (normally 3 neighbours)
   * @param normalize  normalize the data or not
   * @param randomData iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
 class ENN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-          distance: Distances.Distance = Distances.EUCLIDEAN, k: Int = 3, val normalize: Boolean = false,
-          val randomData: Boolean = false) extends LazyLogging {
+          dist: Any, k: Int = 3, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
 
+  private[soul] val distance: Distances.Distance = getDistance(dist)
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
@@ -71,8 +71,11 @@ class ENN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       if (targetClass != untouchableClass) {
         var j = 0
         while (j < majorityClassIndex.length) {
-          val predictedLabel = nnRule(neighbours = neighbours, instance = dataToWorkWith(j), id = j, labels = classes, k = k,
-            distance = distance, nominal = data.fileInfo.nominal, sds = sds, attrCounter = attrCounter, attrClassesCounter = attrClassesCounter)._1
+          val predictedLabel = if (distance == Distances.USER) {
+            nnRule(neighbours, dataToWorkWith(j), j, classes, k, dist, "nearest")._1
+          } else {
+            nnRuleHVDM(neighbours, dataToWorkWith(j), j, classes, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
+          }
           if (predictedLabel == targetClass)
             finalIndex += majorityClassIndex(j)
           j += 1
@@ -87,7 +90,7 @@ class ENN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val index: Array[Int] = (finalIndex.toArray map randomIndex).sorted
     val newData: Data = new Data(index map data.x, index map data.y, Some(index), data.fileInfo)
 
-    logger.whenInfoEnabled{
+    logger.whenInfoEnabled {
       val newCounter: Map[Any, Int] = (finalIndex.toArray map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
       logger.info("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
       logger.info("NEW DATA SIZE: %d".format(finalIndex.length))

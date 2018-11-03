@@ -12,13 +12,10 @@ import soul.util.Utilities._
   *                    will be the same minority class examples as majority class examples. It will take
   *                    numMinorityInstances * ratio
   * @param replacement whether or not to sample randomly with replacement or not. false by default
-  * @param normalize   normalize the data or not
-  * @param randomData  iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
 class RU(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-         ratio: Double = 1.0, replacement: Boolean = false, val normalize: Boolean = false,
-         val randomData: Boolean = false) extends LazyLogging {
+         ratio: Double = 1.0, replacement: Boolean = false) extends LazyLogging {
 
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)

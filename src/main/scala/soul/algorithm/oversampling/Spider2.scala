@@ -14,13 +14,14 @@ import scala.collection.mutable.ArrayBuffer
   * @param relabel   relabeling option
   * @param ampl      amplification option
   * @param k         number of minority class nearest neighbors
-  * @param distance  distance to use when calling the NNRule
+  * @param dist      distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
   * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class Spider2(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-              relabel: String = "yes", ampl: String = "weak", k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN,
-              val normalize: Boolean = false) extends LazyLogging {
+              relabel: String = "yes", ampl: String = "weak", k: Int = 5, dist: Any, val normalize: Boolean = false) extends LazyLogging {
+
+  private[soul] val distance: Distances.Distance = getDistance(dist)
 
   // array with the index of the minority class
   private var minorityClassIndex: Array[Int] = minority(data.y)
@@ -63,8 +64,18 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
 
     def amplify(x: Int, k: Int): Unit = {
       // compute the neighborhood for the majority and minority class
-      val majNeighbors: Array[Int] = kNeighbors(majorityClassIndex map output, output(x), k, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
-      val minNeighbors: Array[Int] = kNeighbors(minorityClassIndex map output, output(x), k, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      val majNeighbors: Array[Int] = if (distance == Distances.USER) {
+        kNeighbors(majorityClassIndex map output, output(x), k, dist)
+      } else {
+        kNeighborsHVDM(majorityClassIndex map output, output(x), k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      }
+
+      val minNeighbors: Array[Int] = if (distance == Distances.USER) {
+        kNeighbors(minorityClassIndex map output, output(x), k, dist)
+      } else {
+        kNeighborsHVDM(minorityClassIndex map output, output(x), k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      }
+
       // compute the number of copies to create
       val S: Int = Math.abs(majNeighbors.length - minNeighbors.length) + 1
       // need to know the size of the output to save the randomIndex of the elements inserted
@@ -83,8 +94,12 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
 
     def correct(x: Int, k: Int, out: Boolean): Boolean = {
       // compute the neighbors
-      val neighbors: Array[Int] = kNeighbors(if (out) samples else output.toArray, if (out) samples(x) else output(x), k, distance,
-        data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      val neighbors: Array[Int] = if (distance == Distances.USER) {
+        kNeighbors(if (out) samples else output.toArray, if (out) samples(x) else output(x), k, dist)
+      } else {
+        kNeighborsHVDM(if (out) samples else output.toArray, if (out) samples(x) else output(x), k,
+          data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      }
       val classes: scala.collection.mutable.Map[Any, Int] = scala.collection.mutable.Map()
       // compute the number of samples for each class in the neighborhood
       neighbors.foreach(neighbor => classes += data.y(neighbor) -> 0)

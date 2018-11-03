@@ -13,14 +13,14 @@ import scala.util.Random
   * @param data      data to work with
   * @param eps       epsilon to indicate the distance that must be between two points
   * @param k         number of neighbors
-  * @param distance  distance to use when calling the NNRule
+  * @param dist      distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
   * @param seed      seed to use. If it is not provided, it will use the system time
   * @param normalize normalize the data or not
   * @author David López Pretel
   */
-class DBSMOTE(private[soul] val data: Data, eps: Double = -1, k: Int = 5, distance: Distances.Distance = Distances.EUCLIDEAN, seed: Long = 5,
-              val normalize: Boolean = false) extends LazyLogging {
+class DBSMOTE(private[soul] val data: Data, eps: Double = -1, k: Int = 5, dist: Any, seed: Long = 5, val normalize: Boolean = false) extends LazyLogging {
 
+  private[soul] val distance: Distances.Distance = getDistance(dist)
   // compute minority class
   private val minorityClassIndex: Array[Int] = minority(data.y)
 
@@ -42,8 +42,11 @@ class DBSMOTE(private[soul] val data: Data, eps: Double = -1, k: Int = 5, distan
 
     def regionQuery(point: Int, eps: Double): Array[Int] = {
       (minorityClassIndex map samples).indices.map(sample => {
-        val D: Double = computeDistance(samples(minorityClassIndex(point)), samples(minorityClassIndex(sample)), distance,
-          data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+        val D: Double = if (distance == Distances.USER) {
+          dist.asInstanceOf[(Array[Double], Array[Double]) => Double](samples(minorityClassIndex(point)), samples(minorityClassIndex(sample)))
+        } else {
+          HVDM(samples(minorityClassIndex(point)), samples(minorityClassIndex(sample)), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+        }
         if (D <= eps) {
           Some(sample)
         } else {
@@ -106,8 +109,16 @@ class DBSMOTE(private[soul] val data: Data, eps: Double = -1, k: Int = 5, distan
     def buildGraph(cluster: Array[Int], eps: Double, minPts: Int): Array[Array[Boolean]] = {
       val graph: Array[Array[Boolean]] = Array.fill(cluster.length, cluster.length)(false)
       //distance between each pair of nodes
-      val distances: Array[Array[Double]] = cluster.map(i => cluster.map(j => computeDistance(samples(minorityClassIndex(i)), samples(minorityClassIndex(j)),
-        distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)))
+      val distances: Array[Array[Double]] = cluster.map { i =>
+        cluster.map { j =>
+          if (distance == Distances.USER) {
+            dist.asInstanceOf[(Array[Double], Array[Double]) => Double](samples(minorityClassIndex(i)), samples(minorityClassIndex(j)))
+          } else {
+            HVDM(samples(minorityClassIndex(i)), samples(minorityClassIndex(j)), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+          }
+
+        }
+      }
 
       // number of nodes connected to another which satisfied distance(a,b) <= eps
       val NNq: Array[Int] = distances.map(row => row.map(dist => if (dist <= eps) 1 else 0)).map(_.sum)
@@ -154,8 +165,12 @@ class DBSMOTE(private[soul] val data: Data, eps: Double = -1, k: Int = 5, distan
         }
         graph(u).indices.foreach(v => {
           if (graph(u)(v) && !nodeInfo(v)._3) {
-            val alt = nodeInfo(u)._1 + computeDistance(samples(minorityClassIndex(cluster(u))), samples(minorityClassIndex(cluster(v))),
-              distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+            val d: Double = if (distance == Distances.USER) {
+              dist.asInstanceOf[(Array[Double], Array[Double]) => Double](samples(minorityClassIndex(cluster(u))), samples(minorityClassIndex(cluster(v))))
+            } else {
+              HVDM(samples(minorityClassIndex(cluster(u))), samples(minorityClassIndex(cluster(v))), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+            }
+            val alt = nodeInfo(u)._1 + d
             if (alt < nodeInfo(v)._1) nodeInfo(v) = (alt, u, nodeInfo(v)._3)
           }
         })
@@ -168,8 +183,15 @@ class DBSMOTE(private[soul] val data: Data, eps: Double = -1, k: Int = 5, distan
     //check if the user pass the epsilon parameter
     var eps2 = eps
     if (eps == -1) {
-      eps2 = samples.map(i => samples.map(j => computeDistance(i, j, distance, data.fileInfo.nominal, sds, attrCounter,
-        attrClassesCounter)).sum).sum / (samples.length * samples.length)
+      eps2 = samples.map { i =>
+        samples.map { j =>
+          if (distance == Distances.USER) {
+            dist.asInstanceOf[(Array[Double], Array[Double]) => Double](i, j)
+          } else {
+            HVDM(i, j, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+          }
+        }.sum
+      }.sum / (samples.length * samples.length)
     }
 
     //compute the clusters using dbscan
@@ -190,7 +212,11 @@ class DBSMOTE(private[soul] val data: Data, eps: Double = -1, k: Int = 5, distan
       var pseudoCentroid: (Int, Double) = (0, 99999999.0)
       //the pseudo-centroid is the sample that is closest to the centroid
       (c map samples).zipWithIndex.foreach(sample => {
-        val d: Double = computeDistance(sample._1, centroid, distance, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+        val d: Double = if (distance == Distances.USER) {
+          dist.asInstanceOf[(Array[Double], Array[Double]) => Double](sample._1, centroid)
+        } else {
+          HVDM(sample._1, centroid, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+        }
         if (d < pseudoCentroid._2) pseudoCentroid = (sample._2, d)
       })
 
