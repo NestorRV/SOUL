@@ -102,8 +102,7 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
     val finalIndex: Array[Int] = (resultTL.index.get.toList map newDataIndex).toArray
     val finishTime: Long = System.nanoTime()
 
-    val index: Array[Int] = (finalIndex map randomIndex).sorted
-    val newData: Data = new Data(index map data.x, index map data.y, Some(index), data.fileInfo)
+    val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
 
     logger.whenInfoEnabled {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)

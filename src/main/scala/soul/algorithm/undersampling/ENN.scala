@@ -88,8 +88,7 @@ class ENN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
 
     val finishTime: Long = System.nanoTime()
 
-    val index: Array[Int] = (finalIndex.toArray map randomIndex).sorted
-    val newData: Data = new Data(index map data.x, index map data.y, Some(index), data.fileInfo)
+    val newData: Data = new Data(finalIndex.toArray map data.x, finalIndex.toArray map data.y, Some(finalIndex.toArray), data.fileInfo)
 
     logger.whenInfoEnabled {
       val newCounter: Map[Any, Int] = (finalIndex.toArray map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)

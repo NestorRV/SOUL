@@ -107,8 +107,7 @@ class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val finalIndex: Array[Int] = classesToWorkWith.indices.diff((indexA1 ++ indexA2.flatten.toList).toList).toArray
     val finishTime: Long = System.nanoTime()
 
-    val index: Array[Int] = (finalIndex map randomIndex).sorted
-    val newData: Data = new Data(index map data.x, index map data.y, Some(index), data.fileInfo)
+    val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
 
     logger.whenInfoEnabled {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)

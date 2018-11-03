@@ -131,8 +131,7 @@ class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.cu
 
     val finishTime: Long = System.nanoTime()
 
-    val index: Array[Int] = (centers.toArray map randomIndex).sorted
-    val newData: Data = new Data(index map data.x, index map data.y, Some(index), data.fileInfo)
+    val newData: Data = new Data(centers.toArray map data.x, centers.toArray map data.y, Some(centers.toArray), data.fileInfo)
 
     logger.whenInfoEnabled {
       val newCounter: Map[Any, Int] = (centers.toArray map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)

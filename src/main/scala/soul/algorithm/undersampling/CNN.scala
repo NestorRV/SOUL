@@ -114,8 +114,7 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val storeIndex: Array[Int] = location.zipWithIndex.filter((x: (Int, Int)) => x._1 == 1).collect { case (_, a) => a }
     val finishTime: Long = System.nanoTime()
 
-    val index: Array[Int] = (storeIndex map randomIndex).sorted
-    val newData: Data = new Data(index map data.x, index map data.y, Some(index), data.fileInfo)
+    val newData: Data = new Data(storeIndex map data.x, storeIndex map data.y, Some(storeIndex), data.fileInfo)
 
     logger.whenInfoEnabled {
       val newCounter: Map[Any, Int] = (storeIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
