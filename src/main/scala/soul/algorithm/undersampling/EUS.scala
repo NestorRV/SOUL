@@ -2,6 +2,7 @@ package soul.algorithm.undersampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
+import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -25,7 +26,7 @@ import scala.math.{abs, sqrt}
   * @author Néstor Rodríguez Vico
   */
 class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-          populationSize: Int = 50, maxEvaluations: Int = 1000, algorithm: String = "EBUSMSGM", dist: Any, probHUX: Double = 0.25,
+          populationSize: Int = 50, maxEvaluations: Int = 1000, algorithm: String = "EBUSMSGM", dist: Any = Utilities.euclideanDistance _, probHUX: Double = 0.25,
           recombination: Double = 0.35, prob0to1: Double = 0.05, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
 
   private[soul] val distance: Distances.Distance = getDistance(dist)

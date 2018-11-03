@@ -2,6 +2,7 @@ package soul.algorithm.oversampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
+import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -19,7 +20,8 @@ import scala.collection.mutable.ArrayBuffer
   * @author David López Pretel
   */
 class Spider2(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-              relabel: String = "yes", ampl: String = "weak", k: Int = 5, dist: Any, val normalize: Boolean = false) extends LazyLogging {
+              relabel: String = "yes", ampl: String = "weak", k: Int = 5, dist: Any = Utilities.euclideanDistance _,
+              val normalize: Boolean = false) extends LazyLogging {
 
   private[soul] val distance: Distances.Distance = getDistance(dist)
 

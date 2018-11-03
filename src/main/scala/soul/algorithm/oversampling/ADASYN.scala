@@ -2,6 +2,7 @@ package soul.algorithm.oversampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
+import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -19,7 +20,7 @@ import scala.util.Random
   * @author David López Pretel
   */
 class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-             d: Double = 1, B: Double = 1, k: Int = 5, dist: Any, val normalize: Boolean = false) extends LazyLogging {
+             d: Double = 1, B: Double = 1, k: Int = 5, dist: Any = Utilities.euclideanDistance _, val normalize: Boolean = false) extends LazyLogging {
 
   private[soul] val distance: Distances.Distance = getDistance(dist)
 

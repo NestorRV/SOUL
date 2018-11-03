@@ -2,6 +2,7 @@ package soul.algorithm.undersampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
+import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -21,8 +22,8 @@ import scala.util.Random
   * @param randomData  iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
-class NM(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), dist: Any, version: Int = 1,
-         nNeighbours: Int = 3, ratio: Double = 1.0, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
+class NM(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), dist: Any = Utilities.euclideanDistance _,
+         version: Int = 1, nNeighbours: Int = 3, ratio: Double = 1.0, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
 
   private[soul] val distance: Distances.Distance = getDistance(dist)
   // Count the number of instances for each class

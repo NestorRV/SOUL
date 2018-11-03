@@ -2,6 +2,7 @@ package soul.algorithm.undersampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
+import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.math.{max, min}
@@ -25,8 +26,8 @@ import scala.math.{max, min}
   */
 class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
           method: String = "random", m: Double = 1.0, k: Int = 3, numClusters: Int = 50, restarts: Int = 1,
-          minDispersion: Double = 0.0001, maxIterations: Int = 200, val dist: Any, val normalize: Boolean = false,
-          val randomData: Boolean = false) extends LazyLogging {
+          minDispersion: Double = 0.0001, maxIterations: Int = 200, val dist: Any = Utilities.euclideanDistance _,
+          val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
 
   private[soul] val distance: Distances.Distance = getDistance(dist)
   // Count the number of instances for each class

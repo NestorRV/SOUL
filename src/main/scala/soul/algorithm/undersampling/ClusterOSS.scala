@@ -2,6 +2,7 @@ package soul.algorithm.undersampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
+import soul.util.Utilities
 import soul.util.Utilities._
 
 /** ClusterOSS. Original paper: "ClusterOSS: a new undersampling method for imbalanced learning."
@@ -21,8 +22,8 @@ import soul.util.Utilities._
   * @author Néstor Rodríguez Vico
   */
 class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-                 dist: Any, k: Int = 3, numClusters: Int = 15, restarts: Int = 5, minDispersion: Double = 0.0001, maxIterations: Int = 100,
-                 val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
+                 dist: Any = Utilities.euclideanDistance _, k: Int = 3, numClusters: Int = 15, restarts: Int = 5, minDispersion: Double = 0.0001,
+                 maxIterations: Int = 100, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
 
   private[soul] val distance: Distances.Distance = getDistance(dist)
 

@@ -2,6 +2,7 @@ package soul.algorithm.undersampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
+import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -18,7 +19,7 @@ import scala.math.min
   * @author Néstor Rodríguez Vico
   */
 class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-          dist: Any, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
+          dist: Any = Utilities.euclideanDistance _, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
 
   private[soul] val distance: Distances.Distance = getDistance(dist)
   // Count the number of instances for each class

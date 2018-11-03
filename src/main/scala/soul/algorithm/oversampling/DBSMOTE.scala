@@ -2,6 +2,7 @@ package soul.algorithm.oversampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
+import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -18,7 +19,8 @@ import scala.util.Random
   * @param normalize normalize the data or not
   * @author David López Pretel
   */
-class DBSMOTE(private[soul] val data: Data, eps: Double = -1, k: Int = 5, dist: Any, seed: Long = 5, val normalize: Boolean = false) extends LazyLogging {
+class DBSMOTE(private[soul] val data: Data, eps: Double = -1, k: Int = 5, dist: Any = Utilities.euclideanDistance _, seed: Long = 5,
+              val normalize: Boolean = false) extends LazyLogging {
 
   private[soul] val distance: Distances.Distance = getDistance(dist)
   // compute minority class

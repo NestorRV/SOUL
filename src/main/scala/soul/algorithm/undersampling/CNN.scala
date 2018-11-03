@@ -2,6 +2,7 @@ package soul.algorithm.undersampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
+import soul.util.Utilities
 import soul.util.Utilities._
 
 /** Condensed Nearest Neighbor decision rule. Original paper: "The Condensed Nearest Neighbor Rule" by P. Hart.
@@ -14,7 +15,7 @@ import soul.util.Utilities._
   * @author Néstor Rodríguez Vico
   */
 class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-          dist: Any, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
+          dist: Any = Utilities.euclideanDistance _, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
 
   private[soul] val distance: Distances.Distance = getDistance(dist)
 

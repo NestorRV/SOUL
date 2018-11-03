@@ -2,6 +2,7 @@ package soul.algorithm.undersampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
+import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -19,9 +20,8 @@ import scala.collection.mutable.ArrayBuffer
   * @param randomData iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
-class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-          dist: Any, k: Int = 3, threshold: Double = 0.5,
-          val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
+class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), dist: Any = Utilities.euclideanDistance _,
+          k: Int = 3, threshold: Double = 0.5, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
 
   private[soul] val distance: Distances.Distance = getDistance(dist)
   // Count the number of instances for each class

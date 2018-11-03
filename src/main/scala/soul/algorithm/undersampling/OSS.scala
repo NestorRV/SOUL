@@ -2,6 +2,7 @@ package soul.algorithm.undersampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
+import soul.util.Utilities
 import soul.util.Utilities._
 
 /** One-Side Selection core. Original paper: "Addressing the Curse of Imbalanced
@@ -14,8 +15,8 @@ import soul.util.Utilities._
   * @param randomData iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
-class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), dist: Any, val normalize: Boolean = false,
-          val randomData: Boolean = false) extends LazyLogging {
+class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), dist: Any = Utilities.euclideanDistance _,
+          val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
 
   private[soul] val distance: Distances.Distance = getDistance(dist)
   // Count the number of instances for each class

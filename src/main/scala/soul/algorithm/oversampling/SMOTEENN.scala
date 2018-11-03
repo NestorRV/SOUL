@@ -3,6 +3,7 @@ package soul.algorithm.oversampling
 import com.typesafe.scalalogging.LazyLogging
 import soul.algorithm.undersampling.ENN
 import soul.data.Data
+import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -19,7 +20,7 @@ import scala.util.Random
   * @author David López Pretel
   */
 class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-               percent: Int = 500, k: Int = 5, dist: Any, val normalize: Boolean = false) extends LazyLogging {
+               percent: Int = 500, k: Int = 5, dist: Any = Utilities.euclideanDistance _, val normalize: Boolean = false) extends LazyLogging {
 
   private[soul] val distance: Distances.Distance = getDistance(dist)
 
