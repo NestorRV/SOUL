@@ -98,7 +98,7 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
     val tl = new TL(auxData, dist = dist)
     tl.untouchableClass_=(untouchableClass)
     val resultTL: Data = tl.compute()
-    // The final randomIndex is the result of applying Tomek Link to the content of newDataIndex
+    // The final instances is the result of applying Tomek Link to the content of newDataIndex
     val finalIndex: Array[Int] = (resultTL.index.get.toList map newDataIndex).toArray
     val finishTime: Long = System.nanoTime()
 
