@@ -2,6 +2,7 @@ package soul.algorithm.undersampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
+import soul.util.KDTree
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -60,25 +61,27 @@ class ENN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       j += 1
     }
 
+    val kdTree: KDTree = new KDTree(dataToWorkWith, classesToWorkWith, dataToWorkWith(0).length)
+
     var i = 0
-    val neighbours: Array[Array[Double]] = (majorityClassIndex map dataToWorkWith).toArray
-    val classes: Array[Any] = (majorityClassIndex map classesToWorkWith).toArray
     while (i < uniqueClasses.length) {
       val targetClass = uniqueClasses(i)
-      if (targetClass != untouchableClass) {
-        var j = 0
-        while (j < majorityClassIndex.length) {
-          val predictedLabel = dist match {
+      val selected: Array[(Int, Boolean)] = if (targetClass != untouchableClass) {
+        majorityClassIndex.par.map { j =>
+          val label = dist match {
             case distance: Distance =>
-              nnRule(neighbours, dataToWorkWith(j), j, classes, k, distance, "nearest")._1
+              mode(kdTree.nNeighbours(dataToWorkWith(j), k, leaveOneOut = true)._2.toArray)
             case _ =>
-              nnRuleHVDM(neighbours, dataToWorkWith(j), j, classes, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
+              nnRuleHVDM(dataToWorkWith, dataToWorkWith(j), j, classesToWorkWith, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
           }
-          if (predictedLabel == targetClass)
-            finalIndex += majorityClassIndex(j)
-          j += 1
-        }
+
+          (j, label == targetClass)
+        }.toArray
+      } else {
+        new Array[(Int, Boolean)](0)
       }
+
+      selected.foreach(e => if (e._2) finalIndex += e._1)
 
       i += 1
     }
