@@ -29,7 +29,7 @@ class KDTree(val x: Array[Array[Double]], val y: Array[Any], val dimensions: Int
 
       def compareProjection(d: Int)(x: T, y: T): Int = ord.compare(x(d), y(d))
     }
-  
+
   implicit def metricFromArray[A](implicit n: Numeric[A]): Metric[Array[A], A] = new Metric[Array[A], A] {
     override def distance(x: Array[A], y: Array[A]): A = x.zip(y).map { z =>
       val d = z._1 - z._2
