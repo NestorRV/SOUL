@@ -90,8 +90,7 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
     val auxData: Data = new Data(x = toXData(newDataIndex map dataToWorkWith),
       y = newDataIndex map classesToWorkWith, fileInfo = data.fileInfo)
     auxData.processedData = newDataIndex map dataToWorkWith
-    val tl = new TL(auxData, dist = dist)
-    tl.untouchableClass_=(untouchableClass)
+    val tl = new TL(auxData, dist = dist, minorityClass = Some(untouchableClass))
     val resultTL: Data = tl.compute()
     // The final instances is the result of applying Tomek Link to the content of newDataIndex
     val finalIndex: Array[Int] = (resultTL.index.get.toList map newDataIndex).toArray

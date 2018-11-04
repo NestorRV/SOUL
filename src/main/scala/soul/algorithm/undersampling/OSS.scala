@@ -67,8 +67,7 @@ class OSS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val auxData: Data = new Data(x = toXData(finalC map dataToWorkWith),
       y = finalC map classesToWorkWith, fileInfo = data.fileInfo)
     auxData.processedData = finalC map dataToWorkWith
-    val tl = new TL(auxData, dist = dist)
-    tl.untouchableClass_=(untouchableClass)
+    val tl = new TL(auxData, dist = dist, minorityClass = Some(untouchableClass))
     val resultTL: Data = tl.compute()
     val finalIndex: Array[Int] = (resultTL.index.get.toList map finalC).toArray
     val finishTime: Long = System.nanoTime()
