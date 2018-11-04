@@ -12,7 +12,7 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @param data       data to work with
   * @param seed       seed to use. If it is not provided, it will use the system time
-  * @param dist       distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
+  * @param dist       object of DistanceType representing the distance to be used
   * @param k          number of neighbours to use when computing k-NN rule (normally 3 neighbours)
   * @param threshold  consider a class to be undersampled if the number of instances of this class is
   *                   greater than data.size * threshold
@@ -22,7 +22,7 @@ import scala.collection.mutable.ArrayBuffer
   */
 class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), dist: DistanceType = Distance(euclideanDistance),
           k: Int = 3, threshold: Double = 0.5, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
-  
+
   // Count the number of instances for each class
   private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
@@ -49,7 +49,7 @@ class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     }
 
     val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
-      (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+      (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
     } else {
@@ -110,7 +110,7 @@ class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
 
     logger.whenInfoEnabled {
-      val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
+      val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
       logger.info("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
       logger.info("NEW DATA SIZE: %d".format(finalIndex.length))
       logger.info("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))
