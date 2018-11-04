@@ -2,7 +2,6 @@ package soul.algorithm.oversampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
-import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -14,14 +13,13 @@ import scala.util.Random
   * @param seed      seed to use. If it is not provided, it will use the system time
   * @param percent   amount of SMOTE N%
   * @param k         number of minority class nearest neighbors
-  * @param dist      distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
+  * @param dist      object of DistanceType representing the distance to be used
   * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-            percent: Int = 500, k: Int = 5, dist: Any = Utilities.euclideanDistance _, val normalize: Boolean = false) extends LazyLogging {
-
-  private[soul] val distance: Distances.Distance = getDistance(dist)
+            percent: Int = 500, k: Int = 5, dist: DistanceType = Distance(euclideanDistance),
+            val normalize: Boolean = false) extends LazyLogging {
 
   /** Compute the SMOTE algorithm
     *
@@ -37,8 +35,8 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))
 
-    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
-      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
     } else {
@@ -66,10 +64,12 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
     // for each minority class sample
     var i: Int = 0
     while (i < minorityClassIndex.length) {
-      neighbors = if (distance == Distances.USER) {
-        kNeighbors(minorityClassIndex map samples, i, k, dist)
-      } else {
-        kNeighborsHVDM(minorityClassIndex map samples, i, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter).map(minorityClassIndex(_))
+      neighbors = dist match {
+        case distance: Distance =>
+          kNeighbors(minorityClassIndex map samples, i, k, distance)
+        case _ =>
+          kNeighborsHVDM(minorityClassIndex map samples, i, k, data.fileInfo.nominal, sds, attrCounter,
+            attrClassesCounter).map(minorityClassIndex(_))
       }
       // compute populate for the sample
       var j: Int = 0
@@ -91,9 +91,11 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
 
     // check if the data is nominal or numerical
     val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
-      to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
+      to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
+        data.fileInfo.minAttribs) else output))
     } else {
-      toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), data.nomToNum)
+      toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
+        data.fileInfo.minAttribs) else output), data.nomToNum)
     }, Array.concat(data.y, Array.fill(output.length)(minorityClass)), None, data.fileInfo)
     val finishTime: Long = System.nanoTime()
 

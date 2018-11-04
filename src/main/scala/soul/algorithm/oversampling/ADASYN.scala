@@ -2,7 +2,6 @@ package soul.algorithm.oversampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
-import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -15,14 +14,13 @@ import scala.util.Random
   * @param d         preset threshold for the maximum tolerated degree of class imbalance radio
   * @param B         balance level after generation of synthetic data
   * @param k         number of neighbors
-  * @param dist      distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
+  * @param dist      object of DistanceType representing the distance to be used
   * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-             d: Double = 1, B: Double = 1, k: Int = 5, dist: Any = Utilities.euclideanDistance _, val normalize: Boolean = false) extends LazyLogging {
-
-  private[soul] val distance: Distances.Distance = getDistance(dist)
+             d: Double = 1, B: Double = 1, k: Int = 5, dist: DistanceType = Distance(euclideanDistance),
+             val normalize: Boolean = false) extends LazyLogging {
 
   /** Compute the ADASYN algorithm
     *
@@ -40,8 +38,8 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
     val initTime: Long = System.nanoTime()
     val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
 
-    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
-      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
     } else {
@@ -57,10 +55,11 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
     val G: Int = ((ml - ms) * B).asInstanceOf[Int]
     // k neighbors of each minority sample
     val neighbors: Array[Array[Int]] = minorityClassIndex.indices.map { sample =>
-      if (distance == Distances.USER) {
-        kNeighbors(samples, minorityClassIndex(sample), k, dist)
-      } else {
-        kNeighborsHVDM(samples, minorityClassIndex(sample), k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      dist match {
+        case distance: Distance =>
+          kNeighbors(samples, minorityClassIndex(sample), k, distance)
+        case _ =>
+          kNeighborsHVDM(samples, minorityClassIndex(sample), k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
     }.toArray
 
@@ -96,9 +95,11 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
 
     // check if the data is nominal or numerical
     val newData = new Data(if (data.fileInfo.nominal.length == 0) {
-      to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
+      to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
+        data.fileInfo.minAttribs) else output))
     } else {
-      toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), data.nomToNum)
+      toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
+        data.fileInfo.minAttribs) else output), data.nomToNum)
     }, Array.concat(data.y, Array.fill(output.length)(minorityClass)), None, data.fileInfo)
 
     val finishTime: Long = System.nanoTime()

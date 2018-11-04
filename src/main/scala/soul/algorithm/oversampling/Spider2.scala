@@ -2,7 +2,6 @@ package soul.algorithm.oversampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
-import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -15,15 +14,13 @@ import scala.collection.mutable.ArrayBuffer
   * @param relabel   relabeling option
   * @param ampl      amplification option
   * @param k         number of minority class nearest neighbors
-  * @param dist      distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
+  * @param dist      object of DistanceType representing the distance to be used
   * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class Spider2(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-              relabel: String = "yes", ampl: String = "weak", k: Int = 5, dist: Any = Utilities.euclideanDistance _,
+              relabel: String = "yes", ampl: String = "weak", k: Int = 5, dist: DistanceType = Distance(euclideanDistance),
               val normalize: Boolean = false) extends LazyLogging {
-
-  private[soul] val distance: Distances.Distance = getDistance(dist)
 
   // array with the index of the minority class
   private var minorityClassIndex: Array[Int] = minority(data.y)
@@ -50,8 +47,8 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
     val initTime: Long = System.nanoTime()
     val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
 
-    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
-      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
     } else {
@@ -66,16 +63,18 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
 
     def amplify(x: Int, k: Int): Unit = {
       // compute the neighborhood for the majority and minority class
-      val majNeighbors: Array[Int] = if (distance == Distances.USER) {
-        kNeighbors(majorityClassIndex map output, output(x), k, dist)
-      } else {
-        kNeighborsHVDM(majorityClassIndex map output, output(x), k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      val majNeighbors: Array[Int] = dist match {
+        case distance: Distance =>
+          kNeighbors(majorityClassIndex map output, output(x), k, distance)
+        case _ =>
+          kNeighborsHVDM(majorityClassIndex map output, output(x), k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
 
-      val minNeighbors: Array[Int] = if (distance == Distances.USER) {
-        kNeighbors(minorityClassIndex map output, output(x), k, dist)
-      } else {
-        kNeighborsHVDM(minorityClassIndex map output, output(x), k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      val minNeighbors: Array[Int] = dist match {
+        case distance: Distance =>
+          kNeighbors(minorityClassIndex map output, output(x), k, distance)
+        case _ =>
+          kNeighborsHVDM(minorityClassIndex map output, output(x), k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
 
       // compute the number of copies to create
@@ -96,11 +95,12 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
 
     def correct(x: Int, k: Int, out: Boolean): Boolean = {
       // compute the neighbors
-      val neighbors: Array[Int] = if (distance == Distances.USER) {
-        kNeighbors(if (out) samples else output.toArray, if (out) samples(x) else output(x), k, dist)
-      } else {
-        kNeighborsHVDM(if (out) samples else output.toArray, if (out) samples(x) else output(x), k,
-          data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      val neighbors: Array[Int] = dist match {
+        case distance: Distance =>
+          kNeighbors(if (out) samples else output.toArray, if (out) samples(x) else output(x), k, distance)
+        case _ =>
+          kNeighborsHVDM(if (out) samples else output.toArray, if (out) samples(x) else output(x), k,
+            data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
       val classes: scala.collection.mutable.Map[Any, Int] = scala.collection.mutable.Map()
       // compute the number of samples for each class in the neighborhood

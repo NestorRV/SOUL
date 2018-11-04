@@ -2,7 +2,6 @@ package soul.algorithm.undersampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
-import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.math.{max, min}
@@ -19,19 +18,18 @@ import scala.math.{max, min}
   * @param restarts      number of times to relaunch KMeans core
   * @param minDispersion stop KMeans core if dispersion is lower than this value
   * @param maxIterations number of iterations to be done in KMeans core
-  * @param dist          distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
+  * @param dist          object of DistanceType representing the distance to be used
   * @param normalize     normalize the data or not
   * @param randomData    iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
 class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
           method: String = "random", m: Double = 1.0, k: Int = 3, numClusters: Int = 50, restarts: Int = 1,
-          minDispersion: Double = 0.0001, maxIterations: Int = 200, val dist: Any = Utilities.euclideanDistance _,
+          minDispersion: Double = 0.0001, maxIterations: Int = 200, val dist: DistanceType = Distance(euclideanDistance),
           val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
 
-  private[soul] val distance: Distances.Distance = getDistance(dist)
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
   private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
 
@@ -54,16 +52,15 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       data.y
     }
 
-    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
-      (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+      (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
     } else {
       (null, null, null)
     }
 
-    val (_, centroids, assignment) = kMeans(data = dataToWorkWith, nominal = data.fileInfo.nominal, numClusters = numClusters, restarts = restarts,
-      minDispersion = minDispersion, maxIterations = maxIterations, seed = seed)
+    val (_, centroids, assignment) = kMeans(dataToWorkWith, data.fileInfo.nominal, numClusters, restarts, minDispersion, maxIterations, seed)
     val minMajElements: List[(Int, Int)] = (0 until numClusters).toList.map { cluster: Int =>
       val elements = assignment(cluster)
       val minElements: Int = (elements map classesToWorkWith).count((c: Any) => c == untouchableClass)
@@ -80,12 +77,12 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       classesToWorkWith(index) == untouchableClass)).toArray
 
     val majorityElements: Array[Int] = if (method.equals("random")) {
-      sSizes.filter((_: (Int, Int))._2 != 0).flatMap { clusteridSize: (Int, Int) =>
+      sSizes.filter(_._2 != 0).flatMap { clusteridSize: (Int, Int) =>
         random.shuffle(assignment(clusteridSize._1).toList).filter((e: Int) =>
           classesToWorkWith(e) != untouchableClass).take(clusteridSize._2)
       }
     } else {
-      sSizes.filter((_: (Int, Int))._2 != 0).flatMap { clusteridSize: (Int, Int) =>
+      sSizes.filter(_._2 != 0).flatMap { clusteridSize: (Int, Int) =>
         val majorityElementsIndex: Array[(Int, Int)] = assignment(clusteridSize._1).zipWithIndex.filter((e: (Int, Int)) =>
           classesToWorkWith(e._1) != untouchableClass)
 
@@ -96,7 +93,7 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
             euclideanDistance(dataToWorkWith(instance), centroids(clusteridSize._1))
           }
 
-          distances.zipWithIndex.sortBy((_: (Double, Int))._2).take(clusteridSize._2).map((_: (Double, Int))._2) map assignment(clusteridSize._1)
+          distances.zipWithIndex.sortBy(_._2).take(clusteridSize._2).map(_._2) map assignment(clusteridSize._1)
         } else {
           val minorityElementsIndex: Array[(Int, Int)] = assignment(clusteridSize._1).zipWithIndex.filter((e: (Int, Int)) =>
             classesToWorkWith(e._1) == untouchableClass)
@@ -111,61 +108,70 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
           if (method.equals("NearMiss1")) {
             // selects the majority class samples whose average distances to k nearest minority class samples in the ith cluster are the smallest.
             val meanDistances: Array[(Int, Double)] = majorityElementsIndex.map { i: (Int, Int) =>
-              val result: (Any, Array[Int], Array[Double]) = if (distance == Distances.USER) {
-                nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, dist, "nearest")
-              } else {
-                nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
+              val result: (Any, Array[Int], Array[Double]) = dist match {
+                case distance: Distance =>
+                  nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, distance, "nearest")
+                case _ =>
+                  nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, data.fileInfo.nominal, sds, attrCounter,
+                    attrClassesCounter, "nearest")
               }
 
               (i._1, (result._2 map result._3).sum / result._2.length)
             }
-            meanDistances.sortBy((pair: (Int, Double)) => pair._2).take(clusteridSize._2).map((_: (Int, Double))._1)
+            meanDistances.sortBy((pair: (Int, Double)) => pair._2).take(clusteridSize._2).map(_._1)
           } else if (method.equals("NearMiss2")) {
             // selects the majority class samples whose average distances to k farthest minority class samples in the ith cluster are the smallest.
             val meanDistances: Array[(Int, Double)] = majorityElementsIndex.map { i: (Int, Int) =>
-              val result: (Any, Array[Int], Array[Double]) = if (distance == Distances.USER) {
-                nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, dist, "farthest")
-              } else {
-                nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "farthest")
+              val result: (Any, Array[Int], Array[Double]) = dist match {
+                case distance: Distance =>
+                  nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, distance, "farthest")
+                case _ =>
+                  nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, data.fileInfo.nominal, sds, attrCounter,
+                    attrClassesCounter, "farthest")
               }
               (i._1, (result._2 map result._3).sum / result._2.length)
             }
-            meanDistances.sortBy((pair: (Int, Double)) => pair._2).take(clusteridSize._2).map((_: (Int, Double))._1)
+            meanDistances.sortBy((pair: (Int, Double)) => pair._2).take(clusteridSize._2).map(_._1)
           } else if (method.equals("NearMiss3")) {
             // selects the majority class samples whose average distances to the closest minority class samples in the ith cluster are the smallest.
             val meanDistances: Array[(Int, Double)] = majorityElementsIndex.map { i: (Int, Int) =>
-              val result: (Any, Array[Int], Array[Double]) = if (distance == Distances.USER) {
-                nnRule(majNeighbours, dataToWorkWith(i._1), i._1, majClasses, k, dist, "nearest")
-              } else {
-                nnRuleHVDM(majNeighbours, dataToWorkWith(i._1), i._1, majClasses, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
+              val result: (Any, Array[Int], Array[Double]) = dist match {
+                case distance: Distance =>
+                  nnRule(majNeighbours, dataToWorkWith(i._1), i._1, majClasses, k, distance, "nearest")
+                case _ =>
+                  nnRuleHVDM(majNeighbours, dataToWorkWith(i._1), i._1, majClasses, k, data.fileInfo.nominal, sds, attrCounter,
+                    attrClassesCounter, "nearest")
               }
               (i._1, (result._2 map result._3).sum / result._2.length)
             }
-            meanDistances.sortBy((pair: (Int, Double)) => pair._2).take(clusteridSize._2).map((_: (Int, Double))._1)
+            meanDistances.sortBy((pair: (Int, Double)) => pair._2).take(clusteridSize._2).map(_._1)
           } else if (method.equals("MostDistant")) {
             // selects the majority class samples whose average distances to M closest minority class samples in the ith cluster are the farthest.
             val meanDistances: Array[(Int, Double)] = majorityElementsIndex.map { i: (Int, Int) =>
-              val result: (Any, Array[Int], Array[Double]) = if (distance == Distances.USER) {
-                nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, k, dist, "nearest")
-              } else {
-                nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
+              val result: (Any, Array[Int], Array[Double]) = dist match {
+                case distance: Distance =>
+                  nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, k, distance, "nearest")
+                case _ =>
+                  nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, k, data.fileInfo.nominal, sds, attrCounter,
+                    attrClassesCounter, "nearest")
               }
               (i._1, (result._2 map result._3).sum / result._2.length)
             }
-            meanDistances.sortBy((pair: (Int, Double)) => pair._2).reverse.take(clusteridSize._2).map((_: (Int, Double))._1)
+            meanDistances.sortBy((pair: (Int, Double)) => pair._2).reverse.take(clusteridSize._2).map(_._1)
           } else if (method.equals("MostFar")) {
             // selects the majority class samples whose average distances to all minority class samples in the cluster are the farthest
             val meanDistances: Array[(Int, Double)] = majorityElementsIndex.map { i: (Int, Int) =>
-              val result: (Any, Array[Int], Array[Double]) = if (distance == Distances.USER) {
-                nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, minorityElementsIndex.unzip._2.length, dist, "nearest")
-              } else {
-                nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, minorityElementsIndex.unzip._2.length,
-                  data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
+              val result: (Any, Array[Int], Array[Double]) = dist match {
+                case distance: Distance =>
+                  nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, minorityElementsIndex.unzip._2.length, distance, "nearest")
+                case _ =>
+                  nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, minorityElementsIndex.unzip._2.length,
+                    data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
               }
 
               (i._1, (result._2 map result._3).sum / result._2.length)
             }
-            meanDistances.sortBy((pair: (Int, Double)) => pair._2).take(clusteridSize._2).map((_: (Int, Double))._1)
+            meanDistances.sortBy((pair: (Int, Double)) => pair._2).take(clusteridSize._2).map(_._1)
           } else {
             throw new Exception("Invalid argument: method should be: random, NearMiss1, NearMiss2, NearMiss3, MostDistant or MostFar")
           }
@@ -179,7 +185,7 @@ class SBC(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
 
     logger.whenInfoEnabled {
-      val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
+      val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
       logger.info("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
       logger.info("NEW DATA SIZE: %d".format(finalIndex.length))
       logger.info("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))

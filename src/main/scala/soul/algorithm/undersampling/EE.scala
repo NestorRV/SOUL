@@ -23,7 +23,7 @@ class EE(private[soul] val data: Data, private[soul] val seed: Long = System.cur
          val randomData: Boolean = false) extends LazyLogging {
 
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
   private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
 
@@ -50,20 +50,20 @@ class EE(private[soul] val data: Data, private[soul] val seed: Long = System.cur
     val majIndex: List[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label != untouchableClass => i }.toList
     val majElements: Array[Int] = (0 until nTimes).flatMap { _: Int =>
       val majorityIndex: Array[Int] = random.shuffle(majIndex).toArray
-      if (!replacement) majorityIndex.take((minorityIndex.length * ratio).toInt) else majorityIndex.indices.map((_: Int) =>
+      if (!replacement) majorityIndex.take((minorityIndex.length * ratio).toInt) else majorityIndex.indices.map(_ =>
         random.nextInt(majorityIndex.length)).toArray map majorityIndex
     }.toArray
 
     // Make an histogram and select the majority class examples that have been selected more times
-    val majorityIndexHistogram: Array[(Int, Int)] = majElements.groupBy(identity).mapValues((_: Array[Int]).length).toArray.sortBy((_: (Int, Int))._2).reverse
-    val majorityIndex: Array[Int] = majorityIndexHistogram.take((minorityIndex.length * ratio).toInt).map((_: (Int, Int))._1)
+    val majorityIndexHistogram: Array[(Int, Int)] = majElements.groupBy(identity).mapValues(_.length).toArray.sortBy(_._2).reverse
+    val majorityIndex: Array[Int] = majorityIndexHistogram.take((minorityIndex.length * ratio).toInt).map(_._1)
     val finalIndex: Array[Int] = minorityIndex ++ majorityIndex
     val finishTime: Long = System.nanoTime()
 
     val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
 
     logger.whenInfoEnabled {
-      val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
+      val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
       logger.info("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
       logger.info("NEW DATA SIZE: %d".format(finalIndex.length))
       logger.info("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))

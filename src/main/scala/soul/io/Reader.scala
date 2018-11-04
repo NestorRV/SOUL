@@ -88,7 +88,7 @@ object Reader {
           val values: Array[String] = (separatedValues ++ nonSeparatedValues).toArray
           // make an index array merging all the index: take care with the separatedValuesIndex because there are more than one
           // index for each value, so we compute the mean for all the numbers associated to one value
-          val index: Array[Double] = separators.map((a: Array[Int]) => a.sum.toDouble / a.length).toArray ++ nonSeparatedValuesIndex.map((_: Int).asInstanceOf[Double])
+          val index: Array[Double] = separators.map((a: Array[Int]) => a.sum.toDouble / a.length).toArray ++ nonSeparatedValuesIndex.map(_.asInstanceOf[Double])
           // finally, construct an array to sort the values
           val indexForMap: Array[Int] = index.zipWithIndex.sortBy((pair: (Double, Int)) => pair._1).map((pair: (Double, Int)) => pair._2)
           // get the final values

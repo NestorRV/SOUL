@@ -10,7 +10,6 @@ import scala.Array.range
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.{immutable, mutable}
 import scala.math.{abs, pow, sqrt}
-import scala.reflect.runtime.universe._
 import scala.util.Random
 
 /** Set of utilities functions
@@ -19,16 +18,20 @@ import scala.util.Random
   */
 object Utilities {
 
-  /** Enumeration to store the possible distances
+  /** Classes to represent the possible distances
     *
     * USER: Distance specified by the user
     * HVDM: Proposed in "Improved Heterogeneous Distance Functions" by "D. Randall Wilson and Tony R. Martinez"
     *
     */
-  object Distances extends Enumeration {
-    type Distance = Value
-    val USER: Distances.Value = Value
-    val HVDM: Distances.Value = Value
+  sealed trait DistanceType
+
+  case class HVDM() extends DistanceType
+
+  case class Distance(f: (Array[Double], Array[Double]) => Double) extends DistanceType {
+    private val dist: (Array[Double], Array[Double]) => Double = f
+
+    def apply(x: Array[Double], y: Array[Double]): Double = dist(x, y)
   }
 
   /** Return an array of the indices that are true
@@ -125,34 +128,16 @@ object Utilities {
 
   /** Compute the Euclidean Distance between two points
     *
-    * @param xs first element
-    * @param ys second element
-    * @return Euclidean Distance between xs and ys
     */
-  def euclideanDistance(xs: Array[Double], ys: Array[Double]): Double = {
+  val euclideanDistance: (Array[Double], Array[Double]) => Double = (x: Array[Double], y: Array[Double]) => {
     var d: Double = 0.0
     var i: Int = 0
-    while (i < xs.length) {
-      val toPow2 = xs(i) - ys(i)
+    while (i < x.length) {
+      val toPow2 = x(i) - y(i)
       d += toPow2 * toPow2
       i += 1
     }
     sqrt(d)
-  }
-
-  /** Check if the distance is valid and get it
-    *
-    * @param distance desired distance
-    * @tparam A any value
-    * @return distance to be used by the algorithm
-    */
-  def getDistance[A: TypeTag](distance: A): Distances.Distance = {
-    val msg: String = "Incorrect distance. It should be \"HVDM\" or a function of the type: (Array[Double], Array[Double]) => Double."
-    typeOf[A] match {
-      case f if f =:= typeOf[(Array[Double], Array[Double]) => Double] => Distances.USER
-      case _ if distance.equals("HVDM") => Distances.HVDM
-      case _ => throw new Exception(msg)
-    }
   }
 
   /** Compute HVDM distance of two nodes
@@ -201,11 +186,11 @@ object Utilities {
     * @param labels labels associated to each point in data
     * @param k      number of neighbours to consider
     * @param nFolds number of subsets to create
-    * @param dist   distance function
-    * @param which  if it's sets to "nearest", return the nearest which, otherwise, return the farthest
+    * @param dist   object representing the function to be used
+    * @param which  "nearest" to return the nearest neighbours, otherwise, return the farthest ones
     * @return the predictedLabels with less error
     */
-  def kFoldPrediction(data: Array[Array[Double]], labels: Array[Any], k: Int, nFolds: Int, dist: Any, which: String): Array[Any] = {
+  def kFoldPrediction(data: Array[Array[Double]], labels: Array[Any], k: Int, nFolds: Int, dist: Distance, which: String): Array[Any] = {
 
     val indices: List[List[Int]] = labels.indices.toList.grouped((labels.length.toFloat / nFolds).ceil.toInt).toList
     val predictedLabels: Array[(Int, Array[Any])] = indices.par.map { index: List[Int] =>
@@ -216,10 +201,10 @@ object Utilities {
       }.toArray
 
       val error: Int = predictedLabels.count((e: (Int, Any)) => e._2 != labels(e._1))
-      (error, predictedLabels.sortBy((_: (Int, Any))._1).unzip._2)
+      (error, predictedLabels.sortBy(_._1).unzip._2)
     }.toArray
 
-    predictedLabels.minBy((_: (Int, Array[Any]))._1)._2
+    predictedLabels.minBy(_._1)._2
   }
 
   /** Split the data into nFolds folds and predict the labels using the test
@@ -232,7 +217,7 @@ object Utilities {
     * @param sds                standard deviations
     * @param attrCounter        counter attributes occurrences
     * @param attrClassesCounter number of occurrences for each value and output class c, for each class
-    * @param which              if it's sets to "nearest", return the nearest which, otherwise, return the farthest
+    * @param which              "nearest" to return the nearest neighbours, otherwise, return the farthest ones
     * @return the predictedLabels with less error
     */
   def kFoldPredictionHVDM(data: Array[Array[Double]], labels: Array[Any], k: Int, nFolds: Int, nominal: Array[Int], sds: Array[Double],
@@ -247,10 +232,10 @@ object Utilities {
       }.toArray
 
       val error: Int = predictedLabels.count((e: (Int, Any)) => e._2 != labels(e._1))
-      (error, predictedLabels.sortBy((_: (Int, Any))._1).unzip._2)
+      (error, predictedLabels.sortBy(_._1).unzip._2)
     }.toArray
 
-    predictedLabels.minBy((_: (Int, Array[Any]))._1)._2
+    predictedLabels.minBy(_._1)._2
   }
 
   /** Compute KMeans core
@@ -317,8 +302,8 @@ object Utilities {
     }
 
     val centroids: Array[Array[Double]] = new scala.util.Random(seed).shuffle(data.indices.toList).toArray.take(numClusters) map data
-    val results: immutable.IndexedSeq[(Double, Array[Array[Double]], mutable.Map[Int, Array[Int]])] = (1 to restarts).map((_: Int) => run(centroids, minDispersion, maxIterations))
-    val (bestDispersion, bestCentroids, bestAssignment) = results.minBy((_: (Double, Array[Array[Double]], mutable.Map[Int, Array[Int]]))._1)
+    val results: immutable.IndexedSeq[(Double, Array[Array[Double]], mutable.Map[Int, Array[Int]])] = (1 to restarts).map(_ => run(centroids, minDispersion, maxIterations))
+    val (bestDispersion, bestCentroids, bestAssignment) = results.minBy(_._1)
     (bestDispersion, bestCentroids, bestAssignment)
   }
 
@@ -327,14 +312,14 @@ object Utilities {
     * @param data array of samples
     * @param node array with the attributes of the node
     * @param k    number of neighbors
-    * @param dist distance function
+    * @param dist object representing the function to be used
     * @return index of the neighbors of node
     */
-  def kNeighbors(data: Array[Array[Double]], node: Array[Double], k: Int, dist: Any): Array[Int] = {
+  def kNeighbors(data: Array[Array[Double]], node: Array[Double], k: Int, dist: Distance): Array[Int] = {
     val distances: Array[Double] = new Array[Double](data.length)
 
     data.indices.foreach(i => {
-      distances(i) = dist.asInstanceOf[(Array[Double], Array[Double]) => Double](node, data(i))
+      distances(i) = dist(node, data(i))
       if (distances(i) == 0) {
         distances(i) = 9999999
       }
@@ -385,10 +370,10 @@ object Utilities {
     * @param data array of samples
     * @param node index whom neighbors are going to be evaluated
     * @param k    number of neighbors
-    * @param dist distance function
+    * @param dist object representing the function to be used
     * @return index of the neighbors of node
     */
-  def kNeighbors(data: Array[Array[Double]], node: Int, k: Int, dist: Any): Array[Int] = {
+  def kNeighbors(data: Array[Array[Double]], node: Int, k: Int, dist: Distance): Array[Int] = {
     val distances: Array[Double] = Array.fill[Double](data.length)(99999999)
 
     val kNeighbors: Array[Int] = (0 until k).toArray
@@ -400,7 +385,7 @@ object Utilities {
       if (i != node) {
         j = 0
         found = false
-        distances(i) = dist.asInstanceOf[(Array[Double], Array[Double]) => Double](data(i), data(node))
+        distances(i) = dist(data(i), data(node))
         //save the best neighbors
         while (j < kNeighbors.length && !found) {
           if (distances(i) < distances(kNeighbors(j))) {
@@ -507,7 +492,7 @@ object Utilities {
     * @return the mode of the array
     */
   def mode(data: Array[Any]): Any = {
-    data.groupBy(identity).mapValues((_: Array[Any]).length).toArray.maxBy((_: (Any, Int))._2)._1
+    data.groupBy(identity).mapValues(_.length).toArray.maxBy(_._2)._1
   }
 
   /** Convert nanoseconds to minutes, seconds and milliseconds
@@ -529,16 +514,17 @@ object Utilities {
     * @param id         id of the instance
     * @param labels     labels associated to each point in data
     * @param k          number of neighbours to consider
-    * @param dist       distance function
+    * @param dist       object representing the function to be used
     * @param which      if it's sets to "nearest", return the nearest which, if it sets "farthest", return the farthest which
     * @return the label associated to newPoint and the index of the k-nearest which
     */
-  def nnRule(neighbours: Array[Array[Double]], instance: Array[Double], id: Int, labels: Array[Any], k: Int, dist: Any, which: String): (Any, Array[Int], Array[Double]) = {
+  def nnRule(neighbours: Array[Array[Double]], instance: Array[Double], id: Int, labels: Array[Any], k: Int,
+             dist: Distance, which: String): (Any, Array[Int], Array[Double]) = {
     val distances: Array[Double] = new Array[Double](neighbours.length)
 
     var i = 0
     while (i < neighbours.length) {
-      distances(i) = dist.asInstanceOf[(Array[Double], Array[Double]) => Double](instance, neighbours(i))
+      distances(i) = dist(instance, neighbours(i))
       i += 1
     }
     distances(id) = Double.MaxValue
@@ -585,7 +571,7 @@ object Utilities {
     * @param sds                standard deviations
     * @param attrCounter        counter attributes occurrences
     * @param attrClassesCounter number of occurrences for each value and output class c, for each class
-    * @param which              if it's sets to "nearest", return the nearest which, otherwise, return the farthest
+    * @param which              "nearest" to return the nearest neighbours, otherwise, return the farthest ones
     * @return the label associated to newPoint and the index of the k-nearest which
     */
   def nnRuleHVDM(neighbours: Array[Array[Double]], instance: Array[Double], id: Int, labels: Array[Any], k: Int,
@@ -640,7 +626,7 @@ object Utilities {
   def occurrencesByValueAndClass(attribute: Array[Double], classes: Array[Any]): Map[Double, Map[Any, Int]] = {
     val auxMap: Map[Double, Array[Any]] = (attribute zip classes).groupBy((element: (Double, Any)) => element._1).map((element: (Double, Array[(Double, Any)])) =>
       (element._1, element._2.map((value: (Double, Any)) => value._2)))
-    auxMap.map((element: (Double, Array[Any])) => Map(element._1 -> element._2.groupBy(identity).mapValues((_: Array[Any]).length))).toList.flatten.toMap
+    auxMap.map((element: (Double, Array[Any])) => Map(element._1 -> element._2.groupBy(identity).mapValues(_.length))).toList.flatten.toMap
   }
 
   /** Convert a data object into a matrix of doubles, taking care of missing values and nominal columns.
@@ -654,21 +640,21 @@ object Utilities {
     var nomToNumIndex = 0
     val processedData: Array[Array[Double]] = data.x.transpose.zipWithIndex.map { column: (Array[Any], Int) =>
       // let's look for the NA values
-      val naIndex: Array[Int] = column._1.zipWithIndex.filter((_: (Any, Int))._1 == "soul_NA").map((_: (Any, Int))._2)
+      val naIndex: Array[Int] = column._1.zipWithIndex.filter(_._1 == "soul_NA").map(_._2)
       // If they exist
       if (naIndex.length != 0) {
         // Take the index of the elements that are not NA
-        val nonNAIndex: Array[Int] = column._1.zipWithIndex.filter((_: (Any, Int))._1 != "soul_NA").map((_: (Any, Int))._2)
+        val nonNAIndex: Array[Int] = column._1.zipWithIndex.filter(_._1 != "soul_NA").map(_._2)
         // If the column is not a nominal value
         if (!data.fileInfo.nominal.contains(column._2)) {
           // compute the mean of the present values
-          val arrayDouble: Array[Double] = (nonNAIndex map column._1).map((_: Any).asInstanceOf[Double])
+          val arrayDouble: Array[Double] = (nonNAIndex map column._1).map(_.asInstanceOf[Double])
           val mean: Double = arrayDouble.sum / arrayDouble.length
           val array: Array[Any] = column._1.clone()
           // replace all the NA values with the mean
           naIndex.foreach((index: Int) => array(index) = mean)
 
-          array.map((_: Any).asInstanceOf[Double])
+          array.map(_.asInstanceOf[Double])
         } else {
           // compute the mode of the present values
           val m: Any = mode(nonNAIndex map column._1)
@@ -686,7 +672,7 @@ object Utilities {
             nomToNum(nomToNumIndex).update(pair._2, pair._1)
           })
           nomToNumIndex += 1
-          array.map((_: Any).asInstanceOf[Double])
+          array.map(_.asInstanceOf[Double])
         }
       } else {
         // If there is no NA values
@@ -701,10 +687,10 @@ object Utilities {
           // make the dictionary to convert numerical to nominal
           dict.foreach(pair => nomToNum(nomToNumIndex).update(pair._2, pair._1))
           nomToNumIndex += 1
-          array.map((_: Any).asInstanceOf[Double])
+          array.map(_.asInstanceOf[Double])
         } else {
           // Store the data as is
-          column._1.map((_: Any).asInstanceOf[Double])
+          column._1.map(_.asInstanceOf[Double])
         }
       }
     }
@@ -714,7 +700,7 @@ object Utilities {
   /** Compute the standard deviation for an array
     *
     * @param xs array to be used
-    * @return standard deviation of xs
+    * @return standard deviation of x
     */
   def standardDeviation(xs: Array[Double]): Double = {
     val mean: Double = xs.sum / xs.length
@@ -760,7 +746,7 @@ object Utilities {
     * @return the result converted
     */
   def to2Decimals(data: Array[Array[Double]]): Array[Array[Any]] = {
-    data.map((_: Array[Double]).map(BigDecimal(_: Double).setScale(3, BigDecimal.RoundingMode.HALF_UP).toDouble.asInstanceOf[Any]))
+    data.map(_.map(BigDecimal(_).setScale(3, BigDecimal.RoundingMode.HALF_UP).toDouble.asInstanceOf[Any]))
   }
 
   /** Denormalize the data
@@ -788,7 +774,7 @@ object Utilities {
 
     x.transpose.indices.diff(d.fileInfo.nominal).par.foreach { index: Int =>
       val aux: Array[Double] = result(index).map((element: Double) => (element - minV(index)).toFloat / (maxV(index) - minV(index)))
-      result(index) = if (aux.count((_: Double).isNaN) == 0) aux else Array.fill[Double](aux.length)(0.0)
+      result(index) = if (aux.count(_.isNaN) == 0) aux else Array.fill[Double](aux.length)(0.0)
     }
     result.transpose
   }

@@ -34,7 +34,7 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
 
   private[soul] val random: scala.util.Random = new scala.util.Random(seed)
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
   private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
 
@@ -77,8 +77,8 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
     def selectInitInstances(population: Array[Array[Double]], classes: Array[Any]): (Array[Array[Double]], Array[Any]) = {
       def getCentroid(cluster: Array[Int], data: Array[Array[Double]]): Int = {
         val elements: Array[Array[Double]] = cluster map data
-        val centroid: Array[Double] = elements.transpose.map((_: Array[Double]).sum).map((_: Double) / cluster.length)
-        (elements.map((instance: Array[Double]) => euclideanDistance(instance, centroid)) zip cluster).minBy((_: (Double, Int))._1)._2
+        val centroid: Array[Double] = elements.transpose.map(_.sum).map(_ / cluster.length)
+        (elements.map((instance: Array[Double]) => euclideanDistance(instance, centroid)) zip cluster).minBy(_._1)._2
       }
 
       def getLeafs(instances: Instances, tree: String): Array[String] = {
@@ -126,7 +126,7 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
       j48.buildClassifier(instances)
 
       val ids: Array[String] = getLeafs(instances = instances, tree = j48.graph())
-      val clusters: Map[String, Array[Int]] = ids.zipWithIndex.groupBy((_: (String, Int))._1).mapValues((_: Array[(String, Int)]).unzip._2)
+      val clusters: Map[String, Array[Int]] = ids.zipWithIndex.groupBy(_._1).mapValues(_.unzip._2)
 
       val selectedElements: Array[Int] = clusters.map { cluster: (String, Array[Int]) =>
         getCentroid(cluster = cluster._2, data = population)
@@ -155,7 +155,7 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
 
         def getNearestNeighbourWithTheSameClass(element: Array[Double], data: Array[Array[Double]]): Int = {
           val distances: Array[(Double, Int)] = data.map((e: Array[Double]) =>
-            euclideanDistance(element, e)).zipWithIndex.sortBy((_: (Double, Int))._1)
+            euclideanDistance(element, e)).zipWithIndex.sortBy(_._1)
           // The first distance is 0, as is computed like the distance between element and element
           distances(1)._2
         }
@@ -246,7 +246,7 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
 
         val scaling: Double = if (fitness1 > fitness2) fi2 else fi1
 
-        mutant(trainData = trainData, trainClasses = trainClasses, testData = testData, testClasses = testClasses, fi = scaling, strategy = strategy)
+        mutant(trainData, trainClasses, testData, testClasses, scaling, strategy)
       }
 
       def SFHC(trainData: Array[Array[Double]], trainClasses: Array[Any], testData: Array[Array[Double]], testClasses: Array[Any],
@@ -278,7 +278,7 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
           localScalingFactor = bestFitness
         }
 
-        mutant(trainData = trainData, trainClasses = trainClasses, testData = testData, testClasses = testClasses, fi = scalingFactor, strategy = strategy)
+        mutant(trainData, trainClasses, testData, testClasses, scalingFactor, strategy)
       }
 
       var localTrainData: Array[Array[Double]] = trainData.clone
@@ -481,7 +481,7 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
     val newData: Data = new Data(population.map((row: Array[Double]) => row.map((e: Double) => e.asInstanceOf[Any])), classes, None, data.fileInfo)
 
     logger.whenInfoEnabled {
-      val newCounter: Map[Any, Int] = classes.groupBy(identity).mapValues((_: Array[Any]).length)
+      val newCounter: Map[Any, Int] = classes.groupBy(identity).mapValues(_.length)
       logger.info("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
       logger.info("NEW DATA SIZE: %d".format(classes.length))
       logger.info("REDUCTION PERCENTAGE: %s".format(100 - (classes.length.toFloat / dataToWorkWith.length) * 100))

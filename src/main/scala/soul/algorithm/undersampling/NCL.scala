@@ -20,12 +20,11 @@ import scala.collection.mutable.ArrayBuffer
   * @param randomData iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
-class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), dist: Any = Utilities.euclideanDistance _,
+class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), dist: DistanceType = Distance(euclideanDistance),
           k: Int = 3, threshold: Double = 0.5, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
-
-  private[soul] val distance: Distances.Distance = getDistance(dist)
+  
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
   private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
 
@@ -49,7 +48,7 @@ class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       data.y
     }
 
-    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
+    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
       (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
         dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
@@ -77,10 +76,11 @@ class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.cu
 
     def selectNeighbours(l: Int, targetClass: Any): ArrayBuffer[Int] = {
       val selected = new ArrayBuffer[Int]()
-      val (label, nNeighbours, _) = if (distance == Distances.USER) {
-        nnRule(dataToWorkWith, dataToWorkWith(l), l, classesToWorkWith, k, dist, "nearest")
-      } else {
-        nnRuleHVDM(dataToWorkWith, dataToWorkWith(l), l, classesToWorkWith, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
+      val (label, nNeighbours, _) = dist match {
+        case distance: Distance =>
+          nnRule(dataToWorkWith, dataToWorkWith(l), l, classesToWorkWith, k, distance, "nearest")
+        case _ =>
+          nnRuleHVDM(dataToWorkWith, dataToWorkWith(l), l, classesToWorkWith, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
       }
 
       if (label != targetClass) {

@@ -18,7 +18,7 @@ class RU(private[soul] val data: Data, private[soul] val seed: Long = System.cur
          ratio: Double = 1.0, replacement: Boolean = false) extends LazyLogging {
 
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
   private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
   // Index to shuffle (randomize) the data
@@ -36,14 +36,14 @@ class RU(private[soul] val data: Data, private[soul] val seed: Long = System.cur
       if label != untouchableClass => i
     }.toList).toArray
     val selectedMajorityIndex: Array[Int] = if (!replacement) majorityIndex.take((minorityIndex.length * ratio).toInt) else
-      majorityIndex.indices.map((_: Int) => random.nextInt(majorityIndex.length)).toArray map majorityIndex
+      majorityIndex.indices.map(_ => random.nextInt(majorityIndex.length)).toArray map majorityIndex
     val finalIndex: Array[Int] = minorityIndex ++ selectedMajorityIndex
     val finishTime: Long = System.nanoTime()
 
     val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
 
     logger.whenInfoEnabled {
-      val newCounter: Map[Any, Int] = (finalIndex map data.y).groupBy(identity).mapValues((_: Array[Any]).length)
+      val newCounter: Map[Any, Int] = (finalIndex map data.y).groupBy(identity).mapValues(_.length)
       logger.info("ORIGINAL SIZE: %d".format(data.x.length))
       logger.info("NEW DATA SIZE: %d".format(finalIndex.length))
       logger.info("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / data.x.length) * 100))

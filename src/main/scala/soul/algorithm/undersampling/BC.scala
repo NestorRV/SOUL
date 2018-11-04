@@ -2,7 +2,6 @@ package soul.algorithm.undersampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
-import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -12,7 +11,7 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @param data        data to work with
   * @param seed        seed to use. If it is not provided, it will use the system time
-  * @param dist        distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
+  * @param dist        object of DistanceType representing the distance to be used
   * @param k           number of neighbours to use when computing k-NN rule (normally 3 neighbours)
   * @param nMaxSubsets maximum number of subsets to generate
   * @param nFolds      number of subsets to create when applying cross-validation
@@ -24,13 +23,11 @@ import scala.collection.mutable.ArrayBuffer
   * @author Néstor Rodríguez Vico
   */
 class BC(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-         dist: Any = Utilities.euclideanDistance _, k: Int = 3, nMaxSubsets: Int = 5, nFolds: Int = 5,
+         dist: DistanceType = Distance(euclideanDistance), k: Int = 3, nMaxSubsets: Int = 5, nFolds: Int = 5,
          ratio: Double = 1.0, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
 
-  private[soul] val distance: Distances.Distance = getDistance(dist)
-
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
   private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
 
@@ -53,8 +50,8 @@ class BC(private[soul] val data: Data, private[soul] val seed: Long = System.cur
       data.y
     }
 
-    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
-      (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+      (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
     } else {
@@ -71,7 +68,7 @@ class BC(private[soul] val data: Data, private[soul] val seed: Long = System.cur
     while (search) {
       val indexToUnderSample: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
       val minorityIndex: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
-      val classesCounter: Map[Any, Int] = (boolToIndex(mask) map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
+      val classesCounter: Map[Any, Int] = (boolToIndex(mask) map classesToWorkWith).groupBy(identity).mapValues(_.length)
 
       classesCounter.foreach { target: (Any, Int) =>
         val indexClass: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (c, i) if c == target._1 => i }
@@ -93,10 +90,12 @@ class BC(private[soul] val data: Data, private[soul] val seed: Long = System.cur
 
       val classesToWorkWithSubset: Array[Any] = subset map classesToWorkWith
       val dataToWorkWithSubset: Array[Array[Double]] = subset map dataToWorkWith
-      val prediction: Array[Any] = (if (distance == Distances.USER) {
-        kFoldPrediction(dataToWorkWithSubset, classesToWorkWithSubset, k, nFolds, dist, "nearest")
-      } else {
-        kFoldPredictionHVDM(dataToWorkWithSubset, classesToWorkWithSubset, k, nFolds, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
+      val prediction: Array[Any] = (dist match {
+        case distance: Distance =>
+          kFoldPrediction(dataToWorkWithSubset, classesToWorkWithSubset, k, nFolds, distance, "nearest")
+        case _ =>
+          kFoldPredictionHVDM(dataToWorkWithSubset, classesToWorkWithSubset, k, nFolds, data.fileInfo.nominal, sds, attrCounter,
+            attrClassesCounter, "nearest")
       }).take(indexToUnderSample.length)
 
       val classifiedInstances: Array[Boolean] = ((indexToUnderSample.indices map classesToWorkWithSubset)
@@ -105,21 +104,21 @@ class BC(private[soul] val data: Data, private[soul] val seed: Long = System.cur
 
       if (subsetsCounter == nMaxSubsets) search = false
 
-      val finalTargetStats: Map[Any, Int] = (boolToIndex(mask) map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
+      val finalTargetStats: Map[Any, Int] = (boolToIndex(mask) map classesToWorkWith).groupBy(identity).mapValues(_.length)
       classesToWorkWith.distinct.filter((c: Any) => c != untouchableClass).foreach { c: Any =>
         if (finalTargetStats(c) < counter(untouchableClass)) search = false
       }
     }
 
-    val majorityIndexHistogram: Array[(Int, Int)] = majorityElements.groupBy(identity).mapValues((_: ArrayBuffer[Int]).length).toArray.sortBy((_: (Int, Int))._2).reverse
-    val majorityIndex: Array[Int] = majorityIndexHistogram.take((minorityElements.distinct.length * ratio).toInt).map((_: (Int, Int))._1)
+    val majorityIndexHistogram: Array[(Int, Int)] = majorityElements.groupBy(identity).mapValues(_.length).toArray.sortBy(_._2).reverse
+    val majorityIndex: Array[Int] = majorityIndexHistogram.take((minorityElements.distinct.length * ratio).toInt).map(_._1)
     val finalIndex: Array[Int] = minorityElements.distinct.toArray ++ majorityIndex
     val finishTime: Long = System.nanoTime()
 
     val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
 
     logger.whenInfoEnabled {
-      val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
+      val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
       logger.info("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
       logger.info("NEW DATA SIZE: %d".format(finalIndex.length))
       logger.info("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))

@@ -23,7 +23,7 @@ object Writer {
     if (data.fileInfo._attributes == null || data.fileInfo._attributesValues == null)
       throw new Exception("Unable to write arff: missing information")
 
-    val orderedAttributes: Map[Int, String] = ListMap(data.fileInfo._attributes.toSeq.sortBy((_: (Int, String))._1): _*)
+    val orderedAttributes: Map[Int, String] = ListMap(data.fileInfo._attributes.toSeq.sortBy(_._1): _*)
 
     for (attribute <- orderedAttributes) {
       pr.write("@attribute %s %s\n".format(attribute._2, data.fileInfo._attributesValues(attribute._2)))
@@ -32,7 +32,7 @@ object Writer {
     pr.write("@data\n")
 
     for (row <- data.x zip data.y) {
-      val naIndex: Array[Int] = row._1.zipWithIndex.filter((_: (Any, Int))._1 == "soul_NA").map((_: (Any, Int))._2)
+      val naIndex: Array[Int] = row._1.zipWithIndex.filter(_._1 == "soul_NA").map(_._2)
       val newRow: Array[Any] = row._1.clone()
       for (index <- naIndex) {
         newRow(index) = "?"
@@ -58,7 +58,7 @@ object Writer {
       pr.write(data.fileInfo._header.mkString(delimiter) + "\n")
 
     for (row <- data.x zip data.y) {
-      val naIndex: Array[Int] = row._1.zipWithIndex.filter((_: (Any, Int))._1 == "soul_NA").map((_: (Any, Int))._2)
+      val naIndex: Array[Int] = row._1.zipWithIndex.filter(_._1 == "soul_NA").map(_._2)
       val newRow: Array[Any] = row._1.clone()
       for (index <- naIndex) {
         newRow(index) = missing

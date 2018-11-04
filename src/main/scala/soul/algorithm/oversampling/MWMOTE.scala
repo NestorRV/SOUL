@@ -2,7 +2,6 @@ package soul.algorithm.oversampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
-import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -17,15 +16,13 @@ import scala.util.Random
   * @param k1        number of neighbors used for predicting noisy minority class samples
   * @param k2        number of majority neighbors used for constructing informative minority set
   * @param k3        number of minority neighbors used for constructing informative minority set
-  * @param dist      distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
+  * @param dist      object of DistanceType representing the distance to be used
   * @param normalize normalize the data or not
   * @author David López Pretel
   */
-class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), N: Int = 500, k1: Int = 5,
-             k2: Int = 5, k3: Int = 5, dist: Any = Utilities.euclideanDistance _,
+class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), N: Int = 500,
+             k1: Int = 5, k2: Int = 5, k3: Int = 5, dist: DistanceType = Distance(euclideanDistance),
              val normalize: Boolean = false) extends LazyLogging {
-
-  private[soul] val distance: Distances.Distance = getDistance(dist)
 
   /** Compute the MWMOTE algorithm
     *
@@ -35,8 +32,8 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
     val initTime: Long = System.nanoTime()
     val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
 
-    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
-      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
     } else {
@@ -52,7 +49,7 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
       val CMAX: Double = 2
 
       if (!Nmin(y._2).contains(x)) {
-        val D: Double = if (distance == Distances.USER) {
+        val D: Double = if (dist.isInstanceOf[Distance]) {
           dist.asInstanceOf[(Array[Double], Array[Double]) => Double](samples(y._1), samples(x))
         } else {
           HVDM(samples(y._1), samples(x), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
@@ -72,7 +69,7 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
       val centroid1: Array[Double] = (cluster1 map samples).transpose.map(_.sum / cluster1.length)
       val centroid2: Array[Double] = (cluster2 map samples).transpose.map(_.sum / cluster2.length)
 
-      if (distance == Distances.USER) {
+      if (dist.isInstanceOf[Distance]) {
         dist.asInstanceOf[(Array[Double], Array[Double]) => Double](centroid1, centroid2)
       } else {
         HVDM(centroid1, centroid2, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
@@ -95,7 +92,7 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
       Sminf.indices.foreach { i =>
         Sminf.indices.foreach { j =>
           if (i != j) {
-            distances(i)(j) = if (distance == Distances.USER) {
+            distances(i)(j) = if (dist.isInstanceOf[Distance]) {
               dist.asInstanceOf[(Array[Double], Array[Double]) => Double](samples(Sminf(i)), samples(Sminf(j)))
             } else {
               HVDM(samples(Sminf(i)), samples(Sminf(j)), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
@@ -127,10 +124,11 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
 
     // construct the filtered minority set
     val Sminf: Array[Int] = minorityClassIndex.map(index => {
-      val neighbors = if (distance == Distances.USER) {
-        kNeighbors(samples, index, k1, dist)
-      } else {
-        kNeighborsHVDM(samples, index, k1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      val neighbors = dist match {
+        case distance: Distance =>
+          kNeighbors(samples, index, k1, distance)
+        case _ =>
+          kNeighborsHVDM(samples, index, k1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
       if (neighbors map data.y contains data.y(minorityClassIndex(0))) {
         Some(index)
@@ -141,19 +139,21 @@ class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System
 
     //for each sample in Sminf compute the nearest majority set
     val Sbmaj: Array[Int] = Sminf.flatMap { x =>
-      if (distance == Distances.USER) {
-        kNeighbors(majorityClassIndex map samples, samples(x), k2, dist)
-      } else {
-        kNeighborsHVDM(majorityClassIndex map samples, samples(x), k2, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      dist match {
+        case distance: Distance =>
+          kNeighbors(majorityClassIndex map samples, samples(x), k2, distance)
+        case _ =>
+          kNeighborsHVDM(majorityClassIndex map samples, samples(x), k2, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
     }.distinct.map(majorityClassIndex(_))
 
     // for each majority example in Sbmaj , compute the nearest minority set
     val Nmin: Array[Array[Int]] = Sbmaj.map { x =>
-      (if (distance == Distances.USER) {
-        kNeighbors(minorityClassIndex map samples, samples(x), k3, dist)
-      } else {
-        kNeighborsHVDM(minorityClassIndex map samples, samples(x), k3, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      (dist match {
+        case distance: Distance =>
+          kNeighbors(minorityClassIndex map samples, samples(x), k3, distance)
+        case _ =>
+          kNeighborsHVDM(minorityClassIndex map samples, samples(x), k3, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }).map(minorityClassIndex(_))
     }
 

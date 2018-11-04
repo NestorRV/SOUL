@@ -2,7 +2,6 @@ package soul.algorithm.undersampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
-import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -17,7 +16,7 @@ import scala.math.{abs, sqrt}
   * @param maxEvaluations number of evaluations
   * @param algorithm      version of core to execute. One of: EBUSGSGM, EBUSMSGM, EBUSGSAUC, EBUSMSAUC,
   *                       EUSCMGSGM, EUSCMMSGM, EUSCMGSAUC or EUSCMMSAUC
-  * @param dist           distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
+  * @param dist           object of DistanceType representing the distance to be used
   * @param probHUX        probability of changing a gen from 0 to 1 (used in crossover)
   * @param recombination  recombination threshold (used in reinitialization)
   * @param prob0to1       probability of changing a gen from 0 to 1 (used in reinitialization)
@@ -25,13 +24,12 @@ import scala.math.{abs, sqrt}
   * @param randomData     iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
-class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-          populationSize: Int = 50, maxEvaluations: Int = 1000, algorithm: String = "EBUSMSGM", dist: Any = Utilities.euclideanDistance _, probHUX: Double = 0.25,
+class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None, populationSize: Int = 50,
+          maxEvaluations: Int = 1000, algorithm: String = "EBUSMSGM", dist: DistanceType = Distance(euclideanDistance), probHUX: Double = 0.25,
           recombination: Double = 0.35, prob0to1: Double = 0.05, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
 
-  private[soul] val distance: Distances.Distance = getDistance(dist)
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
   private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
 
@@ -54,8 +52,8 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       data.y
     }
 
-    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
-      (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+      (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
     } else {
@@ -71,10 +69,11 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       val neighbours: Array[Array[Double]] = index map dataToWorkWith
       val classes: Array[Any] = index map classesToWorkWith
       val predicted: Array[Any] = dataToWorkWith.indices.map { e: Int =>
-        if (distance == Distances.USER) {
-          nnRule(neighbours, dataToWorkWith(e), e, classes, 1, dist, "nearest")._1
-        } else {
-          nnRuleHVDM(neighbours, dataToWorkWith(e), e, classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
+        dist match {
+          case distance: Distance =>
+            nnRule(neighbours, dataToWorkWith(e), e, classes, 1, distance, "nearest")._1
+          case _ =>
+            nnRuleHVDM(neighbours, dataToWorkWith(e), e, classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
         }
       }.toArray
 
@@ -86,7 +85,7 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       val fn: Int = matrix._3
       val tn: Int = matrix._4
 
-      val nPositives: Int = (index map classesToWorkWith).count((_: Any) == untouchableClass)
+      val nPositives: Int = (index map classesToWorkWith).count(_ == untouchableClass)
       val nNegatives: Int = (index map classesToWorkWith).length - nPositives
 
       val tpr: Double = tp / ((tp + fn) + 0.00000001)
@@ -124,7 +123,7 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
 
     val population: Array[Array[Int]] = new Array[Array[Int]](populationSize)
     (0 until populationSize).foreach { i: Int =>
-      val individual: Array[Int] = targetInstances.indices.map((_: Int) => random.nextInt(2)).toArray
+      val individual: Array[Int] = targetInstances.indices.map(_ => random.nextInt(2)).toArray
       if (majoritySelection) {
         minorityElements.foreach((i: Int) => individual(i) = 1)
       }
@@ -175,13 +174,13 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       actualEvaluations += newPopulation.length
 
       // We order the population. The best ones (greater evaluation value) are the first
-      val populationOrder: Array[(Double, Int, String)] = evaluations.zipWithIndex.sortBy((_: (Double, Int))._1)(Ordering[Double].reverse).map((e: (Double, Int)) => (e._1, e._2, "OLD"))
-      val newPopulationOrder: Array[(Double, Int, String)] = newEvaluations.zipWithIndex.sortBy((_: (Double, Int))._1)(Ordering[Double].reverse).map((e: (Double, Int)) => (e._1, e._2, "NEW"))
+      val populationOrder: Array[(Double, Int, String)] = evaluations.zipWithIndex.sortBy(_._1)(Ordering[Double].reverse).map((e: (Double, Int)) => (e._1, e._2, "OLD"))
+      val newPopulationOrder: Array[(Double, Int, String)] = newEvaluations.zipWithIndex.sortBy(_._1)(Ordering[Double].reverse).map((e: (Double, Int)) => (e._1, e._2, "NEW"))
 
       if (newPopulationOrder.length == 0 || populationOrder.last._1 > newPopulationOrder.head._1) {
         incestThreshold -= 1
       } else {
-        val finalOrder: Array[(Double, Int, String)] = (populationOrder ++ newPopulationOrder).sortBy((_: (Double, Int, String))._1)(Ordering[Double].reverse).take(populationSize)
+        val finalOrder: Array[(Double, Int, String)] = (populationOrder ++ newPopulationOrder).sortBy(_._1)(Ordering[Double].reverse).take(populationSize)
 
         finalOrder.zipWithIndex.foreach { e: ((Double, Int, String), Int) =>
           population(e._2) = if (e._1._3 == "OLD") population(e._1._2) else newPopulation(e._1._2)
@@ -191,7 +190,7 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
 
       if (incestThreshold <= 0) {
         population.indices.tail.foreach { i: Int =>
-          val individual: Array[Int] = population(i).map((_: Int) => if (random.nextFloat < recombination)
+          val individual: Array[Int] = population(i).map(_ => if (random.nextFloat < recombination)
             if (random.nextFloat < prob0to1) 1 else 0 else population(0)(i))
 
           if (majoritySelection) {
@@ -211,14 +210,14 @@ class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       }
     }
 
-    val bestChromosome: Array[Int] = population(evaluations.zipWithIndex.sortBy((_: (Double, Int))._1)(Ordering[Double].reverse).head._2)
+    val bestChromosome: Array[Int] = population(evaluations.zipWithIndex.sortBy(_._1)(Ordering[Double].reverse).head._2)
     val finalIndex: Array[Int] = zeroOneToIndex(bestChromosome) map targetInstances
     val finishTime: Long = System.nanoTime()
 
     val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
 
     logger.whenInfoEnabled {
-      val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
+      val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
       logger.info("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
       logger.info("NEW DATA SIZE: %d".format(finalIndex.length))
       logger.info("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))

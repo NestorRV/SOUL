@@ -107,9 +107,11 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
 
     // check if the data is nominal or numerical
     val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
-      to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
+      to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
+        data.fileInfo.minAttribs) else output))
     } else {
-      toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), data.nomToNum)
+      toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
+        data.fileInfo.minAttribs) else output), data.nomToNum)
     }, Array.concat(data.y, Array.fill(output.length)(minorityClass)), None, data.fileInfo)
     val finishTime: Long = System.nanoTime()
 

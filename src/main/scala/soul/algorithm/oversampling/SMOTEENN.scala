@@ -3,7 +3,6 @@ package soul.algorithm.oversampling
 import com.typesafe.scalalogging.LazyLogging
 import soul.algorithm.undersampling.ENN
 import soul.data.Data
-import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -15,14 +14,13 @@ import scala.util.Random
   * @param seed      seed to use. If it is not provided, it will use the system time
   * @param percent   amount of Smote N%
   * @param k         number of minority class nearest neighbors
-  * @param dist      distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
+  * @param dist      object of DistanceType representing the distance to be used
   * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-               percent: Int = 500, k: Int = 5, dist: Any = Utilities.euclideanDistance _, val normalize: Boolean = false) extends LazyLogging {
-
-  private[soul] val distance: Distances.Distance = getDistance(dist)
+               percent: Int = 500, k: Int = 5, dist: DistanceType = Distance(euclideanDistance),
+               val normalize: Boolean = false) extends LazyLogging {
 
   /** Compute the SMOTEENN algorithm
     *
@@ -38,8 +36,8 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))
 
-    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
-      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
     } else {
@@ -66,11 +64,12 @@ class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = Syst
     val r: Random = new Random(seed)
     // for each minority class sample
     minorityClassIndex.zipWithIndex.foreach(i => {
-
-      neighbors = if (distance == Distances.USER) {
-        kNeighbors(minorityClassIndex map samples, i._2, k, dist)
-      } else {
-        kNeighborsHVDM(minorityClassIndex map samples, i._2, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter).map(minorityClassIndex(_))
+      neighbors = dist match {
+        case distance: Distance =>
+          kNeighbors(minorityClassIndex map samples, i._2, k, distance)
+        case _ =>
+          kNeighborsHVDM(minorityClassIndex map samples, i._2, k, data.fileInfo.nominal, sds, attrCounter,
+            attrClassesCounter).map(minorityClassIndex(_))
       }
       // compute populate for the sample
       (0 until N).foreach(_ => {

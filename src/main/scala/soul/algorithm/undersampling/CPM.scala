@@ -2,7 +2,6 @@ package soul.algorithm.undersampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
-import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -13,20 +12,19 @@ import scala.math.min
   *
   * @param data       data to work with
   * @param seed       seed to use. If it is not provided, it will use the system time
-  * @param dist       distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
+  * @param dist       object of DistanceType representing the distance to be used
   * @param normalize  normalize the data or not
   * @param randomData iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
 class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-          dist: Any = Utilities.euclideanDistance _, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
+          dist: DistanceType = Distance(euclideanDistance), val normalize: Boolean = false,
+          val randomData: Boolean = false) extends LazyLogging {
 
-  private[soul] val distance: Distances.Distance = getDistance(dist)
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
   private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
-  private[soul] val centers: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
 
   /** Compute the CPM algorithm.
     *
@@ -35,6 +33,7 @@ class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.cu
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
     val random: scala.util.Random = new scala.util.Random(seed)
+    val centers: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
 
     var dataToWorkWith: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
     var randomIndex: List[Int] = data.x.indices.toList
@@ -52,8 +51,8 @@ class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val impurity: Double = posElements.asInstanceOf[Double] / negElements.asInstanceOf[Double]
     val cluster: Array[Int] = new Array[Int](dataToWorkWith.length).indices.toArray
 
-    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
-      (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+      (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
     } else {
@@ -89,13 +88,13 @@ class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.cu
         center2 = pairs(pointer)._2
 
         parentCluster.foreach { element: Int =>
-          val d1: Double = if (distance == Distances.USER) {
+          val d1: Double = if (dist.isInstanceOf[Distance]) {
             dist.asInstanceOf[(Array[Double], Array[Double]) => Double](dataToWorkWith(element), dataToWorkWith(center1))
           } else {
             HVDM(dataToWorkWith(element), dataToWorkWith(center1), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
           }
 
-          val d2: Double = if (distance == Distances.USER) {
+          val d2: Double = if (dist.isInstanceOf[Distance]) {
             dist.asInstanceOf[(Array[Double], Array[Double]) => Double](dataToWorkWith(element), dataToWorkWith(center2))
           } else {
             HVDM(dataToWorkWith(element), dataToWorkWith(center2), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
@@ -134,7 +133,7 @@ class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val newData: Data = new Data(centers.toArray map data.x, centers.toArray map data.y, Some(centers.toArray), data.fileInfo)
 
     logger.whenInfoEnabled {
-      val newCounter: Map[Any, Int] = (centers.toArray map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
+      val newCounter: Map[Any, Int] = (centers.toArray map classesToWorkWith).groupBy(identity).mapValues(_.length)
       logger.info("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
       logger.info("NEW DATA SIZE: %d".format(centers.toArray.length))
       logger.info("REDUCTION PERCENTAGE: %s".format(100 - (centers.toArray.length.toFloat / dataToWorkWith.length) * 100))

@@ -2,7 +2,6 @@ package soul.algorithm.oversampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
-import soul.util.Utilities
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -13,14 +12,12 @@ import scala.util.Random
   * @param data      data to work with
   * @param seed      seed to use. If it is not provided, it will use the system time
   * @param k         Number of nearest neighbors
-  * @param dist      distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
+  * @param dist      object of DistanceType representing the distance to be used
   * @param normalize normalize the data or not
   * @author David López Pretel
   */
 class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-                     k: Int = 5, dist: Any = Utilities.euclideanDistance _, val normalize: Boolean = false) extends LazyLogging {
-
-  private[soul] val distance: Distances.Distance = getDistance(dist)
+                     k: Int = 5, dist: DistanceType = Distance(euclideanDistance), val normalize: Boolean = false) extends LazyLogging {
 
   /** Compute the SafeLevelSMOTE algorithm
     *
@@ -33,8 +30,8 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))
 
-    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
-      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+      (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
     } else {
@@ -54,10 +51,11 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
     // for each minority class sample
     minorityClassIndex.foreach(i => {
       // compute k neighbors from p and save number of positive instances
-      neighbors = if (distance == Distances.USER) {
-        kNeighbors(samples, i, k, dist)
-      } else {
-        kNeighborsHVDM(samples, i, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      neighbors = dist match {
+        case distance: Distance =>
+          kNeighbors(samples, i, k, distance)
+        case _ =>
+          kNeighborsHVDM(samples, i, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
       val n: Int = neighbors(r.nextInt(neighbors.length))
       val slp: Int = neighbors.map(neighbor => {
@@ -68,10 +66,11 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
         }
       }).sum
       // compute k neighbors from n and save number of positive instances
-      val selectedNeighbors: Array[Int] = if (distance == Distances.USER) {
-        kNeighbors(samples, n, k, dist)
-      } else {
-        kNeighborsHVDM(samples, n, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      val selectedNeighbors: Array[Int] = dist match {
+        case distance: Distance =>
+          kNeighbors(samples, n, k, distance)
+        case _ =>
+          kNeighborsHVDM(samples, n, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
 
       val sln: Int = selectedNeighbors.map(neighbor => {
@@ -109,9 +108,11 @@ class SafeLevelSMOTE(private[soul] val data: Data, private[soul] val seed: Long 
 
     // check if the data is nominal or numerical
     val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
-      to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output))
+      to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
+        data.fileInfo.minAttribs) else output))
     } else {
-      toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output), data.nomToNum)
+      toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
+        data.fileInfo.minAttribs) else output), data.nomToNum)
     }, Array.concat(data.y, Array.fill(output.length)(minorityClass)), None, data.fileInfo)
     val finishTime: Long = System.nanoTime()
 

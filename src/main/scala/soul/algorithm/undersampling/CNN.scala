@@ -2,25 +2,23 @@ package soul.algorithm.undersampling
 
 import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
-import soul.util.Utilities
 import soul.util.Utilities._
 
 /** Condensed Nearest Neighbor decision rule. Original paper: "The Condensed Nearest Neighbor Rule" by P. Hart.
   *
   * @param data       data to work with
   * @param seed       seed to use. If it is not provided, it will use the system time
-  * @param dist       distance to be used. It should be "HVDM" or a function of the type: (Array[Double], Array[Double]) => Double.
+  * @param dist       object of DistanceType representing the distance to be used
   * @param normalize  normalize the data or not
   * @param randomData iterate through the data randomly or not
   * @author Néstor Rodríguez Vico
   */
 class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-          dist: Any = Utilities.euclideanDistance _, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
-
-  private[soul] val distance: Distances.Distance = getDistance(dist)
+          dist: DistanceType = Distance(euclideanDistance), val normalize: Boolean = false,
+          val randomData: Boolean = false) extends LazyLogging {
 
   // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues((_: Array[Any]).length)
+  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
   // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it if
   private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
 
@@ -43,8 +41,8 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       data.y
     }
 
-    val (attrCounter, attrClassesCounter, sds) = if (distance == Distances.HVDM) {
-      (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues((_: Array[Double]).length)),
+    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+      (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
     } else {
@@ -68,17 +66,20 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       val index: Array[Int] = location.zipWithIndex.collect { case (a, b) if a == 1 => b }
       val neighbours: Array[Array[Double]] = index map dataToWorkWith
       val classes: Array[Any] = index map classesToWorkWith
-      val label: (Any, Array[Int], Array[Double]) = if (distance == Distances.USER) {
-        nnRule(neighbours, element._1, element._2, classes, 1, dist, "nearest")
-      } else {
-        nnRuleHVDM(neighbours, element._1, element._2, classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
+      val label: (Any, Array[Int], Array[Double]) = dist match {
+        case distance: Distance =>
+          nnRule(neighbours, element._1, element._2, classes, 1, distance, "nearest")
+        case _ =>
+          nnRuleHVDM(neighbours, element._1, element._2, classes, 1, data.fileInfo.nominal, sds, attrCounter,
+            attrClassesCounter, "nearest")
       }
       // If it is misclassified or is a element of the untouchable class it is added to store; otherwise, it is added to grabbag
       location(element._2) = if (label._1 != classesToWorkWith(element._2)) 1 else -1
     }
 
     logger.whenInfoEnabled {
-      logger.info("ITERATION %d: GRABBAG SIZE: %d, STORE SIZE: %d.".format(iteration, location.count((z: Int) => z == -1), location.count((z: Int) => z == 1)))
+      logger.info("ITERATION %d: GRABBAG SIZE: %d, STORE SIZE: %d.".format(iteration, location.count((z: Int) => z == -1),
+        location.count((z: Int) => z == 1)))
     }
 
     // After a first pass, iterate grabbag until is exhausted:
@@ -93,10 +94,12 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
         val index: Array[Int] = location.zipWithIndex.collect { case (a, b) if a == 1 => b }
         val neighbours: Array[Array[Double]] = index map dataToWorkWith
         val classes: Array[Any] = index map classesToWorkWith
-        val label: Any = if (distance == Distances.USER) {
-          nnRule(neighbours, dataToWorkWith(element._2), element._2, classes, 1, dist, "nearest")._1
-        } else {
-          nnRuleHVDM(neighbours, dataToWorkWith(element._2), element._2, classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
+        val label: Any = dist match {
+          case distance: Distance =>
+            nnRule(neighbours, dataToWorkWith(element._2), element._2, classes, 1, distance, "nearest")._1
+          case _ =>
+            nnRuleHVDM(neighbours, dataToWorkWith(element._2), element._2, classes, 1, data.fileInfo.nominal, sds, attrCounter,
+              attrClassesCounter, "nearest")._1
         }
         // If it is misclassified or is a element of the untouchable class it is added to store; otherwise, it is added to grabbag
         location(element._2) = if (label != classesToWorkWith(element._2)) {
@@ -106,7 +109,8 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       }
 
       logger.whenInfoEnabled {
-        logger.info("ITERATION %d: GRABBAG SIZE: %d, STORE SIZE: %d.".format(iteration, location.count((z: Int) => z == -1), location.count((z: Int) => z == 1)))
+        logger.info("ITERATION %d: GRABBAG SIZE: %d, STORE SIZE: %d.".format(iteration, location.count((z: Int) => z == -1),
+          location.count((z: Int) => z == 1)))
       }
     }
 
@@ -117,7 +121,7 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     val newData: Data = new Data(storeIndex map data.x, storeIndex map data.y, Some(storeIndex), data.fileInfo)
 
     logger.whenInfoEnabled {
-      val newCounter: Map[Any, Int] = (storeIndex map classesToWorkWith).groupBy(identity).mapValues((_: Array[Any]).length)
+      val newCounter: Map[Any, Int] = (storeIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
       logger.info("NEW DATA SIZE: %d".format(storeIndex.length))
       logger.info("REDUCTION PERCENTAGE: %s".format(100 - (storeIndex.length.toFloat / dataToWorkWith.length) * 100))
       logger.info("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(counter, untouchableClass)))
