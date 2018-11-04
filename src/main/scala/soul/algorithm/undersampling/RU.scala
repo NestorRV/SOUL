@@ -1,6 +1,5 @@
 package soul.algorithm.undersampling
 
-import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
 import soul.util.Utilities._
 
@@ -12,10 +11,11 @@ import soul.util.Utilities._
   *                    will be the same minority class examples as majority class examples. It will take
   *                    numMinorityInstances * ratio
   * @param replacement whether or not to sample randomly with replacement or not. false by default
+  * @param verbose     choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
 class RU(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-         ratio: Double = 1.0, replacement: Boolean = false) extends LazyLogging {
+         ratio: Double = 1.0, replacement: Boolean = false, val verbose: Boolean = false) {
 
   /** Compute the RU algorithm.
     *
@@ -39,14 +39,14 @@ class RU(private[soul] val data: Data, private[soul] val seed: Long = System.cur
 
     val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
 
-    logger.whenInfoEnabled {
+    if (verbose) {
       val newCounter: Map[Any, Int] = (finalIndex map data.y).groupBy(identity).mapValues(_.length)
-      logger.info("ORIGINAL SIZE: %d".format(data.x.length))
-      logger.info("NEW DATA SIZE: %d".format(finalIndex.length))
-      logger.info("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / data.x.length) * 100))
-      logger.info("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(counter, untouchableClass)))
-      logger.info("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, untouchableClass)))
-      logger.info("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+      println("ORIGINAL SIZE: %d".format(data.x.length))
+      println("NEW DATA SIZE: %d".format(finalIndex.length))
+      println("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / data.x.length) * 100))
+      println("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(counter, untouchableClass)))
+      println("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, untouchableClass)))
+      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
     newData

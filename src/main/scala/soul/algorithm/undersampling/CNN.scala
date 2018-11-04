@@ -1,6 +1,5 @@
 package soul.algorithm.undersampling
 
-import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
 import soul.util.Utilities._
 
@@ -11,11 +10,12 @@ import soul.util.Utilities._
   * @param dist       object of DistanceType representing the distance to be used
   * @param normalize  normalize the data or not
   * @param randomData iterate through the data randomly or not
+  * @param verbose    choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
 class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
           dist: DistanceType = Distance(euclideanDistance), val normalize: Boolean = false,
-          val randomData: Boolean = false) extends LazyLogging {
+          val randomData: Boolean = false, val verbose: Boolean = false) {
 
   /** Compute the CNN algorithm
     *
@@ -46,8 +46,8 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       (null, null, null)
     }
 
-    logger.whenInfoEnabled {
-      logger.info("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
+    if (verbose) {
+      println("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
     }
 
     // Indicate the corresponding group: 1 for store, 0 for unknown, -1 for grabbag
@@ -74,8 +74,8 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
       location(element._2) = if (label._1 != classesToWorkWith(element._2)) 1 else -1
     }
 
-    logger.whenInfoEnabled {
-      logger.info("ITERATION %d: GRABBAG SIZE: %d, STORE SIZE: %d.".format(iteration, location.count((z: Int) => z == -1),
+    if (verbose) {
+      println("ITERATION %d: GRABBAG SIZE: %d, STORE SIZE: %d.".format(iteration, location.count((z: Int) => z == -1),
         location.count((z: Int) => z == 1)))
     }
 
@@ -105,8 +105,8 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
         } else -1
       }
 
-      logger.whenInfoEnabled {
-        logger.info("ITERATION %d: GRABBAG SIZE: %d, STORE SIZE: %d.".format(iteration, location.count((z: Int) => z == -1),
+      if (verbose) {
+        println("ITERATION %d: GRABBAG SIZE: %d, STORE SIZE: %d.".format(iteration, location.count((z: Int) => z == -1),
           location.count((z: Int) => z == 1)))
       }
     }
@@ -117,13 +117,13 @@ class CNN(private[soul] val data: Data, private[soul] val seed: Long = System.cu
 
     val newData: Data = new Data(storeIndex map data.x, storeIndex map data.y, Some(storeIndex), data.fileInfo)
 
-    logger.whenInfoEnabled {
+    if (verbose) {
       val newCounter: Map[Any, Int] = (storeIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
-      logger.info("NEW DATA SIZE: %d".format(storeIndex.length))
-      logger.info("REDUCTION PERCENTAGE: %s".format(100 - (storeIndex.length.toFloat / dataToWorkWith.length) * 100))
-      logger.info("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(counter, untouchableClass)))
-      logger.info("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, untouchableClass)))
-      logger.info("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+      println("NEW DATA SIZE: %d".format(storeIndex.length))
+      println("REDUCTION PERCENTAGE: %s".format(100 - (storeIndex.length.toFloat / dataToWorkWith.length) * 100))
+      println("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(counter, untouchableClass)))
+      println("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, untouchableClass)))
+      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
     newData

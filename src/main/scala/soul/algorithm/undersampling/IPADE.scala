@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream
 import java.util
 
 import com.paypal.digraph.parser.{GraphEdge, GraphNode, GraphParser}
-import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
 import soul.util.Utilities._
 import weka.classifiers.Evaluation
@@ -26,11 +25,12 @@ import scala.collection.mutable.ArrayBuffer
   * @param randomChoice whether to choose a random individual or not
   * @param normalize    normalize the data or not
   * @param randomData   iterate through the data randomly or not
+  * @param verbose      choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
 class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
             iterations: Int = 100, strategy: Int = 1, randomChoice: Boolean = true, val normalize: Boolean = false,
-            val randomData: Boolean = false) extends LazyLogging {
+            val randomData: Boolean = false, val verbose: Boolean = false) {
 
   /** Compute the IPADE algorithm.
     *
@@ -475,14 +475,14 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
 
     val newData: Data = new Data(population.map((row: Array[Double]) => row.map((e: Double) => e.asInstanceOf[Any])), classes, None, data.fileInfo)
 
-    logger.whenInfoEnabled {
+    if (verbose) {
       val newCounter: Map[Any, Int] = classes.groupBy(identity).mapValues(_.length)
-      logger.info("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
-      logger.info("NEW DATA SIZE: %d".format(classes.length))
-      logger.info("REDUCTION PERCENTAGE: %s".format(100 - (classes.length.toFloat / dataToWorkWith.length) * 100))
-      logger.info("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(counter, untouchableClass)))
-      logger.info("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, untouchableClass)))
-      logger.info("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+      println("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
+      println("NEW DATA SIZE: %d".format(classes.length))
+      println("REDUCTION PERCENTAGE: %s".format(100 - (classes.length.toFloat / dataToWorkWith.length) * 100))
+      println("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(counter, untouchableClass)))
+      println("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, untouchableClass)))
+      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
     newData

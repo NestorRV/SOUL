@@ -1,6 +1,5 @@
 package soul.algorithm.undersampling
 
-import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
 import soul.util.Utilities._
 import weka.classifiers.trees.J48
@@ -15,10 +14,11 @@ import weka.core.Instances
   * @param nFolds     number of subsets to create when applying cross-validation
   * @param normalize  normalize the data or not
   * @param randomData iterate through the data randomly or not
+  * @param verbose    choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
 class IHTS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), nFolds: Int = 5,
-           val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
+           val normalize: Boolean = false, val randomData: Boolean = false, val verbose: Boolean = false) {
 
   /** Compute the IHTS algorithm.
     *
@@ -85,14 +85,14 @@ class IHTS(private[soul] val data: Data, private[soul] val seed: Long = System.c
 
     val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
 
-    logger.whenInfoEnabled {
+    if (verbose) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
-      logger.info("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
-      logger.info("NEW DATA SIZE: %d".format(finalIndex.length))
-      logger.info("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))
-      logger.info("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(counter, untouchableClass)))
-      logger.info("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, untouchableClass)))
-      logger.info("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+      println("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
+      println("NEW DATA SIZE: %d".format(finalIndex.length))
+      println("REDUCTION PERCENTAGE: %s".format(100 - (finalIndex.length.toFloat / dataToWorkWith.length) * 100))
+      println("ORIGINAL IMBALANCED RATIO: %s".format(imbalancedRatio(counter, untouchableClass)))
+      println("NEW IMBALANCED RATIO: %s".format(imbalancedRatio(newCounter, untouchableClass)))
+      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
     newData

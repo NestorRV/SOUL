@@ -1,7 +1,6 @@
 package soul.algorithm.oversampling
 
 import breeze.linalg.{DenseMatrix, eigSym}
-import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
 import soul.util.Utilities._
 
@@ -16,11 +15,12 @@ import scala.util.Random
   * @param k         number of neighbors
   * @param dist      object of DistanceType representing the distance to be used
   * @param normalize normalize the data or not
+  * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
 class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
             percent: Int = 300, k: Int = 5, dist: DistanceType = Distance(euclideanDistance),
-            val normalize: Boolean = false) extends LazyLogging {
+            val normalize: Boolean = false, val verbose: Boolean = false) {
 
   /** Compute the first principal component axis
     *
@@ -108,10 +108,10 @@ class ADOMS(private[soul] val data: Data, private[soul] val seed: Long = System.
     }, Array.concat(data.y, Array.fill(output.length)(minorityClass)), None, data.fileInfo)
     val finishTime: Long = System.nanoTime()
 
-    logger.whenInfoEnabled {
-      logger.info("ORIGINAL SIZE: %d".format(data.x.length))
-      logger.info("NEW DATA SIZE: %d".format(newData.x.length))
-      logger.info("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+    if (verbose) {
+      println("ORIGINAL SIZE: %d".format(data.x.length))
+      println("NEW DATA SIZE: %d".format(newData.x.length))
+      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
     newData

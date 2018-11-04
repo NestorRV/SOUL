@@ -1,7 +1,6 @@
 package soul.algorithm.oversampling
 
 import breeze.linalg.{DenseMatrix, DenseVector, eigSym, inv, sum}
-import com.typesafe.scalalogging.LazyLogging
 import soul.data.Data
 import soul.util.Utilities._
 
@@ -13,9 +12,11 @@ import scala.util.Random
   * @param data      data to work with
   * @param seed      seed to use. If it is not provided, it will use the system time
   * @param normalize normalize the data or not
+  * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
-class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), val normalize: Boolean = false) extends LazyLogging {
+class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), val normalize: Boolean = false,
+          val verbose: Boolean = false) {
 
   /** create the new samples for MDO algorithm
     *
@@ -115,10 +116,10 @@ class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.cu
     }, Array.concat(data.y, Array.fill(output.length)(minorityClass)), None, data.fileInfo)
     val finishTime: Long = System.nanoTime()
 
-    logger.whenInfoEnabled {
-      logger.info("ORIGINAL SIZE: %d".format(data.x.length))
-      logger.info("NEW DATA SIZE: %d".format(newData.x.length))
-      logger.info("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+    if (verbose) {
+      println("ORIGINAL SIZE: %d".format(data.x.length))
+      println("NEW DATA SIZE: %d".format(newData.x.length))
+      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
     newData
