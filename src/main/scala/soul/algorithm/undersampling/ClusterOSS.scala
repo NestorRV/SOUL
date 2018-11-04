@@ -23,19 +23,16 @@ class ClusterOSS(private[soul] val data: Data, private[soul] val seed: Long = Sy
                  dist: DistanceType = Distance(euclideanDistance), k: Int = 3, numClusters: Int = 15, restarts: Int = 5, minDispersion: Double = 0.0001,
                  maxIterations: Int = 100, val normalize: Boolean = false, val randomData: Boolean = false) extends LazyLogging {
 
-  // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
-  // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
-  private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
-
   /** Compute the ClusterOSS algorithm
     *
     * @return undersampled data structure
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
-    val random: scala.util.Random = new scala.util.Random(seed)
 
+    val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
+    val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
+    val random: scala.util.Random = new scala.util.Random(seed)
     var dataToWorkWith: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
     var randomIndex: List[Int] = data.x.indices.toList
     val classesToWorkWith: Array[Any] = if (randomData) {

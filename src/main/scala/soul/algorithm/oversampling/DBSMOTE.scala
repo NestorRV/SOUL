@@ -21,15 +21,13 @@ import scala.util.Random
 class DBSMOTE(private[soul] val data: Data, eps: Double = -1, k: Int = 5, dist: DistanceType = Distance(euclideanDistance),
               seed: Long = 5, val normalize: Boolean = false) extends LazyLogging {
 
-  // compute minority class
-  private val minorityClassIndex: Array[Int] = minority(data.y)
-
   /** Compute the DBSMOTE algorithm
     *
     * @return synthetic samples generated
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
+    val minorityClassIndex: Array[Int] = minority(data.y)
     val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
 
     val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {

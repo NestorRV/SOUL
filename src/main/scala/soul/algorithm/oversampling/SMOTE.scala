@@ -26,11 +26,12 @@ class SMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.
     * @return synthetic samples generated
     */
   def compute(): Data = {
+    val initTime: Long = System.nanoTime()
+
     if (percent > 100 && percent % 100 != 0) {
       throw new Exception("Percent must be a multiple of 100")
     }
 
-    val initTime: Long = System.nanoTime()
     val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))

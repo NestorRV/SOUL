@@ -26,11 +26,12 @@ class SMOTETL(private[soul] val data: Data, private[soul] val seed: Long = Syste
     * @return synthetic samples generated
     */
   def compute(): Data = {
+    val initTime: Long = System.nanoTime()
+
     if (percent > 100 && percent % 100 != 0) {
       throw new Exception("Percent must be a multiple of 100")
     }
 
-    val initTime: Long = System.nanoTime()
     val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
     // compute minority class
     val minorityClassIndex: Array[Int] = minority(data.y)

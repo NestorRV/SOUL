@@ -22,20 +22,13 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
               relabel: String = "yes", ampl: String = "weak", k: Int = 5, dist: DistanceType = Distance(euclideanDistance),
               val normalize: Boolean = false) extends LazyLogging {
 
-  // array with the index of the minority class
-  private var minorityClassIndex: Array[Int] = minority(data.y)
-  private val minorityClass: Any = data.y(minorityClassIndex(0))
-  // array with the index of the majority class
-  private var majorityClassIndex: Array[Int] = data.processedData.indices.diff(minorityClassIndex.toList).toArray
-  // the samples computed by the algorithm
-  private val output: ArrayBuffer[Array[Double]] = ArrayBuffer()
-  private var resultClasses: Array[Any] = _
-
   /** Compute the Spider2 algorithm
     *
     * @return synthetic samples generated
     */
   def compute(): Data = {
+    val initTime: Long = System.nanoTime()
+
     if (relabel != "no" && relabel != "yes") {
       throw new Exception("relabel must be yes or no.")
     }
@@ -44,7 +37,12 @@ class Spider2(private[soul] val data: Data, private[soul] val seed: Long = Syste
       throw new Exception("amplification must be weak or strong or no.")
     }
 
-    val initTime: Long = System.nanoTime()
+    var minorityClassIndex: Array[Int] = minority(data.y)
+    val minorityClass: Any = data.y(minorityClassIndex(0))
+    var majorityClassIndex: Array[Int] = data.processedData.indices.diff(minorityClassIndex.toList).toArray
+    val output: ArrayBuffer[Array[Double]] = ArrayBuffer()
+    var resultClasses: Array[Any] = new Array[Any](0)
+
     val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
 
     val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {

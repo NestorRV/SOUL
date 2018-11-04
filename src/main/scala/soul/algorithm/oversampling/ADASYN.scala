@@ -27,6 +27,8 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
     * @return synthetic samples generated
     */
   def compute(): Data = {
+    val initTime: Long = System.nanoTime()
+
     if (B > 1 || B < 0) {
       throw new Exception("B must be between 0 and 1, both included")
     }
@@ -35,7 +37,6 @@ class ADASYN(private[soul] val data: Data, private[soul] val seed: Long = System
       throw new Exception("d must be between 0 and 1, zero not included")
     }
 
-    val initTime: Long = System.nanoTime()
     val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
 
     val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {

@@ -32,17 +32,14 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
             iterations: Int = 100, strategy: Int = 1, randomChoice: Boolean = true, val normalize: Boolean = false,
             val randomData: Boolean = false) extends LazyLogging {
 
-  private[soul] val random: scala.util.Random = new scala.util.Random(seed)
-  // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
-  // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
-  private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
-
   /** Compute the IPADE algorithm.
     *
     * @return undersampled data structure
     */
   def compute(): Data = {
+    val initTime: Long = System.nanoTime()
+    val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
+    val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
     val random: scala.util.Random = new scala.util.Random(seed)
 
     def accuracy(trainData: Array[Array[Double]], trainClasses: Array[Any], testData: Array[Array[Double]], testClasses: Array[Any]): Double = {
@@ -351,8 +348,6 @@ class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.
 
       (localTrainData, localTrainClasses)
     }
-
-    val initTime: Long = System.nanoTime()
 
     var dataToWorkWith: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
     var randomIndex: List[Int] = data.x.indices.toList

@@ -17,18 +17,15 @@ import soul.util.Utilities._
 class RU(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
          ratio: Double = 1.0, replacement: Boolean = false) extends LazyLogging {
 
-  // Count the number of instances for each class
-  private[soul] val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
-  // In certain algorithms, reduce the minority class is forbidden, so let's detect what class is it
-  private[soul] val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
-  // Index to shuffle (randomize) the data
-
   /** Compute the RU algorithm.
     *
     * @return undersampled data structure
     */
   def compute(): Data = {
     val initTime: Long = System.nanoTime()
+
+    val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
+    val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
     val random: scala.util.Random = new scala.util.Random(seed)
 
     val minorityIndex: Array[Int] = data.y.zipWithIndex.collect { case (label, i) if label == untouchableClass => i }
