@@ -14,11 +14,15 @@ import scala.math.Numeric.Implicits._
   */
 class KDTree(val x: Array[Array[Double]], val y: Array[Any], val dimensions: Int) {
 
-  private val kDTreeMap: KDTreeMap[Array[Double], Any] =
-    KDTreeMap.fromSeq((x zip y).map(f => f._1 -> f._2))(dimensionalOrderingForArray[Array[Double], Double](dimensions))
+  private val kDTreeMap: KDTreeMap[Array[Double], (Any, Int)] =
+    KDTreeMap.fromSeq((x zip y.zipWithIndex).map(f => f._1 -> (f._2._1, f._2._2)))(dimensionalOrderingForArray[Array[Double], Double](dimensions))
 
-  def nNeighbours(instance: Array[Double], k: Int, leaveOneOut: Boolean): (Seq[Array[Double]], Seq[Any]) = {
-    if (leaveOneOut) kDTreeMap.findNearest(instance, k + 1).drop(1).unzip else kDTreeMap.findNearest(instance, k).unzip
+  def nNeighbours(instance: Array[Double], k: Int, leaveOneOut: Boolean): (Seq[Array[Double]], Seq[Any], Seq[Int]) = {
+    val realK: Int = if (leaveOneOut) k + 1 else k
+    val drop: Int = if (leaveOneOut) 1 else 0
+    val instances: (Seq[Array[Double]], Seq[(Any, Int)]) = kDTreeMap.findNearest(instance, realK).drop(drop).unzip
+    val (labels, index) = instances._2.unzip
+    (instances._1, labels, index)
   }
 
   def apply(x: Array[Double]) = kDTreeMap(x)
