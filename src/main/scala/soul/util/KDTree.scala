@@ -12,7 +12,7 @@ import scala.math.Numeric.Implicits._
   * @param dimensions number of dimensions
   * @author Néstor Rodríguez Vico
   */
-class KDTree(val x: Array[Array[Double]], val y: Array[Any], val dimensions: Int) {
+class KDTree(x: Array[Array[Double]], y: Array[Any], val dimensions: Int) {
 
   private val kDTreeMap: KDTreeMap[Array[Double], (Any, Int)] =
     KDTreeMap.fromSeq((x zip y.zipWithIndex).map(f => f._1 -> (f._2._1, f._2._2)))(dimensionalOrderingForArray[Array[Double], Double](dimensions))
