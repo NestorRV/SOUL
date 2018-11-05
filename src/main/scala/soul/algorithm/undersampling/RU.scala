@@ -14,8 +14,7 @@ import soul.util.Utilities._
   * @param verbose     choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class RU(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-         ratio: Double = 1.0, replacement: Boolean = false, val verbose: Boolean = false) {
+class RU(data: Data, seed: Long = System.currentTimeMillis(), ratio: Double = 1.0, replacement: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the RU algorithm.
     *

@@ -20,9 +20,8 @@ import scala.util.Random
   * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
-class MWMOTE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), N: Int = 500,
-             k1: Int = 5, k2: Int = 5, k3: Int = 5, dist: DistanceType = Distance(euclideanDistance),
-             val normalize: Boolean = false, val verbose: Boolean = false) {
+class MWMOTE(data: Data, seed: Long = System.currentTimeMillis(), N: Int = 500, k1: Int = 5, k2: Int = 5, k3: Int = 5,
+             dist: DistanceType = Distance(euclideanDistance), normalize: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the MWMOTE algorithm
     *

@@ -15,8 +15,7 @@ import scala.util.Random
   * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
-class MDO(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), val normalize: Boolean = false,
-          val verbose: Boolean = false) {
+class MDO(data: Data, seed: Long = System.currentTimeMillis(), normalize: Boolean = false, verbose: Boolean = false) {
 
   /** create the new samples for MDO algorithm
     *

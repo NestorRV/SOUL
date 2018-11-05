@@ -17,9 +17,8 @@ import scala.math.min
   * @param verbose    choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class CPM(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-          dist: DistanceType = Distance(euclideanDistance), val normalize: Boolean = false,
-          val randomData: Boolean = false, val verbose: Boolean = false) {
+class CPM(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType = Distance(euclideanDistance),
+          normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the CPM algorithm.
     *

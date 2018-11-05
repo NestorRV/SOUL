@@ -18,9 +18,8 @@ import soul.util.Utilities._
   * @param verbose     choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class EE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-         ratio: Double = 1.0, replacement: Boolean = false, nTimes: Int = 5, val normalize: Boolean = false,
-         val randomData: Boolean = false, val verbose: Boolean = false) {
+class EE(data: Data, seed: Long = System.currentTimeMillis(), ratio: Double = 1.0, replacement: Boolean = false, nTimes: Int = 5,
+         normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the EE algorithm.
     *

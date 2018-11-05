@@ -28,9 +28,8 @@ import scala.collection.mutable.ArrayBuffer
   * @param verbose      choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class IPADE(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-            iterations: Int = 100, strategy: Int = 1, randomChoice: Boolean = true, val normalize: Boolean = false,
-            val randomData: Boolean = false, val verbose: Boolean = false) {
+class IPADE(data: Data, seed: Long = System.currentTimeMillis(), iterations: Int = 100, strategy: Int = 1,
+            randomChoice: Boolean = true, normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the IPADE algorithm.
     *

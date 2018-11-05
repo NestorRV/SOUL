@@ -18,9 +18,8 @@ import scala.util.Random
   * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
-class SMOTEENN(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(),
-               percent: Int = 500, k: Int = 5, dist: DistanceType = Distance(euclideanDistance),
-               val normalize: Boolean = false, val verbose: Boolean = false) {
+class SMOTEENN(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 500, k: Int = 5,
+               dist: DistanceType = Distance(euclideanDistance), normalize: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the SMOTEENN algorithm
     *

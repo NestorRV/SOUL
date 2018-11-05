@@ -22,9 +22,9 @@ import scala.collection.mutable.ArrayBuffer
   * @param verbose     choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class BC(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-         dist: DistanceType = Distance(euclideanDistance), k: Int = 3, nMaxSubsets: Int = 5, nFolds: Int = 5,
-         ratio: Double = 1.0, val normalize: Boolean = false, val randomData: Boolean = false, val verbose: Boolean = false) {
+class BC(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType = Distance(euclideanDistance),
+         k: Int = 3, nMaxSubsets: Int = 5, nFolds: Int = 5, ratio: Double = 1.0, normalize: Boolean = false,
+         randomData: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the BC algorithm.
     *

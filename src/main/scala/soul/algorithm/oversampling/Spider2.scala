@@ -18,9 +18,8 @@ import scala.collection.mutable.ArrayBuffer
   * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
-class Spider2(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None,
-              relabel: String = "yes", ampl: String = "weak", k: Int = 5, dist: DistanceType = Distance(euclideanDistance),
-              val normalize: Boolean = false, val verbose: Boolean = false) {
+class Spider2(data: Data, seed: Long = System.currentTimeMillis(), relabel: String = "yes", ampl: String = "weak", k: Int = 5,
+              dist: DistanceType = Distance(euclideanDistance), normalize: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the Spider2 algorithm
     *

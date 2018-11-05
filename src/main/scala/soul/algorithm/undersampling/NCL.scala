@@ -20,9 +20,8 @@ import scala.collection.mutable.ArrayBuffer
   * @param verbose    choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class NCL(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), dist: DistanceType = Distance(euclideanDistance),
-          k: Int = 3, threshold: Double = 0.5, val normalize: Boolean = false, val randomData: Boolean = false,
-          val verbose: Boolean = false) {
+class NCL(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType = Distance(euclideanDistance), k: Int = 3,
+          threshold: Double = 0.5, normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
   /** Compute the NCL algorithm.
     *
     * @return undersampled data structure

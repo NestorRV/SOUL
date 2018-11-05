@@ -18,8 +18,8 @@ import scala.util.Random
   * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
-class DBSMOTE(private[soul] val data: Data, eps: Double = -1, k: Int = 5, dist: DistanceType = Distance(euclideanDistance),
-              seed: Long = 5, val normalize: Boolean = false, val verbose: Boolean = false) {
+class DBSMOTE(data: Data, eps: Double = -1, k: Int = 5, dist: DistanceType = Distance(euclideanDistance),
+              seed: Long = 5, normalize: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the DBSMOTE algorithm
     *

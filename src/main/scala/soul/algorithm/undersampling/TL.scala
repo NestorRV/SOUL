@@ -17,9 +17,8 @@ import soul.util.Utilities._
   * @param verbose       choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class TL(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), dist: DistanceType = Distance(euclideanDistance),
-         ratio: String = "not minority", val minorityClass: Option[Any] = None, val normalize: Boolean = false,
-         val randomData: Boolean = false, val verbose: Boolean = false) {
+class TL(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType = Distance(euclideanDistance), ratio: String = "not minority",
+         val minorityClass: Option[Any] = None, normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the TL algorithm.
     *

@@ -24,10 +24,10 @@ import scala.math.{abs, sqrt}
   * @param verbose        choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class EUS(private[soul] val data: Data, private[soul] val seed: Long = System.currentTimeMillis(), file: Option[String] = None, populationSize: Int = 50,
-          maxEvaluations: Int = 1000, algorithm: String = "EBUSMSGM", dist: DistanceType = Distance(euclideanDistance), probHUX: Double = 0.25,
-          recombination: Double = 0.35, prob0to1: Double = 0.05, val normalize: Boolean = false, val randomData: Boolean = false,
-          val verbose: Boolean = false) {
+class EUS(data: Data, seed: Long = System.currentTimeMillis(), populationSize: Int = 50, maxEvaluations: Int = 1000,
+          algorithm: String = "EBUSMSGM", dist: DistanceType = Distance(euclideanDistance), probHUX: Double = 0.25,
+          recombination: Double = 0.35, prob0to1: Double = 0.05, normalize: Boolean = false, randomData: Boolean = false,
+          verbose: Boolean = false) {
 
   /** Compute the EUS algorithm.
     *
