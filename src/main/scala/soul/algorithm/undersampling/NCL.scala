@@ -1,7 +1,7 @@
 package soul.algorithm.undersampling
 
 import soul.data.Data
-import soul.util.Utilities
+import soul.util.KDTree
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -61,48 +61,50 @@ class NCL(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceTyp
       i += 1
     }
 
-    val ennData = new Data(toXData((majorityIndex map dataToWorkWith).toArray), (majorityIndex map classesToWorkWith).toArray, None, data.fileInfo)
-    ennData.processedData = (majorityIndex map dataToWorkWith).toArray
-    val enn = new ENN(ennData, dist = dist, k = k)
-    val resultENN: Data = enn.compute()
-    val indexA1: Array[Int] = resultENN.index.get map majorityIndex
+    // ENN can not be applied when only one class is in the less important group
+    val indexA1: Array[Int] = if (classesToWorkWith.distinct.length > 2) {
+      val ennData = new Data(toXData((majorityIndex map dataToWorkWith).toArray), (majorityIndex map classesToWorkWith).toArray, None, data.fileInfo)
+      ennData.processedData = (majorityIndex map dataToWorkWith).toArray
+      val enn = new ENN(ennData, dist = dist, k = k)
+      val resultENN: Data = enn.compute()
+      classesToWorkWith.indices.diff(resultENN.index.get).toArray
+    } else {
+      new Array[Int](0)
+    }
 
     val uniqueMajClasses = (majorityIndex map classesToWorkWith).distinct
     val ratio: Double = dataToWorkWith.length * threshold
 
-    def selectNeighbours(l: Int, targetClass: Any): ArrayBuffer[Int] = {
-      val selected = new ArrayBuffer[Int]()
-      val (label, nNeighbours, _) = dist match {
-        case distance: Distance =>
-          nnRule(dataToWorkWith, dataToWorkWith(l), l, classesToWorkWith, k, distance, "nearest")
-        case _ =>
-          nnRuleHVDM(dataToWorkWith, dataToWorkWith(l), l, classesToWorkWith, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
-      }
+    val kdTree: KDTree = new KDTree((minorityIndex map dataToWorkWith).toArray, (majorityIndex map classesToWorkWith).toArray, dataToWorkWith(0).length)
 
-      if (label != targetClass) {
-        nNeighbours.foreach { n =>
-          val nNeighbourClass: Any = classesToWorkWith(n)
-          if (nNeighbourClass != untouchableClass && counter(nNeighbourClass) > ratio) {
-            selected += n
+    def selectNeighbours(l: Int): ArrayBuffer[Int] = {
+      var selectedElements = new ArrayBuffer[Int](0)
+      val (_, labels, index) = kdTree.nNeighbours(dataToWorkWith(l), k, leaveOneOut = true)
+      val label = mode(labels.toArray)
+
+      if (label != classesToWorkWith(l)) {
+        index.foreach { n =>
+          if (classesToWorkWith(n) != untouchableClass && counter(classesToWorkWith(n)) > ratio) {
+            selectedElements += n
           }
         }
       }
-      selected
+      selectedElements
     }
 
     var j = 0
-    val indexA2 = new Array[ArrayBuffer[Int]](minorityIndex.length)
+    val indexA2 = new ArrayBuffer[Int](0)
     while (j < uniqueMajClasses.length) {
-      val targetClass: Any = classesToWorkWith(j)
-      minorityIndex.zipWithIndex.par.foreach { l =>
-        indexA2(l._2) = selectNeighbours(l._1, targetClass)
-      }
+      val selectedNeighbours: Array[ArrayBuffer[Int]] = minorityIndex.par.map { l =>
+        selectNeighbours(l)
+      }.toArray
+
+      selectedNeighbours.flatten.distinct.foreach(e => indexA2 += e)
       j += 1
     }
 
-    val finalIndex: Array[Int] = classesToWorkWith.indices.diff((indexA1 ++ indexA2.flatten.toList).toList).toArray
+    val finalIndex: Array[Int] = classesToWorkWith.indices.diff(indexA1.toList ++ indexA2.distinct).toArray
     val finishTime: Long = System.nanoTime()
-
     val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
 
     if (verbose) {
