@@ -1,6 +1,7 @@
 package soul.algorithm.oversampling
 
 import soul.data.Data
+import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -15,13 +16,13 @@ import scala.util.Random
   * @param k1        number of neighbors used for predicting noisy minority class samples
   * @param k2        number of majority neighbors used for constructing informative minority set
   * @param k3        number of minority neighbors used for constructing informative minority set
-  * @param dist      object of DistanceType representing the distance to be used
+  * @param dist      object of Distance enumeration representing the distance to be used
   * @param normalize normalize the data or not
   * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
 class MWMOTE(data: Data, seed: Long = System.currentTimeMillis(), N: Int = 500, k1: Int = 5, k2: Int = 5, k3: Int = 5,
-             dist: DistanceType = Distance(euclideanDistance), normalize: Boolean = false, verbose: Boolean = false) {
+             dist: Distance = Distance.EUCLIDEAN, normalize: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the MWMOTE algorithm
     *
@@ -31,7 +32,7 @@ class MWMOTE(data: Data, seed: Long = System.currentTimeMillis(), N: Int = 500, 
     val initTime: Long = System.nanoTime()
     val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
 
-    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+    val (attrCounter, attrClassesCounter, sds) = if (dist == Distance.HVDM) {
       (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
@@ -48,8 +49,8 @@ class MWMOTE(data: Data, seed: Long = System.currentTimeMillis(), N: Int = 500, 
       val CMAX: Double = 2
 
       if (!Nmin(y._2).contains(x)) {
-        val D: Double = if (dist.isInstanceOf[Distance]) {
-          dist.asInstanceOf[(Array[Double], Array[Double]) => Double](samples(y._1), samples(x))
+        val D: Double = if (dist == Distance.EUCLIDEAN) {
+          euclidean(samples(y._1), samples(x))
         } else {
           HVDM(samples(y._1), samples(x), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
         }
@@ -68,8 +69,8 @@ class MWMOTE(data: Data, seed: Long = System.currentTimeMillis(), N: Int = 500, 
       val centroid1: Array[Double] = (cluster1 map samples).transpose.map(_.sum / cluster1.length)
       val centroid2: Array[Double] = (cluster2 map samples).transpose.map(_.sum / cluster2.length)
 
-      if (dist.isInstanceOf[Distance]) {
-        dist.asInstanceOf[(Array[Double], Array[Double]) => Double](centroid1, centroid2)
+      if (dist == Distance.EUCLIDEAN) {
+        euclidean(centroid1, centroid2)
       } else {
         HVDM(centroid1, centroid2, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
@@ -91,8 +92,8 @@ class MWMOTE(data: Data, seed: Long = System.currentTimeMillis(), N: Int = 500, 
       Sminf.indices.foreach { i =>
         Sminf.indices.foreach { j =>
           if (i != j) {
-            distances(i)(j) = if (dist.isInstanceOf[Distance]) {
-              dist.asInstanceOf[(Array[Double], Array[Double]) => Double](samples(Sminf(i)), samples(Sminf(j)))
+            distances(i)(j) = if (dist == Distance.EUCLIDEAN) {
+              euclidean(samples(Sminf(i)), samples(Sminf(j)))
             } else {
               HVDM(samples(Sminf(i)), samples(Sminf(j)), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
             }
@@ -123,11 +124,10 @@ class MWMOTE(data: Data, seed: Long = System.currentTimeMillis(), N: Int = 500, 
 
     // construct the filtered minority set
     val Sminf: Array[Int] = minorityClassIndex.map(index => {
-      val neighbors = dist match {
-        case distance: Distance =>
-          kNeighbors(samples, index, k1, distance)
-        case _ =>
-          kNeighborsHVDM(samples, index, k1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      val neighbors = if (dist == Distance.EUCLIDEAN) {
+        kNeighbors(samples, index, k1)
+      } else {
+        kNeighborsHVDM(samples, index, k1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
       if (neighbors map data.y contains data.y(minorityClassIndex(0))) {
         Some(index)
@@ -138,21 +138,19 @@ class MWMOTE(data: Data, seed: Long = System.currentTimeMillis(), N: Int = 500, 
 
     //for each sample in Sminf compute the nearest majority set
     val Sbmaj: Array[Int] = Sminf.flatMap { x =>
-      dist match {
-        case distance: Distance =>
-          kNeighbors(majorityClassIndex map samples, samples(x), k2, distance)
-        case _ =>
-          kNeighborsHVDM(majorityClassIndex map samples, samples(x), k2, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      if (dist == Distance.EUCLIDEAN) {
+        kNeighbors(majorityClassIndex map samples, samples(x), k2)
+      } else {
+        kNeighborsHVDM(majorityClassIndex map samples, samples(x), k2, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
     }.distinct.map(majorityClassIndex(_))
 
     // for each majority example in Sbmaj , compute the nearest minority set
     val Nmin: Array[Array[Int]] = Sbmaj.map { x =>
-      (dist match {
-        case distance: Distance =>
-          kNeighbors(minorityClassIndex map samples, samples(x), k3, distance)
-        case _ =>
-          kNeighborsHVDM(minorityClassIndex map samples, samples(x), k3, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      (if (dist == Distance.EUCLIDEAN) {
+        kNeighbors(minorityClassIndex map samples, samples(x), k3)
+      } else {
+        kNeighborsHVDM(minorityClassIndex map samples, samples(x), k3, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }).map(minorityClassIndex(_))
     }
 

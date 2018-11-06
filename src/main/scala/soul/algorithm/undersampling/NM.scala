@@ -1,6 +1,7 @@
 package soul.algorithm.undersampling
 
 import soul.data.Data
+import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -10,7 +11,7 @@ import scala.util.Random
   *
   * @param data        data to work with
   * @param seed        seed to use. If it is not provided, it will use the system time
-  * @param dist        object of DistanceType representing the distance to be used
+  * @param dist        object of Distance enumeration representing the distance to be used
   * @param version     version of the core to execute
   * @param nNeighbours number of neighbours to take for each minority example (only used if version is set to 3)
   * @param ratio       ratio to know how many majority class examples to preserve. By default it's set to 1 so there
@@ -21,7 +22,7 @@ import scala.util.Random
   * @param verbose     choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class NM(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType = Distance(euclideanDistance), version: Int = 1,
+class NM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN, version: Int = 1,
          nNeighbours: Int = 3, ratio: Double = 1.0, normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the NM algorithm.
@@ -45,7 +46,7 @@ class NM(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType
       data.y
     }
 
-    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+    val (attrCounter, attrClassesCounter, sds) = if (dist == Distance.HVDM) {
       (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
@@ -61,23 +62,21 @@ class NM(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType
     val majClasses: Array[Any] = majElements map classesToWorkWith
     val selectedMajElements: Array[Int] = if (version == 1) {
       majElements.map { i: Int =>
-        val result: (Any, Array[Int], Array[Double]) = dist match {
-          case distance: Distance =>
-            nnRule(minNeighbours, dataToWorkWith(i), i, minClasses, 3, distance, "nearest")
-          case _ =>
-            nnRuleHVDM(minNeighbours, dataToWorkWith(i), i, minClasses, 3, data.fileInfo.nominal, sds, attrCounter,
-              attrClassesCounter, "nearest")
+        val result: (Any, Array[Int], Array[Double]) = if (dist == Distance.EUCLIDEAN) {
+          nnRule(minNeighbours, dataToWorkWith(i), i, minClasses, 3, "nearest")
+        } else {
+          nnRuleHVDM(minNeighbours, dataToWorkWith(i), i, minClasses, 3, data.fileInfo.nominal, sds, attrCounter,
+            attrClassesCounter, "nearest")
         }
         (i, (result._2 map result._3).sum / result._2.length)
       }.sortBy(_._2).map(_._1)
     } else if (version == 2) {
       majElements.map { i: Int =>
-        val result: (Any, Array[Int], Array[Double]) = dist match {
-          case distance: Distance =>
-            nnRule(minNeighbours, dataToWorkWith(i), i, minClasses, 3, distance, "farthest")
-          case _ =>
-            nnRuleHVDM(minNeighbours, dataToWorkWith(i), i, minClasses, 3, data.fileInfo.nominal, sds, attrCounter,
-              attrClassesCounter, "farthest")
+        val result: (Any, Array[Int], Array[Double]) = if (dist == Distance.EUCLIDEAN) {
+          nnRule(minNeighbours, dataToWorkWith(i), i, minClasses, 3, "farthest")
+        } else {
+          nnRuleHVDM(minNeighbours, dataToWorkWith(i), i, minClasses, 3, data.fileInfo.nominal, sds, attrCounter,
+            attrClassesCounter, "farthest")
         }
         (i, (result._2 map result._3).sum / result._2.length)
       }.sortBy(_._2).map(_._1)
@@ -85,12 +84,11 @@ class NM(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType
       // We shuffle the data because, at last, we are going to take, at least, minElements.length * ratio elements and if
       // we don't shuffle, we only take majority elements examples that are near to the first minority class examples
       new Random(seed).shuffle(minElements.flatMap { i: Int =>
-        dist match {
-          case distance: Distance =>
-            nnRule(majNeighbours, dataToWorkWith(i), i, majClasses, nNeighbours, distance, "nearest")._2
-          case _ =>
-            nnRuleHVDM(majNeighbours, dataToWorkWith(i), i, majClasses, nNeighbours, data.fileInfo.nominal, sds, attrCounter,
-              attrClassesCounter, "nearest")._2
+        if (dist == Distance.EUCLIDEAN) {
+          nnRule(majNeighbours, dataToWorkWith(i), i, majClasses, nNeighbours, "nearest")._2
+        } else {
+          nnRuleHVDM(majNeighbours, dataToWorkWith(i), i, majClasses, nNeighbours, data.fileInfo.nominal, sds, attrCounter,
+            attrClassesCounter, "nearest")._2
         }
       }.distinct.toList).toArray
     } else {

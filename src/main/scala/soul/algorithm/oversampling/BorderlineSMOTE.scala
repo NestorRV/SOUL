@@ -1,6 +1,7 @@
 package soul.algorithm.oversampling
 
 import soul.data.Data
+import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -12,13 +13,13 @@ import scala.util.Random
   * @param seed      seed to use. If it is not provided, it will use the system time
   * @param m         number of nearest neighbors
   * @param k         number of minority class nearest neighbors
-  * @param dist      object of DistanceType representing the distance to be used
+  * @param dist      object of Distance enumeration representing the distance to be used
   * @param normalize normalize the data or not
   * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
 class BorderlineSMOTE(data: Data, seed: Long = System.currentTimeMillis(), m: Int = 10, k: Int = 5,
-                      dist: DistanceType = Distance(euclideanDistance), normalize: Boolean = false, verbose: Boolean = false) {
+                      dist: Distance = Distance.EUCLIDEAN, normalize: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the BorderlineSMOTE algorithm
     *
@@ -30,7 +31,7 @@ class BorderlineSMOTE(data: Data, seed: Long = System.currentTimeMillis(), m: In
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))
 
-    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+    val (attrCounter, attrClassesCounter, sds) = if (dist == Distance.HVDM) {
       (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
@@ -39,11 +40,10 @@ class BorderlineSMOTE(data: Data, seed: Long = System.currentTimeMillis(), m: In
     }
 
     // compute minority class neighbors
-    val minorityClassNeighbors: Array[Array[Int]] = dist match {
-      case distance: Distance =>
-        minorityClassIndex.map(node => kNeighbors(samples, node, m, distance))
-      case _ =>
-        minorityClassIndex.map(node => kNeighborsHVDM(samples, node, m, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter))
+    val minorityClassNeighbors: Array[Array[Int]] = if (dist == Distance.EUCLIDEAN) {
+      minorityClassIndex.map(node => kNeighbors(samples, node, m))
+    } else {
+      minorityClassIndex.map(node => kNeighborsHVDM(samples, node, m, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter))
     }
 
     //compute nodes in borderline
@@ -77,12 +77,11 @@ class BorderlineSMOTE(data: Data, seed: Long = System.currentTimeMillis(), m: In
     var newIndex: Int = 0
     // for each minority class sample
     DangerNodes.zipWithIndex.foreach(i => {
-      neighbors = dist match {
-        case distance: Distance =>
-          kNeighbors(minorityClassIndex map samples, i._2, k, distance)
-        case _ =>
-          kNeighborsHVDM(minorityClassIndex map samples, i._2, k, data.fileInfo.nominal, sds, attrCounter,
-            attrClassesCounter).map(minorityClassIndex(_))
+      neighbors = if (dist == Distance.EUCLIDEAN) {
+        kNeighbors(minorityClassIndex map samples, i._2, k)
+      } else {
+        kNeighborsHVDM(minorityClassIndex map samples, i._2, k, data.fileInfo.nominal, sds, attrCounter,
+          attrClassesCounter).map(minorityClassIndex(_))
       }
       val sNeighbors: Array[Int] = (0 until s).map(_ => r.nextInt(neighbors.length)).toArray.distinct
       neighbors = sNeighbors map neighbors

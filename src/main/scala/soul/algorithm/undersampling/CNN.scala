@@ -1,19 +1,20 @@
 package soul.algorithm.undersampling
 
 import soul.data.Data
+import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
 /** Condensed Nearest Neighbor decision rule. Original paper: "The Condensed Nearest Neighbor Rule" by P. Hart.
   *
   * @param data       data to work with
   * @param seed       seed to use. If it is not provided, it will use the system time
-  * @param dist       object of DistanceType representing the distance to be used
+  * @param dist       object of Distance enumeration representing the distance to be used
   * @param normalize  normalize the data or not
   * @param randomData iterate through the data randomly or not
   * @param verbose    choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class CNN(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType = Distance(euclideanDistance),
+class CNN(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN,
           normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the CNN algorithm
@@ -37,7 +38,7 @@ class CNN(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceTyp
       data.y
     }
 
-    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+    val (attrCounter, attrClassesCounter, sds) = if (dist == Distance.HVDM) {
       (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
@@ -62,12 +63,11 @@ class CNN(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceTyp
       val index: Array[Int] = location.zipWithIndex.collect { case (a, b) if a == 1 => b }
       val neighbours: Array[Array[Double]] = index map dataToWorkWith
       val classes: Array[Any] = index map classesToWorkWith
-      val label: (Any, Array[Int], Array[Double]) = dist match {
-        case distance: Distance =>
-          nnRule(neighbours, element._1, element._2, classes, 1, distance, "nearest")
-        case _ =>
-          nnRuleHVDM(neighbours, element._1, element._2, classes, 1, data.fileInfo.nominal, sds, attrCounter,
-            attrClassesCounter, "nearest")
+      val label: (Any, Array[Int], Array[Double]) = if (dist == Distance.EUCLIDEAN) {
+        nnRule(neighbours, element._1, element._2, classes, 1, "nearest")
+      } else {
+        nnRuleHVDM(neighbours, element._1, element._2, classes, 1, data.fileInfo.nominal, sds, attrCounter,
+          attrClassesCounter, "nearest")
       }
       // If it is misclassified or is a element of the untouchable class it is added to store; otherwise, it is added to grabbag
       location(element._2) = if (label._1 != classesToWorkWith(element._2)) 1 else -1
@@ -90,12 +90,11 @@ class CNN(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceTyp
         val index: Array[Int] = location.zipWithIndex.collect { case (a, b) if a == 1 => b }
         val neighbours: Array[Array[Double]] = index map dataToWorkWith
         val classes: Array[Any] = index map classesToWorkWith
-        val label: Any = dist match {
-          case distance: Distance =>
-            nnRule(neighbours, dataToWorkWith(element._2), element._2, classes, 1, distance, "nearest")._1
-          case _ =>
-            nnRuleHVDM(neighbours, dataToWorkWith(element._2), element._2, classes, 1, data.fileInfo.nominal, sds, attrCounter,
-              attrClassesCounter, "nearest")._1
+        val label: Any = if (dist == Distance.EUCLIDEAN) {
+          nnRule(neighbours, dataToWorkWith(element._2), element._2, classes, 1, "nearest")._1
+        } else {
+          nnRuleHVDM(neighbours, dataToWorkWith(element._2), element._2, classes, 1, data.fileInfo.nominal, sds, attrCounter,
+            attrClassesCounter, "nearest")._1
         }
         // If it is misclassified or is a element of the untouchable class it is added to store; otherwise, it is added to grabbag
         location(element._2) = if (label != classesToWorkWith(element._2)) {

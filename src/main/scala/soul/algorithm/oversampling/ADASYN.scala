@@ -1,6 +1,7 @@
 package soul.algorithm.oversampling
 
 import soul.data.Data
+import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -13,13 +14,13 @@ import scala.util.Random
   * @param d         preset threshold for the maximum tolerated degree of class imbalance radio
   * @param B         balance level after generation of synthetic data
   * @param k         number of neighbors
-  * @param dist      object of DistanceType representing the distance to be used
+  * @param dist      object of Distance enumeration representing the distance to be used
   * @param normalize normalize the data or not
   * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
 class ADASYN(data: Data, seed: Long = System.currentTimeMillis(), d: Double = 1, B: Double = 1, k: Int = 5,
-             dist: DistanceType = Distance(euclideanDistance), normalize: Boolean = false, verbose: Boolean = false) {
+             dist: Distance = Distance.EUCLIDEAN, normalize: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the ADASYN algorithm
     *
@@ -38,7 +39,7 @@ class ADASYN(data: Data, seed: Long = System.currentTimeMillis(), d: Double = 1,
 
     val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
 
-    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+    val (attrCounter, attrClassesCounter, sds) = if (dist == Distance.HVDM) {
       (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
@@ -55,11 +56,10 @@ class ADASYN(data: Data, seed: Long = System.currentTimeMillis(), d: Double = 1,
     val G: Int = ((ml - ms) * B).asInstanceOf[Int]
     // k neighbors of each minority sample
     val neighbors: Array[Array[Int]] = minorityClassIndex.indices.map { sample =>
-      dist match {
-        case distance: Distance =>
-          kNeighbors(samples, minorityClassIndex(sample), k, distance)
-        case _ =>
-          kNeighborsHVDM(samples, minorityClassIndex(sample), k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      if (dist == Distance.EUCLIDEAN) {
+        kNeighbors(samples, minorityClassIndex(sample), k)
+      } else {
+        kNeighborsHVDM(samples, minorityClassIndex(sample), k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
     }.toArray
 

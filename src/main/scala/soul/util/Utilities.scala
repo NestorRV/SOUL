@@ -18,20 +18,15 @@ import scala.util.Random
   */
 object Utilities {
 
-  /** Classes to represent the possible distances
+  /** Enumeration to represent the possible distances
     *
-    * USER: Distance specified by the user
+    * EUCLIDEAN: Euclidean distance
     * HVDM: Proposed in "Improved Heterogeneous Distance Functions" by "D. Randall Wilson and Tony R. Martinez"
     *
     */
-  sealed trait DistanceType
-
-  case class HVDM() extends DistanceType
-
-  case class Distance(f: (Array[Double], Array[Double]) => Double) extends DistanceType {
-    private val dist: (Array[Double], Array[Double]) => Double = f
-
-    def apply(x: Array[Double], y: Array[Double]): Double = dist(x, y)
+  object Distance extends Enumeration {
+    type Distance = Value
+    val HVDM, EUCLIDEAN = Value
   }
 
   /** Return an array of the indices that are true
@@ -128,8 +123,11 @@ object Utilities {
 
   /** Compute the Euclidean Distance between two points
     *
+    * @param x first instance
+    * @param y second instance
+    * @return euclidean distance between the instances
     */
-  val euclideanDistance: (Array[Double], Array[Double]) => Double = (x: Array[Double], y: Array[Double]) => {
+  def euclidean(x: Array[Double], y: Array[Double]): Double = {
     var d: Double = 0.0
     var i: Int = 0
     while (i < x.length) {
@@ -186,18 +184,17 @@ object Utilities {
     * @param labels labels associated to each point in data
     * @param k      number of neighbours to consider
     * @param nFolds number of subsets to create
-    * @param dist   object representing the function to be used
     * @param which  "nearest" to return the nearest neighbours, otherwise, return the farthest ones
     * @return the predictedLabels with less error
     */
-  def kFoldPrediction(data: Array[Array[Double]], labels: Array[Any], k: Int, nFolds: Int, dist: Distance, which: String): Array[Any] = {
+  def kFoldPrediction(data: Array[Array[Double]], labels: Array[Any], k: Int, nFolds: Int, which: String): Array[Any] = {
 
     val indices: List[List[Int]] = labels.indices.toList.grouped((labels.length.toFloat / nFolds).ceil.toInt).toList
     val predictedLabels: Array[(Int, Array[Any])] = indices.par.map { index: List[Int] =>
       val neighbours: Array[Array[Double]] = (index map data).toArray
       val classes: Array[Any] = (index map labels).toArray
       val predictedLabels: Array[(Int, Any)] = labels.indices.diff(index).map { i: Int =>
-        (i, nnRule(neighbours, data(i), i, classes, k, dist, which))
+        (i, nnRule(neighbours, data(i), i, classes, k, which))
       }.toArray
 
       val error: Int = predictedLabels.count((e: (Int, Any)) => e._2 != labels(e._1))
@@ -257,7 +254,7 @@ object Utilities {
 
       def clusterIndex(data: Array[Array[Double]], centroids: Array[Array[Double]]): (Double, Array[Int]) = {
         val (distances, memberships) = data.par.map { element: Array[Double] =>
-          val distances: Array[Double] = centroids.map((c: Array[Double]) => euclideanDistance(c, element))
+          val distances: Array[Double] = centroids.map((c: Array[Double]) => euclidean(c, element))
           val (bestDistance, bestCentroid) = distances.zipWithIndex.min
           (bestDistance * bestDistance, bestCentroid)
         }.toArray.unzip
@@ -312,14 +309,13 @@ object Utilities {
     * @param data array of samples
     * @param node array with the attributes of the node
     * @param k    number of neighbors
-    * @param dist object representing the function to be used
     * @return index of the neighbors of node
     */
-  def kNeighbors(data: Array[Array[Double]], node: Array[Double], k: Int, dist: Distance): Array[Int] = {
+  def kNeighbors(data: Array[Array[Double]], node: Array[Double], k: Int): Array[Int] = {
     val distances: Array[Double] = new Array[Double](data.length)
 
     data.indices.foreach(i => {
-      distances(i) = dist(node, data(i))
+      distances(i) = euclidean(node, data(i))
       if (distances(i) == 0) {
         distances(i) = 9999999
       }
@@ -370,10 +366,9 @@ object Utilities {
     * @param data array of samples
     * @param node index whom neighbors are going to be evaluated
     * @param k    number of neighbors
-    * @param dist object representing the function to be used
     * @return index of the neighbors of node
     */
-  def kNeighbors(data: Array[Array[Double]], node: Int, k: Int, dist: Distance): Array[Int] = {
+  def kNeighbors(data: Array[Array[Double]], node: Int, k: Int): Array[Int] = {
     val distances: Array[Double] = Array.fill[Double](data.length)(99999999)
 
     val kNeighbors: Array[Int] = (0 until k).toArray
@@ -385,7 +380,7 @@ object Utilities {
       if (i != node) {
         j = 0
         found = false
-        distances(i) = dist(data(i), data(node))
+        distances(i) = euclidean(data(i), data(node))
         //save the best neighbors
         while (j < kNeighbors.length && !found) {
           if (distances(i) < distances(kNeighbors(j))) {
@@ -514,17 +509,16 @@ object Utilities {
     * @param id         id of the instance
     * @param labels     labels associated to each point in data
     * @param k          number of neighbours to consider
-    * @param dist       object representing the function to be used
     * @param which      if it's sets to "nearest", return the nearest which, if it sets "farthest", return the farthest which
     * @return the label associated to newPoint and the index of the k-nearest which
     */
   def nnRule(neighbours: Array[Array[Double]], instance: Array[Double], id: Int, labels: Array[Any], k: Int,
-             dist: Distance, which: String): (Any, Array[Int], Array[Double]) = {
+             which: String): (Any, Array[Int], Array[Double]) = {
     val distances: Array[Double] = new Array[Double](neighbours.length)
 
     var i = 0
     while (i < neighbours.length) {
-      distances(i) = dist(instance, neighbours(i))
+      distances(i) = euclidean(instance, neighbours(i))
       i += 1
     }
     distances(id) = Double.MaxValue

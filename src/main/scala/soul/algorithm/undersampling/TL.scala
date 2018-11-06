@@ -1,13 +1,14 @@
 package soul.algorithm.undersampling
 
 import soul.data.Data
+import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
 /** Tomek Link. Original paper: "Two Modifications of CNN" by Ivan Tomek.
   *
   * @param data          data to work with
   * @param seed          seed to use. If it is not provided, it will use the system time
-  * @param dist          object of DistanceType representing the distance to be used
+  * @param dist          object of Distance enumeration representing the distance to be used
   * @param ratio         indicates the instances of the Tomek Links that are going to be remove. "all" will remove all instances,
   *                      "minority" will remove instances of the minority class and "not minority" will remove all the instances
   *                      except the ones of the minority class.
@@ -17,7 +18,7 @@ import soul.util.Utilities._
   * @param verbose       choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class TL(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType = Distance(euclideanDistance), ratio: String = "not minority",
+class TL(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN, ratio: String = "not minority",
          val minorityClass: Option[Any] = None, normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the TL algorithm.
@@ -41,7 +42,7 @@ class TL(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType
       data.y
     }
 
-    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+    val (attrCounter, attrClassesCounter, sds) = if (dist == Distance.HVDM) {
       (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
@@ -58,10 +59,10 @@ class TL(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType
 
     val distances: Array[Array[Double]] = Array.fill[Array[Double]](dataToWorkWith.length)(new Array[Double](dataToWorkWith.length))
 
-    if (dist.isInstanceOf[Distance]) {
+    if (dist == Distance.EUCLIDEAN) {
       dataToWorkWith.indices.par.foreach { i: Int =>
         dataToWorkWith.indices.drop(i).par.foreach { j: Int =>
-          distances(i)(j) = euclideanDistance(dataToWorkWith(i), dataToWorkWith(j))
+          distances(i)(j) = euclidean(dataToWorkWith(i), dataToWorkWith(j))
           distances(j)(i) = distances(i)(j)
         }
       }

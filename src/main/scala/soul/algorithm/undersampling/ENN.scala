@@ -2,6 +2,7 @@ package soul.algorithm.undersampling
 
 import soul.data.Data
 import soul.util.KDTree
+import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -11,14 +12,14 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @param data       data to work with
   * @param seed       seed to use. If it is not provided, it will use the system time
-  * @param dist       object of DistanceType representing the distance to be used
+  * @param dist       object of Distance enumeration representing the distance to be used
   * @param k          number of neighbours to use when computing k-NN rule (normally 3 neighbours)
   * @param normalize  normalize the data or not
   * @param randomData iterate through the data randomly or not
   * @param verbose    choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class ENN(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType = Distance(euclideanDistance),
+class ENN(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN,
           k: Int = 3, normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the ENN algorithm.
@@ -42,7 +43,7 @@ class ENN(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceTyp
       data.y
     }
 
-    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+    val (attrCounter, attrClassesCounter, sds) = if (dist == Distance.HVDM) {
       (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
@@ -67,11 +68,10 @@ class ENN(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceTyp
       val targetClass = uniqueClasses(i)
       val selected: Array[(Int, Boolean)] = if (targetClass != untouchableClass) {
         majorityClassIndex.par.map { j =>
-          val label = dist match {
-            case distance: Distance =>
-              mode(kdTree.nNeighbours(dataToWorkWith(j), k, leaveOneOut = true)._2.toArray)
-            case _ =>
-              nnRuleHVDM(dataToWorkWith, dataToWorkWith(j), j, classesToWorkWith, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
+          val label = if (dist == Distance.EUCLIDEAN) {
+            mode(kdTree.nNeighbours(dataToWorkWith(j), k, leaveOneOut = true)._2.toArray)
+          } else {
+            nnRuleHVDM(dataToWorkWith, dataToWorkWith(j), j, classesToWorkWith, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
           }
 
           (j, label == targetClass)

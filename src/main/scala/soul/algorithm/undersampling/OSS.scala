@@ -1,6 +1,7 @@
 package soul.algorithm.undersampling
 
 import soul.data.Data
+import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
 /** One-Side Selection. Original paper: "Addressing the Curse of Imbalanced
@@ -8,13 +9,13 @@ import soul.util.Utilities._
   *
   * @param data       data to work with
   * @param seed       seed to use. If it is not provided, it will use the system time
-  * @param dist       object of DistanceType representing the distance to be used
+  * @param dist       object of Distance enumeration representing the distance to be used
   * @param normalize  normalize the data or not
   * @param randomData iterate through the data randomly or not
   * @param verbose    choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class OSS(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType = Distance(euclideanDistance),
+class OSS(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN,
           normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the OSS algorithm.
@@ -39,7 +40,7 @@ class OSS(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceTyp
       data.y
     }
 
-    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+    val (attrCounter, attrClassesCounter, sds) = if (dist == Distance.HVDM) {
       (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
@@ -53,11 +54,10 @@ class OSS(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceTyp
     val neighbours = c map dataToWorkWith
     val classes = c map classesToWorkWith
     val labels: Seq[(Int, Any)] = dataToWorkWith.indices.map { i: Int =>
-      val label: Any = dist match {
-        case distance: Distance =>
-          nnRule(neighbours, dataToWorkWith(i), i, classes, 1, distance, "nearest")._1
-        case _ =>
-          nnRuleHVDM(neighbours, dataToWorkWith(i), i, classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
+      val label: Any = if (dist == Distance.EUCLIDEAN) {
+        nnRule(neighbours, dataToWorkWith(i), i, classes, 1, "nearest")._1
+      } else {
+        nnRuleHVDM(neighbours, dataToWorkWith(i), i, classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
       }
       (i, label)
     }

@@ -1,6 +1,7 @@
 package soul.algorithm.undersampling
 
 import soul.data.Data
+import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -15,7 +16,7 @@ import scala.math.{abs, sqrt}
   * @param maxEvaluations number of evaluations
   * @param algorithm      version of core to execute. One of: EBUSGSGM, EBUSMSGM, EBUSGSAUC, EBUSMSAUC,
   *                       EUSCMGSGM, EUSCMMSGM, EUSCMGSAUC or EUSCMMSAUC
-  * @param dist           object of DistanceType representing the distance to be used
+  * @param dist           object of Distance enumeration representing the distance to be used
   * @param probHUX        probability of changing a gen from 0 to 1 (used in crossover)
   * @param recombination  recombination threshold (used in reinitialization)
   * @param prob0to1       probability of changing a gen from 0 to 1 (used in reinitialization)
@@ -25,7 +26,7 @@ import scala.math.{abs, sqrt}
   * @author Néstor Rodríguez Vico
   */
 class EUS(data: Data, seed: Long = System.currentTimeMillis(), populationSize: Int = 50, maxEvaluations: Int = 1000,
-          algorithm: String = "EBUSMSGM", dist: DistanceType = Distance(euclideanDistance), probHUX: Double = 0.25,
+          algorithm: String = "EBUSMSGM", dist: Distance = Distance.EUCLIDEAN, probHUX: Double = 0.25,
           recombination: Double = 0.35, prob0to1: Double = 0.05, normalize: Boolean = false, randomData: Boolean = false,
           verbose: Boolean = false) {
 
@@ -50,7 +51,7 @@ class EUS(data: Data, seed: Long = System.currentTimeMillis(), populationSize: I
       data.y
     }
 
-    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+    val (attrCounter, attrClassesCounter, sds) = if (dist == Distance.HVDM) {
       (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
@@ -67,11 +68,10 @@ class EUS(data: Data, seed: Long = System.currentTimeMillis(), populationSize: I
       val neighbours: Array[Array[Double]] = index map dataToWorkWith
       val classes: Array[Any] = index map classesToWorkWith
       val predicted: Array[Any] = dataToWorkWith.indices.map { e: Int =>
-        dist match {
-          case distance: Distance =>
-            nnRule(neighbours, dataToWorkWith(e), e, classes, 1, distance, "nearest")._1
-          case _ =>
-            nnRuleHVDM(neighbours, dataToWorkWith(e), e, classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
+        if (dist == Distance.EUCLIDEAN) {
+          nnRule(neighbours, dataToWorkWith(e), e, classes, 1, "nearest")._1
+        } else {
+          nnRuleHVDM(neighbours, dataToWorkWith(e), e, classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
         }
       }.toArray
 

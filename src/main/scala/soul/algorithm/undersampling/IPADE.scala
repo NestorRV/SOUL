@@ -74,7 +74,7 @@ class IPADE(data: Data, seed: Long = System.currentTimeMillis(), iterations: Int
       def getCentroid(cluster: Array[Int], data: Array[Array[Double]]): Int = {
         val elements: Array[Array[Double]] = cluster map data
         val centroid: Array[Double] = elements.transpose.map(_.sum).map(_ / cluster.length)
-        (elements.map((instance: Array[Double]) => euclideanDistance(instance, centroid)) zip cluster).minBy(_._1)._2
+        (elements.map((instance: Array[Double]) => euclidean(instance, centroid)) zip cluster).minBy(_._1)._2
       }
 
       def getLeafs(instances: Instances, tree: String): Array[String] = {
@@ -151,7 +151,7 @@ class IPADE(data: Data, seed: Long = System.currentTimeMillis(), iterations: Int
 
         def getNearestNeighbourWithTheSameClass(element: Array[Double], data: Array[Array[Double]]): Int = {
           val distances: Array[(Double, Int)] = data.map((e: Array[Double]) =>
-            euclideanDistance(element, e)).zipWithIndex.sortBy(_._1)
+            euclidean(element, e)).zipWithIndex.sortBy(_._1)
           // The first distance is 0, as is computed like the distance between element and element
           distances(1)._2
         }

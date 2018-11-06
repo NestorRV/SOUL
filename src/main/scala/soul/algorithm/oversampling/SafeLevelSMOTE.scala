@@ -1,6 +1,7 @@
 package soul.algorithm.oversampling
 
 import soul.data.Data
+import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -11,13 +12,13 @@ import scala.util.Random
   * @param data      data to work with
   * @param seed      seed to use. If it is not provided, it will use the system time
   * @param k         Number of nearest neighbors
-  * @param dist      object of DistanceType representing the distance to be used
+  * @param dist      object of Distance enumeration representing the distance to be used
   * @param normalize normalize the data or not
   * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
 class SafeLevelSMOTE(data: Data, seed: Long = System.currentTimeMillis(), k: Int = 5,
-                     dist: DistanceType = Distance(euclideanDistance), normalize: Boolean = false, verbose: Boolean = false) {
+                     dist: Distance = Distance.EUCLIDEAN, normalize: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the SafeLevelSMOTE algorithm
     *
@@ -30,7 +31,7 @@ class SafeLevelSMOTE(data: Data, seed: Long = System.currentTimeMillis(), k: Int
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))
 
-    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+    val (attrCounter, attrClassesCounter, sds) = if (dist == Distance.HVDM) {
       (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
@@ -51,11 +52,10 @@ class SafeLevelSMOTE(data: Data, seed: Long = System.currentTimeMillis(), k: Int
     // for each minority class sample
     minorityClassIndex.foreach(i => {
       // compute k neighbors from p and save number of positive instances
-      neighbors = dist match {
-        case distance: Distance =>
-          kNeighbors(samples, i, k, distance)
-        case _ =>
-          kNeighborsHVDM(samples, i, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      neighbors = if (dist == Distance.EUCLIDEAN) {
+        kNeighbors(samples, i, k)
+      } else {
+        kNeighborsHVDM(samples, i, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
       val n: Int = neighbors(r.nextInt(neighbors.length))
       val slp: Int = neighbors.map(neighbor => {
@@ -66,11 +66,10 @@ class SafeLevelSMOTE(data: Data, seed: Long = System.currentTimeMillis(), k: Int
         }
       }).sum
       // compute k neighbors from n and save number of positive instances
-      val selectedNeighbors: Array[Int] = dist match {
-        case distance: Distance =>
-          kNeighbors(samples, n, k, distance)
-        case _ =>
-          kNeighborsHVDM(samples, n, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      val selectedNeighbors: Array[Int] = if (dist == Distance.EUCLIDEAN) {
+        kNeighbors(samples, n, k)
+      } else {
+        kNeighborsHVDM(samples, n, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
 
       val sln: Int = selectedNeighbors.map(neighbor => {

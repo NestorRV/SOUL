@@ -1,6 +1,7 @@
 package soul.algorithm.undersampling
 
 import soul.data.Data
+import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -11,13 +12,13 @@ import scala.math.min
   *
   * @param data       data to work with
   * @param seed       seed to use. If it is not provided, it will use the system time
-  * @param dist       object of DistanceType representing the distance to be used
+  * @param dist       object of Distance enumeration representing the distance to be used
   * @param normalize  normalize the data or not
   * @param randomData iterate through the data randomly or not
   * @param verbose    choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class CPM(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType = Distance(euclideanDistance),
+class CPM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN,
           normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the CPM algorithm.
@@ -47,7 +48,7 @@ class CPM(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceTyp
     val impurity: Double = posElements.asInstanceOf[Double] / negElements.asInstanceOf[Double]
     val cluster: Array[Int] = new Array[Int](dataToWorkWith.length).indices.toArray
 
-    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+    val (attrCounter, attrClassesCounter, sds) = if (dist == Distance.HVDM) {
       (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
@@ -84,14 +85,14 @@ class CPM(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceTyp
         center2 = pairs(pointer)._2
 
         parentCluster.foreach { element: Int =>
-          val d1: Double = if (dist.isInstanceOf[Distance]) {
-            dist.asInstanceOf[(Array[Double], Array[Double]) => Double](dataToWorkWith(element), dataToWorkWith(center1))
+          val d1: Double = if (dist == Distance.EUCLIDEAN) {
+            euclidean(dataToWorkWith(element), dataToWorkWith(center1))
           } else {
             HVDM(dataToWorkWith(element), dataToWorkWith(center1), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
           }
 
-          val d2: Double = if (dist.isInstanceOf[Distance]) {
-            dist.asInstanceOf[(Array[Double], Array[Double]) => Double](dataToWorkWith(element), dataToWorkWith(center2))
+          val d2: Double = if (dist == Distance.EUCLIDEAN) {
+            euclidean(dataToWorkWith(element), dataToWorkWith(center2))
           } else {
             HVDM(dataToWorkWith(element), dataToWorkWith(center2), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
           }

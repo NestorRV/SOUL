@@ -1,6 +1,7 @@
 package soul.algorithm.undersampling
 
 import soul.data.Data
+import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -10,7 +11,7 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @param data        data to work with
   * @param seed        seed to use. If it is not provided, it will use the system time
-  * @param dist        object of DistanceType representing the distance to be used
+  * @param dist        object of Distance enumeration representing the distance to be used
   * @param k           number of neighbours to use when computing k-NN rule (normally 3 neighbours)
   * @param nMaxSubsets maximum number of subsets to generate
   * @param nFolds      number of subsets to create when applying cross-validation
@@ -22,7 +23,7 @@ import scala.collection.mutable.ArrayBuffer
   * @param verbose     choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class BC(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType = Distance(euclideanDistance),
+class BC(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN,
          k: Int = 3, nMaxSubsets: Int = 5, nFolds: Int = 5, ratio: Double = 1.0, normalize: Boolean = false,
          randomData: Boolean = false, verbose: Boolean = false) {
 
@@ -47,7 +48,7 @@ class BC(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType
       data.y
     }
 
-    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+    val (attrCounter, attrClassesCounter, sds) = if (dist == Distance.HVDM) {
       (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
@@ -87,12 +88,11 @@ class BC(data: Data, seed: Long = System.currentTimeMillis(), dist: DistanceType
 
       val classesToWorkWithSubset: Array[Any] = subset map classesToWorkWith
       val dataToWorkWithSubset: Array[Array[Double]] = subset map dataToWorkWith
-      val prediction: Array[Any] = (dist match {
-        case distance: Distance =>
-          kFoldPrediction(dataToWorkWithSubset, classesToWorkWithSubset, k, nFolds, distance, "nearest")
-        case _ =>
-          kFoldPredictionHVDM(dataToWorkWithSubset, classesToWorkWithSubset, k, nFolds, data.fileInfo.nominal, sds, attrCounter,
-            attrClassesCounter, "nearest")
+      val prediction: Array[Any] = (if (dist == Distance.EUCLIDEAN) {
+        kFoldPrediction(dataToWorkWithSubset, classesToWorkWithSubset, k, nFolds, "nearest")
+      } else {
+        kFoldPredictionHVDM(dataToWorkWithSubset, classesToWorkWithSubset, k, nFolds, data.fileInfo.nominal, sds, attrCounter,
+          attrClassesCounter, "nearest")
       }).take(indexToUnderSample.length)
 
       val classifiedInstances: Array[Boolean] = ((indexToUnderSample.indices map classesToWorkWithSubset)

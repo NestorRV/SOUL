@@ -1,6 +1,7 @@
 package soul.algorithm.undersampling
 
 import soul.data.Data
+import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
 import scala.math.{max, min}
@@ -17,14 +18,14 @@ import scala.math.{max, min}
   * @param restarts      number of times to relaunch KMeans core
   * @param minDispersion stop KMeans core if dispersion is lower than this value
   * @param maxIterations number of iterations to be done in KMeans core
-  * @param dist          object of DistanceType representing the distance to be used
+  * @param dist          object of Distance enumeration representing the distance to be used
   * @param normalize     normalize the data or not
   * @param randomData    iterate through the data randomly or not
   * @param verbose       choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
 class SBC(data: Data, seed: Long = System.currentTimeMillis(), method: String = "random", m: Double = 1.0, k: Int = 3, numClusters: Int = 50,
-          restarts: Int = 1, minDispersion: Double = 0.0001, maxIterations: Int = 200, val dist: DistanceType = Distance(euclideanDistance),
+          restarts: Int = 1, minDispersion: Double = 0.0001, maxIterations: Int = 200, val dist: Distance = Distance.EUCLIDEAN,
           normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the SBC algorithm.
@@ -48,7 +49,7 @@ class SBC(data: Data, seed: Long = System.currentTimeMillis(), method: String = 
       data.y
     }
 
-    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+    val (attrCounter, attrClassesCounter, sds) = if (dist == Distance.HVDM) {
       (dataToWorkWith.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         dataToWorkWith.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         dataToWorkWith.transpose.map((column: Array[Double]) => standardDeviation(column)))
@@ -86,7 +87,7 @@ class SBC(data: Data, seed: Long = System.currentTimeMillis(), method: String = 
         if (majorityElementsIndex.length == assignment(clusteridSize._1).length) {
           // Use the centroid as "minority class" element
           val distances: Array[Double] = assignment(clusteridSize._1).map { instance: Int =>
-            euclideanDistance(dataToWorkWith(instance), centroids(clusteridSize._1))
+            euclidean(dataToWorkWith(instance), centroids(clusteridSize._1))
           }
 
           distances.zipWithIndex.sortBy(_._2).take(clusteridSize._2).map(_._2) map assignment(clusteridSize._1)
@@ -104,12 +105,11 @@ class SBC(data: Data, seed: Long = System.currentTimeMillis(), method: String = 
           if (method.equals("NearMiss1")) {
             // selects the majority class samples whose average distances to k nearest minority class samples in the ith cluster are the smallest.
             val meanDistances: Array[(Int, Double)] = majorityElementsIndex.map { i: (Int, Int) =>
-              val result: (Any, Array[Int], Array[Double]) = dist match {
-                case distance: Distance =>
-                  nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, distance, "nearest")
-                case _ =>
-                  nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, data.fileInfo.nominal, sds, attrCounter,
-                    attrClassesCounter, "nearest")
+              val result: (Any, Array[Int], Array[Double]) = if (dist == Distance.EUCLIDEAN) {
+                nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, "nearest")
+              } else {
+                nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, data.fileInfo.nominal, sds, attrCounter,
+                  attrClassesCounter, "nearest")
               }
 
               (i._1, (result._2 map result._3).sum / result._2.length)
@@ -118,12 +118,11 @@ class SBC(data: Data, seed: Long = System.currentTimeMillis(), method: String = 
           } else if (method.equals("NearMiss2")) {
             // selects the majority class samples whose average distances to k farthest minority class samples in the ith cluster are the smallest.
             val meanDistances: Array[(Int, Double)] = majorityElementsIndex.map { i: (Int, Int) =>
-              val result: (Any, Array[Int], Array[Double]) = dist match {
-                case distance: Distance =>
-                  nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, distance, "farthest")
-                case _ =>
-                  nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, data.fileInfo.nominal, sds, attrCounter,
-                    attrClassesCounter, "farthest")
+              val result: (Any, Array[Int], Array[Double]) = if (dist == Distance.EUCLIDEAN) {
+                nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, "farthest")
+              } else {
+                nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, data.fileInfo.nominal, sds, attrCounter,
+                  attrClassesCounter, "farthest")
               }
               (i._1, (result._2 map result._3).sum / result._2.length)
             }
@@ -131,12 +130,11 @@ class SBC(data: Data, seed: Long = System.currentTimeMillis(), method: String = 
           } else if (method.equals("NearMiss3")) {
             // selects the majority class samples whose average distances to the closest minority class samples in the ith cluster are the smallest.
             val meanDistances: Array[(Int, Double)] = majorityElementsIndex.map { i: (Int, Int) =>
-              val result: (Any, Array[Int], Array[Double]) = dist match {
-                case distance: Distance =>
-                  nnRule(majNeighbours, dataToWorkWith(i._1), i._1, majClasses, k, distance, "nearest")
-                case _ =>
-                  nnRuleHVDM(majNeighbours, dataToWorkWith(i._1), i._1, majClasses, k, data.fileInfo.nominal, sds, attrCounter,
-                    attrClassesCounter, "nearest")
+              val result: (Any, Array[Int], Array[Double]) = if (dist == Distance.EUCLIDEAN) {
+                nnRule(majNeighbours, dataToWorkWith(i._1), i._1, majClasses, k, "nearest")
+              } else {
+                nnRuleHVDM(majNeighbours, dataToWorkWith(i._1), i._1, majClasses, k, data.fileInfo.nominal, sds, attrCounter,
+                  attrClassesCounter, "nearest")
               }
               (i._1, (result._2 map result._3).sum / result._2.length)
             }
@@ -144,12 +142,11 @@ class SBC(data: Data, seed: Long = System.currentTimeMillis(), method: String = 
           } else if (method.equals("MostDistant")) {
             // selects the majority class samples whose average distances to M closest minority class samples in the ith cluster are the farthest.
             val meanDistances: Array[(Int, Double)] = majorityElementsIndex.map { i: (Int, Int) =>
-              val result: (Any, Array[Int], Array[Double]) = dist match {
-                case distance: Distance =>
-                  nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, k, distance, "nearest")
-                case _ =>
-                  nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, k, data.fileInfo.nominal, sds, attrCounter,
-                    attrClassesCounter, "nearest")
+              val result: (Any, Array[Int], Array[Double]) = if (dist == Distance.EUCLIDEAN) {
+                nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, k, "nearest")
+              } else {
+                nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, k, data.fileInfo.nominal, sds, attrCounter,
+                  attrClassesCounter, "nearest")
               }
               (i._1, (result._2 map result._3).sum / result._2.length)
             }
@@ -157,12 +154,11 @@ class SBC(data: Data, seed: Long = System.currentTimeMillis(), method: String = 
           } else if (method.equals("MostFar")) {
             // selects the majority class samples whose average distances to all minority class samples in the cluster are the farthest
             val meanDistances: Array[(Int, Double)] = majorityElementsIndex.map { i: (Int, Int) =>
-              val result: (Any, Array[Int], Array[Double]) = dist match {
-                case distance: Distance =>
-                  nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, minorityElementsIndex.unzip._2.length, distance, "nearest")
-                case _ =>
-                  nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, minorityElementsIndex.unzip._2.length,
-                    data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
+              val result: (Any, Array[Int], Array[Double]) = if (dist == Distance.EUCLIDEAN) {
+                nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, minorityElementsIndex.unzip._2.length, "nearest")
+              } else {
+                nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, minorityElementsIndex.unzip._2.length,
+                  data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
               }
 
               (i._1, (result._2 map result._3).sum / result._2.length)

@@ -1,6 +1,7 @@
 package soul.algorithm.oversampling
 
 import soul.data.Data
+import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
 import scala.collection.mutable.ArrayBuffer
@@ -12,13 +13,13 @@ import scala.util.Random
   * @param data      data to work with
   * @param eps       epsilon to indicate the distance that must be between two points
   * @param k         number of neighbors
-  * @param dist      object of DistanceType representing the distance to be used
+  * @param dist      object of Distance enumeration representing the distance to be used
   * @param seed      seed to use. If it is not provided, it will use the system time
   * @param normalize normalize the data or not
   * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
-class DBSMOTE(data: Data, eps: Double = -1, k: Int = 5, dist: DistanceType = Distance(euclideanDistance),
+class DBSMOTE(data: Data, eps: Double = -1, k: Int = 5, dist: Distance = Distance.EUCLIDEAN,
               seed: Long = 5, normalize: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the DBSMOTE algorithm
@@ -30,7 +31,7 @@ class DBSMOTE(data: Data, eps: Double = -1, k: Int = 5, dist: DistanceType = Dis
     val minorityClassIndex: Array[Int] = minority(data.y)
     val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
 
-    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+    val (attrCounter, attrClassesCounter, sds) = if (dist == Distance.HVDM) {
       (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
@@ -40,9 +41,8 @@ class DBSMOTE(data: Data, eps: Double = -1, k: Int = 5, dist: DistanceType = Dis
 
     def regionQuery(point: Int, eps: Double): Array[Int] = {
       (minorityClassIndex map samples).indices.map(sample => {
-        val D: Double = if (dist.isInstanceOf[Distance]) {
-          dist.asInstanceOf[(Array[Double], Array[Double]) => Double](samples(minorityClassIndex(point)),
-            samples(minorityClassIndex(sample)))
+        val D: Double = if (dist == Distance.EUCLIDEAN) {
+          euclidean(samples(minorityClassIndex(point)), samples(minorityClassIndex(sample)))
         } else {
           HVDM(samples(minorityClassIndex(point)), samples(minorityClassIndex(sample)), data.fileInfo.nominal, sds,
             attrCounter, attrClassesCounter)
@@ -111,8 +111,8 @@ class DBSMOTE(data: Data, eps: Double = -1, k: Int = 5, dist: DistanceType = Dis
       //distance between each pair of nodes
       val distances: Array[Array[Double]] = cluster.map { i =>
         cluster.map { j =>
-          if (dist.isInstanceOf[Distance]) {
-            dist.asInstanceOf[(Array[Double], Array[Double]) => Double](samples(minorityClassIndex(i)), samples(minorityClassIndex(j)))
+          if (dist == Distance.EUCLIDEAN) {
+            euclidean(samples(minorityClassIndex(i)), samples(minorityClassIndex(j)))
           } else {
             HVDM(samples(minorityClassIndex(i)), samples(minorityClassIndex(j)), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
           }
@@ -165,8 +165,8 @@ class DBSMOTE(data: Data, eps: Double = -1, k: Int = 5, dist: DistanceType = Dis
         }
         graph(u).indices.foreach(v => {
           if (graph(u)(v) && !nodeInfo(v)._3) {
-            val d: Double = if (dist.isInstanceOf[Distance]) {
-              dist.asInstanceOf[(Array[Double], Array[Double]) => Double](samples(minorityClassIndex(cluster(u))),
+            val d: Double = if (dist == Distance.EUCLIDEAN) {
+              euclidean(samples(minorityClassIndex(cluster(u))),
                 samples(minorityClassIndex(cluster(v))))
             } else {
               HVDM(samples(minorityClassIndex(cluster(u))), samples(minorityClassIndex(cluster(v))), data.fileInfo.nominal,
@@ -187,8 +187,8 @@ class DBSMOTE(data: Data, eps: Double = -1, k: Int = 5, dist: DistanceType = Dis
     if (eps == -1) {
       eps2 = samples.map { i =>
         samples.map { j =>
-          if (dist.isInstanceOf[Distance]) {
-            dist.asInstanceOf[(Array[Double], Array[Double]) => Double](i, j)
+          if (dist == Distance.EUCLIDEAN) {
+            euclidean(i, j)
           } else {
             HVDM(i, j, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
           }
@@ -214,8 +214,8 @@ class DBSMOTE(data: Data, eps: Double = -1, k: Int = 5, dist: DistanceType = Dis
       var pseudoCentroid: (Int, Double) = (0, 99999999.0)
       //the pseudo-centroid is the sample that is closest to the centroid
       (c map samples).zipWithIndex.foreach(sample => {
-        val d: Double = if (dist.isInstanceOf[Distance]) {
-          dist.asInstanceOf[(Array[Double], Array[Double]) => Double](sample._1, centroid)
+        val d: Double = if (dist == Distance.EUCLIDEAN) {
+          euclidean(sample._1, centroid)
         } else {
           HVDM(sample._1, centroid, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
         }

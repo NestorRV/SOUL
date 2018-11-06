@@ -2,6 +2,7 @@ package soul.algorithm.oversampling
 
 import breeze.linalg.{DenseMatrix, eigSym}
 import soul.data.Data
+import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
 import scala.util.Random
@@ -13,13 +14,13 @@ import scala.util.Random
   * @param seed      seed to use. If it is not provided, it will use the system time
   * @param percent   amount of samples N%
   * @param k         number of neighbors
-  * @param dist      object of DistanceType representing the distance to be used
+  * @param dist      object of Distance enumeration representing the distance to be used
   * @param normalize normalize the data or not
   * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
 class ADOMS(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 300, k: Int = 5,
-            dist: DistanceType = Distance(euclideanDistance), normalize: Boolean = false, verbose: Boolean = false) {
+            dist: Distance = Distance.EUCLIDEAN, normalize: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the first principal component axis
     *
@@ -56,7 +57,7 @@ class ADOMS(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
     var newIndex: Int = 0
     val r: Random = new Random(seed)
 
-    val (attrCounter, attrClassesCounter, sds) = if (dist.isInstanceOf[HVDM]) {
+    val (attrCounter, attrClassesCounter, sds) = if (dist == Distance.HVDM) {
       (samples.transpose.map((column: Array[Double]) => column.groupBy(identity).mapValues(_.length)),
         samples.transpose.map((attribute: Array[Double]) => occurrencesByValueAndClass(attribute, data.y)),
         samples.transpose.map((column: Array[Double]) => standardDeviation(column)))
@@ -67,17 +68,16 @@ class ADOMS(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
     (0 until percent / 100).foreach(_ => {
       // for each minority class sample
       minorityClassIndex.zipWithIndex.foreach(i => {
-        neighbors = dist match {
-          case distance: Distance =>
-            kNeighbors(minorityClassIndex map samples, i._2, k, distance)
-          case _ =>
-            kNeighborsHVDM(minorityClassIndex map samples, i._2, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+        neighbors = if (dist == Distance.EUCLIDEAN) {
+          kNeighbors(minorityClassIndex map samples, i._2, k)
+        } else {
+          kNeighborsHVDM(minorityClassIndex map samples, i._2, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
         }
 
         val n: Int = r.nextInt(neighbors.length)
 
-        val D: Double = if (dist.isInstanceOf[Distance]) {
-          dist.asInstanceOf[(Array[Double], Array[Double]) => Double](samples(i._1), samples(minorityClassIndex(neighbors(n))))
+        val D: Double = if (dist == Distance.EUCLIDEAN) {
+          euclidean(samples(i._1), samples(minorityClassIndex(neighbors(n))))
         } else {
           HVDM(samples(i._1), samples(minorityClassIndex(neighbors(n))), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
         }
