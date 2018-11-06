@@ -93,12 +93,30 @@ class NCL(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
       selectedElements
     }
 
+    def selectNeighboursHVDM(l: Int): ArrayBuffer[Int] = {
+      val selectedElements = new ArrayBuffer[Int]()
+      val (label, nNeighbours, _) = nnRuleHVDM(dataToWorkWith, dataToWorkWith(l), l, classesToWorkWith, k, data.fileInfo.nominal,
+        sds, attrCounter, attrClassesCounter, "nearest")
+
+      if (label != classesToWorkWith(l)) {
+        nNeighbours.foreach { n =>
+          val nNeighbourClass: Any = classesToWorkWith(n)
+          if (nNeighbourClass != untouchableClass && counter(nNeighbourClass) > ratio) {
+            selectedElements += n
+          }
+        }
+      }
+      selectedElements
+    }
+
     var j = 0
     val indexA2 = new ArrayBuffer[Int](0)
     while (j < uniqueMajClasses.length) {
-      val selectedNeighbours: Array[ArrayBuffer[Int]] = minorityIndex.par.map { l =>
-        selectNeighbours(l)
-      }.toArray
+      val selectedNeighbours: Array[ArrayBuffer[Int]] = if (dist == Distance.EUCLIDEAN) {
+        minorityIndex.par.map(l => selectNeighbours(l)).toArray
+      } else {
+        minorityIndex.par.map(l => selectNeighboursHVDM(l)).toArray
+      }
 
       selectedNeighbours.flatten.distinct.foreach(e => indexA2 += e)
       j += 1
