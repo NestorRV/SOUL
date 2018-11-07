@@ -188,14 +188,16 @@ object Utilities {
     * @return the predictedLabels with less error
     */
   def kFoldPrediction(data: Array[Array[Double]], labels: Array[Any], k: Int, nFolds: Int, which: String): Array[Any] = {
-
     val indices: List[List[Int]] = scala.util.Random.shuffle(labels.indices.toList).grouped((labels.length.toFloat / nFolds).ceil.toInt).toList
-    val predictedLabels: Array[(Int, Array[Any])] = indices.par.map { index: List[Int] =>
-      val neighbours: Array[Array[Double]] = (index map data).toArray
-      val classes: Array[Any] = (index map labels).toArray
-      val predictedLabels: Array[(Int, Any)] = labels.indices.diff(index).map(i => (i, nnRule(neighbours, data(i), -1, classes, k, which))).toArray
+    val predictedLabels: Array[(Int, Array[Any])] = indices.par.map { test: List[Int] =>
+      val targetData: Array[Array[Double]] = (test map data).toArray
+      val targetClasses: Array[Any] = (test map labels).toArray
+      val kdTree: KDTree = new KDTree(targetData, targetClasses, targetData(0).length)
+      val predictedLabels: Array[(Int, Any)] = test.map { e =>
+        (e, mode(kdTree.nNeighbours(data(e), k, leaveOneOut = false)._2.toArray))
+      }.toArray
       val error: Int = predictedLabels.count((e: (Int, Any)) => e._2 != labels(e._1))
-      (error, predictedLabels.sortBy(_._1).unzip._2)
+      (error, predictedLabels.unzip._2)
     }.toArray
 
     predictedLabels.minBy(_._1)._2
