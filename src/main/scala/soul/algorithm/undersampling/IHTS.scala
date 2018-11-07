@@ -75,7 +75,7 @@ class IHTS(data: Data, seed: Long = System.currentTimeMillis(), nFolds: Int = 5,
         boolToIndex((targetIndex map probabilities).map((e: Double) => e >= threshold))
       }
       else {
-        classesToWorkWith.filter((c: Any) => c == targetClass).indices.toArray
+        classesToWorkWith.zipWithIndex.collect { case (c, i) if c == targetClass => i }
       }
 
       indexTargetClass map boolToIndex(classesToWorkWith.map((c: Any) => c == targetClass))
