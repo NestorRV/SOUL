@@ -3,7 +3,7 @@ package soul.util
 import com.thesamet.spatial.{DimensionalOrdering, KDTreeMap, Metric}
 
 import scala.language.implicitConversions
-import scala.math.Numeric.Implicits._
+import scala.math.sqrt
 
 /** Wrapper of a com.thesamet.spatial.KDTreeMap adapted for Arrays of Doubles
   *
@@ -34,13 +34,13 @@ class KDTree(x: Array[Array[Double]], y: Array[Any], dimensions: Int) {
       def compareProjection(d: Int)(x: T, y: T): Int = ord.compare(x(d), y(d))
     }
 
-  implicit def metricFromArray[A](implicit n: Numeric[A]): Metric[Array[A], A] = new Metric[Array[A], A] {
-    override def distance(x: Array[A], y: Array[A]): A = x.zip(y).map { z =>
+  implicit def metricFromArray(implicit n: Numeric[Double]): Metric[Array[Double], Double] = new Metric[Array[Double], Double] {
+    override def distance(x: Array[Double], y: Array[Double]): Double = sqrt(x.zip(y).map { z =>
       val d = z._1 - z._2
       d * d
-    }.sum
+    }.sum)
 
-    override def planarDistance(dimension: Int)(x: Array[A], y: Array[A]): A = {
+    override def planarDistance(dimension: Int)(x: Array[Double], y: Array[Double]): Double = {
       val dd = x(dimension) - y(dimension)
       dd * dd
     }
