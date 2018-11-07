@@ -218,10 +218,10 @@ object Utilities {
                           attrCounter: Array[Map[Double, Int]], attrClassesCounter: Array[Map[Double, Map[Any, Int]]], which: String): Array[Any] = {
 
     val indices: List[List[Int]] = scala.util.Random.shuffle(labels.indices.toList).grouped((labels.length.toFloat / nFolds).ceil.toInt).toList
-    val predictedLabels: Array[(Int, Array[Any])] = indices.map { index: List[Int] =>
-      val neighbours: Array[Array[Double]] = (labels.indices.diff(index) map data).toArray
-      val classes: Array[Any] = (labels.indices.diff(index) map labels).toArray
-      val predictedLabels: Array[(Int, Any)] = labels.indices.diff(index).map { i: Int =>
+    val predictedLabels: Array[(Int, Array[Any])] = indices.map { test: List[Int] =>
+      val neighbours: Array[Array[Double]] = (labels.indices.diff(test) map data).toArray
+      val classes: Array[Any] = (labels.indices.diff(test) map labels).toArray
+      val predictedLabels: Array[(Int, Any)] = labels.indices.diff(test).map { i: Int =>
         (i, nnRuleHVDM(neighbours, data(i), -1, classes, k, nominal, sds, attrCounter, attrClassesCounter, which)._1)
       }.toArray
 
