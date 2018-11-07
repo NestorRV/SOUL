@@ -189,7 +189,7 @@ object Utilities {
     */
   def kFoldPrediction(data: Array[Array[Double]], labels: Array[Any], k: Int, nFolds: Int, which: String): Array[Any] = {
 
-    val indices: List[List[Int]] = labels.indices.toList.grouped((labels.length.toFloat / nFolds).ceil.toInt).toList
+    val indices: List[List[Int]] = scala.util.Random.shuffle(labels.indices.toList).grouped((labels.length.toFloat / nFolds).ceil.toInt).toList
     val predictedLabels: Array[(Int, Array[Any])] = indices.par.map { index: List[Int] =>
       val neighbours: Array[Array[Double]] = (index map data).toArray
       val classes: Array[Any] = (index map labels).toArray
@@ -217,7 +217,7 @@ object Utilities {
   def kFoldPredictionHVDM(data: Array[Array[Double]], labels: Array[Any], k: Int, nFolds: Int, nominal: Array[Int], sds: Array[Double],
                           attrCounter: Array[Map[Double, Int]], attrClassesCounter: Array[Map[Double, Map[Any, Int]]], which: String): Array[Any] = {
 
-    val indices: List[List[Int]] = labels.indices.toList.grouped((labels.length.toFloat / nFolds).ceil.toInt).toList
+    val indices: List[List[Int]] = scala.util.Random.shuffle(labels.indices.toList).grouped((labels.length.toFloat / nFolds).ceil.toInt).toList
     val predictedLabels: Array[(Int, Array[Any])] = indices.map { index: List[Int] =>
       val neighbours: Array[Array[Double]] = (index map data).toArray
       val classes: Array[Any] = (index map labels).toArray
