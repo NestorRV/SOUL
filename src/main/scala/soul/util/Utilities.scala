@@ -193,10 +193,7 @@ object Utilities {
     val predictedLabels: Array[(Int, Array[Any])] = indices.par.map { index: List[Int] =>
       val neighbours: Array[Array[Double]] = (index map data).toArray
       val classes: Array[Any] = (index map labels).toArray
-      val predictedLabels: Array[(Int, Any)] = labels.indices.diff(index).map { i: Int =>
-        (i, nnRule(neighbours, data(i), i, classes, k, which))
-      }.toArray
-
+      val predictedLabels: Array[(Int, Any)] = labels.indices.diff(index).map(i => (i, nnRule(neighbours, data(i), i, classes, k, which))).toArray
       val error: Int = predictedLabels.count((e: (Int, Any)) => e._2 != labels(e._1))
       (error, predictedLabels.sortBy(_._1).unzip._2)
     }.toArray
