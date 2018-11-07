@@ -193,7 +193,7 @@ object Utilities {
     val predictedLabels: Array[(Int, Array[Any])] = indices.par.map { index: List[Int] =>
       val neighbours: Array[Array[Double]] = (index map data).toArray
       val classes: Array[Any] = (index map labels).toArray
-      val predictedLabels: Array[(Int, Any)] = labels.indices.diff(index).map(i => (i, nnRule(neighbours, data(i), i, classes, k, which))).toArray
+      val predictedLabels: Array[(Int, Any)] = labels.indices.diff(index).map(i => (i, nnRule(neighbours, data(i), -1, classes, k, which))).toArray
       val error: Int = predictedLabels.count((e: (Int, Any)) => e._2 != labels(e._1))
       (error, predictedLabels.sortBy(_._1).unzip._2)
     }.toArray
@@ -219,10 +219,10 @@ object Utilities {
 
     val indices: List[List[Int]] = scala.util.Random.shuffle(labels.indices.toList).grouped((labels.length.toFloat / nFolds).ceil.toInt).toList
     val predictedLabels: Array[(Int, Array[Any])] = indices.map { index: List[Int] =>
-      val neighbours: Array[Array[Double]] = (index map data).toArray
-      val classes: Array[Any] = (index map labels).toArray
+      val neighbours: Array[Array[Double]] = (labels.indices.diff(index) map data).toArray
+      val classes: Array[Any] = (labels.indices.diff(index) map labels).toArray
       val predictedLabels: Array[(Int, Any)] = labels.indices.diff(index).map { i: Int =>
-        (i, nnRuleHVDM(neighbours, data(i), i, classes, k, nominal, sds, attrCounter, attrClassesCounter, which)._1)
+        (i, nnRuleHVDM(neighbours, data(i), -1, classes, k, nominal, sds, attrCounter, attrClassesCounter, which)._1)
       }.toArray
 
       val error: Int = predictedLabels.count((e: (Int, Any)) => e._2 != labels(e._1))
@@ -518,7 +518,8 @@ object Utilities {
       distances(i) = euclidean(instance, neighbours(i))
       i += 1
     }
-    distances(id) = Double.MaxValue
+    if (id != -1)
+      distances(id) = Double.MaxValue
 
     val kBest = List.fill(k)(0).toArray
     val distancesKBest = if (which == "nearest") List.fill(k)(Double.PositiveInfinity).toArray else List.fill(k)(Double.NegativeInfinity).toArray
@@ -575,7 +576,8 @@ object Utilities {
       distances(i) = HVDM(instance, neighbours(i), nominal, sds, attrCounter, attrClassesCounter)
       i += 1
     }
-    distances(id) = Double.MaxValue
+    if (id != -1)
+      distances(id) = Double.MaxValue
 
     val kBest = List.fill(k)(0).toArray
     val distancesKBest = if (which == "nearest") List.fill(k)(Double.PositiveInfinity).toArray else List.fill(k)(Double.NegativeInfinity).toArray
