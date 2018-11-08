@@ -17,7 +17,7 @@ class KDTree(x: Array[Array[Double]], y: Array[Any], dimensions: Int) {
   private val kDTreeMap: KDTreeMap[Array[Double], (Any, Int)] =
     KDTreeMap.fromSeq((x zip y.zipWithIndex).map(f => f._1 -> (f._2._1, f._2._2)))(dimensionalOrderingForArray[Array[Double], Double](dimensions))
 
-  def nNeighbours(instance: Array[Double], k: Int, leaveOneOut: Boolean): (Seq[Array[Double]], Seq[Any], Seq[Int]) = {
+  def nNeighbours(instance: Array[Double], k: Int, leaveOneOut: Boolean = true): (Seq[Array[Double]], Seq[Any], Seq[Int]) = {
     val realK: Int = if (leaveOneOut) k + 1 else k
     val drop: Int = if (leaveOneOut) 1 else 0
     val instances: (Seq[Array[Double]], Seq[(Any, Int)]) = kDTreeMap.findNearest(instance, realK).drop(drop).unzip
