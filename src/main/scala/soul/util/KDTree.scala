@@ -12,7 +12,7 @@ import scala.math.sqrt
   */
 class KDTree(dimensions: Int) {
 
-  private var kDTreeMap: KDTreeMap[Array[Double], (Any, Int)] = KDTreeMap[Array[Double], (Any, Int)]()(dimensionalOrderingForArray[Array[Double], Double](dimensions))
+  private[soul] var kDTreeMap: KDTreeMap[Array[Double], (Any, Int)] = KDTreeMap[Array[Double], (Any, Int)]()(dimensionalOrderingForArray[Array[Double], Double](dimensions))
 
   def nNeighbours(instance: Array[Double], k: Int, leaveOneOut: Boolean = true): (Seq[Array[Double]], Seq[Any], Seq[Int]) = {
     val realK: Int = if (leaveOneOut) k + 1 else k
