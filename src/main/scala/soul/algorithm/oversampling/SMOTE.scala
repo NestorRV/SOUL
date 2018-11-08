@@ -1,6 +1,7 @@
 package soul.algorithm.oversampling
 
 import soul.data.Data
+import soul.util.KDTree
 import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
@@ -44,6 +45,14 @@ class SMOTE(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
       (null, null, null)
     }
 
+    val kdTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+      val kdTree = new KDTree(samples(0).length)
+      kdTree.build(samples, data.y)
+      Some(kdTree)
+    } else {
+      None
+    }
+
     // check if the percent is correct
     var T: Int = minorityClassIndex.length
     var N: Int = percent
@@ -63,31 +72,25 @@ class SMOTE(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
     var newIndex: Int = 0
     val r: Random = new Random(seed)
     // for each minority class sample
-    var i: Int = 0
-    while (i < minorityClassIndex.length) {
+    minorityClassIndex.zipWithIndex.par.foreach((i: (Int, Int)) => {
       neighbors = if (dist == Distance.EUCLIDEAN) {
-        kNeighbors(minorityClassIndex map samples, i, k)
+        kdTree.get.nNeighbours(samples(i._1), k)._3.toArray
       } else {
-        kNeighborsHVDM(minorityClassIndex map samples, i, k, data.fileInfo.nominal, sds, attrCounter,
+        kNeighborsHVDM(minorityClassIndex map samples, i._2, k, data.fileInfo.nominal, sds, attrCounter,
           attrClassesCounter).map(minorityClassIndex(_))
       }
       // compute populate for the sample
-      var j: Int = 0
-      while (j < N) {
+      (0 until N).par.foreach((j: Int) => {
         val nn: Int = r.nextInt(neighbors.length)
         // compute attributes of the sample
-        var atrib: Int = 0
-        while (atrib < samples(0).length) {
-          val diff: Double = samples(neighbors(nn))(atrib) - samples(minorityClassIndex(i))(atrib)
+        samples(0).indices.par.foreach((atrib: Int) => {
+          val diff: Double = samples(neighbors(nn))(atrib) - samples(i._1)(atrib)
           val gap: Float = r.nextFloat
-          output(newIndex)(atrib) = samples(minorityClassIndex(i))(atrib) + gap * diff
-          atrib = atrib + 1
-        }
+          output(newIndex)(atrib) = samples(i._1)(atrib) + gap * diff
+        })
         newIndex = newIndex + 1
-        j = j + 1
-      }
-      i = i + 1
-    }
+      })
+    })
 
     // check if the data is nominal or numerical
     val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
