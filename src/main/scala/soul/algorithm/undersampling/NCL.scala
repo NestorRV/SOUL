@@ -77,9 +77,7 @@ class NCL(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
     val ratio: Double = dataToWorkWith.length * threshold
 
     val kdTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
-      val kdTree = new KDTree(dataToWorkWith(0).length)
-      kdTree.build((minorityIndex map dataToWorkWith).toArray, (majorityIndex map classesToWorkWith).toArray)
-      Some(kdTree)
+      Some(new KDTree((minorityIndex map dataToWorkWith).toArray, (majorityIndex map classesToWorkWith).toArray, dataToWorkWith(0).length))
     } else {
       None
     }

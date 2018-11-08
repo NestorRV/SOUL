@@ -192,8 +192,7 @@ object Utilities {
     val predictedLabels: Array[(Int, Array[Any])] = indices.par.map { test: List[Int] =>
       val targetData: Array[Array[Double]] = (test map data).toArray
       val targetClasses: Array[Any] = (test map labels).toArray
-      val kdTree: KDTree = new KDTree(targetData(0).length)
-      kdTree.build(targetData, targetClasses)
+      val kdTree: KDTree = new KDTree(targetData, targetClasses, targetData(0).length)
       val predictedLabels: Array[(Int, Any)] = test.map { e =>
         (e, mode(kdTree.nNeighbours(data(e), k, leaveOneOut = false)._2.toArray))
       }.toArray
