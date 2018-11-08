@@ -7,15 +7,12 @@ import scala.math.sqrt
 
 /** Wrapper of a com.thesamet.spatial.KDTreeMap adapted for Arrays of Doubles
   *
-  * @param x          data
-  * @param y          labels
   * @param dimensions number of dimensions
   * @author Néstor Rodríguez Vico
   */
-class KDTree(x: Array[Array[Double]], y: Array[Any], dimensions: Int) {
+class KDTree(dimensions: Int) {
 
-  private val kDTreeMap: KDTreeMap[Array[Double], (Any, Int)] =
-    KDTreeMap.fromSeq((x zip y.zipWithIndex).map(f => f._1 -> (f._2._1, f._2._2)))(dimensionalOrderingForArray[Array[Double], Double](dimensions))
+  private var kDTreeMap: KDTreeMap[Array[Double], (Any, Int)] = KDTreeMap[Array[Double], (Any, Int)]()(dimensionalOrderingForArray[Array[Double], Double](dimensions))
 
   def nNeighbours(instance: Array[Double], k: Int, leaveOneOut: Boolean = true): (Seq[Array[Double]], Seq[Any], Seq[Int]) = {
     val realK: Int = if (leaveOneOut) k + 1 else k
@@ -25,7 +22,19 @@ class KDTree(x: Array[Array[Double]], y: Array[Any], dimensions: Int) {
     (instances._1, labels, index)
   }
 
+  def build(x: Array[Array[Double]], y: Array[Any]): Unit = {
+    kDTreeMap = KDTreeMap.fromSeq((x zip y.zipWithIndex).map(f => f._1 -> (f._2._1, f._2._2)))(dimensionalOrderingForArray[Array[Double], Double](dimensions))
+  }
+
   def apply(x: Array[Double]) = kDTreeMap(x)
+
+  def addElement(x: Array[Double], y: Any): Unit = {
+    kDTreeMap = kDTreeMap + (x -> (y, kDTreeMap.size + 1))
+  }
+
+  def removeElement(x: Array[Double]): Unit = {
+    kDTreeMap = kDTreeMap - x
+  }
 
   def dimensionalOrderingForArray[T <: Array[A], A](dim: Int)(implicit ord: Ordering[A]): DimensionalOrdering[T] =
     new DimensionalOrdering[T] {

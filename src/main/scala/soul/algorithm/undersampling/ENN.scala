@@ -62,7 +62,9 @@ class ENN(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
     }
 
     val kdTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
-      Some(new KDTree(dataToWorkWith, classesToWorkWith, dataToWorkWith(0).length))
+      val kdTree = new KDTree(dataToWorkWith(0).length)
+      kdTree.build(dataToWorkWith, classesToWorkWith)
+      Some(kdTree)
     } else {
       None
     }
