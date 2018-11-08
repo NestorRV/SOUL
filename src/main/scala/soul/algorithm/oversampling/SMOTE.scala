@@ -46,9 +46,7 @@ class SMOTE(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
     }
 
     val kdTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
-      val kdTree = new KDTree(samples(0).length)
-      kdTree.build(samples, data.y)
-      Some(kdTree)
+      Some(new KDTree(samples, data.y, samples(0).length))
     } else {
       None
     }
@@ -83,7 +81,7 @@ class SMOTE(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
       (0 until N).par.foreach((j: Int) => {
         val nn: Int = r.nextInt(neighbors.length)
         // compute attributes of the sample
-        samples(0).indices.par.foreach((atrib: Int) => {
+        samples(0).indices.foreach((atrib: Int) => {
           val diff: Double = samples(neighbors(nn))(atrib) - samples(i._1)(atrib)
           val gap: Float = r.nextFloat
           output(newIndex)(atrib) = samples(i._1)(atrib) + gap * diff
