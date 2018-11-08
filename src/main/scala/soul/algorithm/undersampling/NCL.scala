@@ -84,7 +84,7 @@ class NCL(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
 
     def selectNeighbours(l: Int): ArrayBuffer[Int] = {
       var selectedElements = new ArrayBuffer[Int](0)
-      val (_, labels, index) = kdTree.get.nNeighbours(dataToWorkWith(l), k, leaveOneOut = true)
+      val (_, labels, index) = kdTree.get.nNeighbours(dataToWorkWith(l), k)
       val label = mode(labels.toArray)
 
       if (label != classesToWorkWith(l)) {
