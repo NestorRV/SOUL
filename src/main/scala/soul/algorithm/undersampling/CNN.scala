@@ -6,22 +6,22 @@ import soul.util.Utilities._
 
 /** Condensed Nearest Neighbor decision rule. Original paper: "The Condensed Nearest Neighbor Rule" by P. Hart.
   *
-  * @param data       data to work with
-  * @param seed       seed to use. If it is not provided, it will use the system time
-  * @param dist       object of Distance enumeration representing the distance to be used
-  * @param normalize  normalize the data or not
-  * @param randomData iterate through the data randomly or not
-  * @param verbose    choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class CNN(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN,
-          normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
+class CNN() {
 
   /** Compute the CNN algorithm
     *
+    * @param data       data to work with
+    * @param seed       seed to use. If it is not provided, it will use the system time
+    * @param dist       object of Distance enumeration representing the distance to be used
+    * @param normalize  normalize the data or not
+    * @param randomData iterate through the data randomly or not
+    * @param verbose    choose to display information about the execution or not
     * @return undersampled data structure
     */
-  def compute(): Data = {
+  def compute(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN,
+              normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false): Data = {
     val initTime: Long = System.nanoTime()
 
     val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
@@ -113,8 +113,6 @@ class CNN(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
     val storeIndex: Array[Int] = location.zipWithIndex.filter((x: (Int, Int)) => x._1 == 1).collect { case (_, a) => a }
     val finishTime: Long = System.nanoTime()
 
-    val newData: Data = new Data(storeIndex map data.x, storeIndex map data.y, Some(storeIndex), data.fileInfo)
-
     if (verbose) {
       val newCounter: Map[Any, Int] = (storeIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
       println("NEW DATA SIZE: %d".format(storeIndex.length))
@@ -124,6 +122,6 @@ class CNN(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    newData
+    new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
   }
 }

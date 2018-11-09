@@ -10,23 +10,23 @@ import scala.util.Random
 /** DBSMOTE algorithm. Original paper: "DBSMOTE: Density-Based Synthetic Minority Over-sampling Technique" by
   * Chumphol Bunkhumpornpat, Krung Sinapiromsaran and Chidchanok Lursinsap.
   *
-  * @param data      data to work with
-  * @param eps       epsilon to indicate the distance that must be between two points
-  * @param k         number of neighbors
-  * @param dist      object of Distance enumeration representing the distance to be used
-  * @param seed      seed to use. If it is not provided, it will use the system time
-  * @param normalize normalize the data or not
-  * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
-class DBSMOTE(data: Data, eps: Double = -1, k: Int = 5, dist: Distance = Distance.EUCLIDEAN,
-              seed: Long = 5, normalize: Boolean = false, verbose: Boolean = false) {
+class DBSMOTE() {
 
   /** Compute the DBSMOTE algorithm
     *
+    * @param data      data to work with
+    * @param eps       epsilon to indicate the distance that must be between two points
+    * @param k         number of neighbors
+    * @param dist      object of Distance enumeration representing the distance to be used
+    * @param seed      seed to use. If it is not provided, it will use the system time
+    * @param normalize normalize the data or not
+    * @param verbose   choose to display information about the execution or not
     * @return synthetic samples generated
     */
-  def compute(): Data = {
+  def compute(data: Data, eps: Double = -1, k: Int = 5, dist: Distance = Distance.EUCLIDEAN,
+              seed: Long = 5, normalize: Boolean = false, verbose: Boolean = false): Data = {
     val initTime: Long = System.nanoTime()
     val minorityClassIndex: Array[Int] = minority(data.y)
     val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
@@ -240,22 +240,20 @@ class DBSMOTE(data: Data, eps: Double = -1, k: Int = 5, dist: Distance = Distanc
       })
     })
 
-    // check if the data is nominal or numerical
-    val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
+    val finishTime: Long = System.nanoTime()
+
+    if (verbose) {
+      println("ORIGINAL SIZE: %d".format(data.x.length))
+      println("NEW DATA SIZE: %d".format(data.x.length + output.length))
+      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+    }
+
+    new Data(if (data.fileInfo.nominal.length == 0) {
       to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
         data.fileInfo.minAttribs) else output))
     } else {
       toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
         data.fileInfo.minAttribs) else output), data.nomToNum)
     }, Array.concat(data.y, Array.fill(output.length)(minorityClass)), None, data.fileInfo)
-    val finishTime: Long = System.nanoTime()
-
-    if (verbose) {
-      println("ORIGINAL SIZE: %d".format(data.x.length))
-      println("NEW DATA SIZE: %d".format(newData.x.length))
-      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-    }
-
-    newData
   }
 }

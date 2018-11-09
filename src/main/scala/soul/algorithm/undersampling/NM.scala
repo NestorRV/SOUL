@@ -9,27 +9,27 @@ import scala.util.Random
 /** NearMiss. Original paper: "kNN Approach to Unbalanced Data Distribution: A Case Study involving Information
   * Extraction" by Jianping Zhang and Inderjeet Mani.
   *
-  * @param data        data to work with
-  * @param seed        seed to use. If it is not provided, it will use the system time
-  * @param dist        object of Distance enumeration representing the distance to be used
-  * @param version     version of the core to execute
-  * @param nNeighbours number of neighbours to take for each minority example (only used if version is set to 3)
-  * @param ratio       ratio to know how many majority class examples to preserve. By default it's set to 1 so there
-  *                    will be the same minority class examples as majority class examples. It will take
-  *                    numMinorityInstances * ratio
-  * @param normalize   normalize the data or not
-  * @param randomData  iterate through the data randomly or not
-  * @param verbose     choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class NM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN, version: Int = 1,
-         nNeighbours: Int = 3, ratio: Double = 1.0, normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
+class NM() {
 
   /** Compute the NM algorithm.
     *
+    * @param data        data to work with
+    * @param seed        seed to use. If it is not provided, it will use the system time
+    * @param dist        object of Distance enumeration representing the distance to be used
+    * @param version     version of the core to execute
+    * @param nNeighbours number of neighbours to take for each minority example (only used if version is set to 3)
+    * @param ratio       ratio to know how many majority class examples to preserve. By default it's set to 1 so there
+    *                    will be the same minority class examples as majority class examples. It will take
+    *                    numMinorityInstances * ratio
+    * @param normalize   normalize the data or not
+    * @param randomData  iterate through the data randomly or not
+    * @param verbose     choose to display information about the execution or not
     * @return undersampled data structure
     */
-  def compute(): Data = {
+  def compute(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN, version: Int = 1,
+              nNeighbours: Int = 3, ratio: Double = 1.0, normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false): Data = {
     val initTime: Long = System.nanoTime()
 
     val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
@@ -98,8 +98,6 @@ class NM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = D
     val finalIndex: Array[Int] = minElements ++ selectedMajElements.take((minElements.length * ratio).toInt)
     val finishTime: Long = System.nanoTime()
 
-    val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
-
     if (verbose) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
       println("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
@@ -110,6 +108,6 @@ class NM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = D
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    newData
+    new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
   }
 }

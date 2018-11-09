@@ -7,22 +7,22 @@ import soul.util.Utilities._
 /** One-Side Selection. Original paper: "Addressing the Curse of Imbalanced
   * Training Sets: One-Side Selection" by Miroslav Kubat and Stan Matwin.
   *
-  * @param data       data to work with
-  * @param seed       seed to use. If it is not provided, it will use the system time
-  * @param dist       object of Distance enumeration representing the distance to be used
-  * @param normalize  normalize the data or not
-  * @param randomData iterate through the data randomly or not
-  * @param verbose    choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class OSS(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN,
-          normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
+class OSS() {
 
   /** Compute the OSS algorithm.
     *
+    * @param data       data to work with
+    * @param seed       seed to use. If it is not provided, it will use the system time
+    * @param dist       object of Distance enumeration representing the distance to be used
+    * @param normalize  normalize the data or not
+    * @param randomData iterate through the data randomly or not
+    * @param verbose    choose to display information about the execution or not
     * @return undersampled data structure
     */
-  def compute(): Data = {
+  def compute(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN,
+              normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false): Data = {
     // Note: the notation used to refers the subsets of data is the used in the original paper.
     val initTime: Long = System.nanoTime()
 
@@ -67,12 +67,10 @@ class OSS(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
     val auxData: Data = new Data(x = toXData(finalC map dataToWorkWith),
       y = finalC map classesToWorkWith, fileInfo = data.fileInfo)
     auxData.processedData = finalC map dataToWorkWith
-    val tl = new TL(auxData, dist = dist, minorityClass = Some(untouchableClass))
-    val resultTL: Data = tl.compute()
+    val tl = new TL()
+    val resultTL: Data = tl.compute(auxData, dist = dist, minorityClass = Some(untouchableClass))
     val finalIndex: Array[Int] = (resultTL.index.get.toList map finalC).toArray
     val finishTime: Long = System.nanoTime()
-
-    val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
 
     if (verbose) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
@@ -84,6 +82,6 @@ class OSS(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    newData
+    new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
   }
 }

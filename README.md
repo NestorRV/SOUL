@@ -83,11 +83,11 @@ Now we're going to run an undersampling algorithm:
 import soul.algorithm.undersampling.NCL
 import soul.data.Data
 
-val nclCSV = new NCL(csvData)
-val resultCSV: Data = nclCSV.compute()
+val nclCSV = new NCL()
+val resultCSV: Data = nclCSV.compute(csvData)
 
-val nclARFF = new NCL(arffData)
-val resultARFF: Data = nclARFF.compute()
+val nclARFF = new NCL()
+val resultARFF: Data = nclARFF.compute(arffData)
 ```
 
 In this example we've used an undersampling algorithm but it's the same for an oversampling one. All the algorithm's parameters have default values so you don't need to specify any of them.

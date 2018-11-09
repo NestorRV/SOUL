@@ -10,24 +10,24 @@ import scala.collection.mutable.ArrayBuffer
 /** Neighbourhood Cleaning Rule. Original paper: "Improving Identification of Difficult Small Classes by Balancing Class
   * Distribution" by J. Laurikkala.
   *
-  * @param data       data to work with
-  * @param seed       seed to use. If it is not provided, it will use the system time
-  * @param dist       object of Distance enumeration representing the distance to be used
-  * @param k          number of neighbours to use when computing k-NN rule (normally 3 neighbours)
-  * @param threshold  consider a class to be undersampled if the number of instances of this class is
-  *                   greater than data.size * threshold
-  * @param normalize  normalize the data or not
-  * @param randomData iterate through the data randomly or not
-  * @param verbose    choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class NCL(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN, k: Int = 3,
-          threshold: Double = 0.5, normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
+class NCL() {
   /** Compute the NCL algorithm.
     *
+    * @param data       data to work with
+    * @param seed       seed to use. If it is not provided, it will use the system time
+    * @param dist       object of Distance enumeration representing the distance to be used
+    * @param k          number of neighbours to use when computing k-NN rule (normally 3 neighbours)
+    * @param threshold  consider a class to be undersampled if the number of instances of this class is
+    *                   greater than data.size * threshold
+    * @param normalize  normalize the data or not
+    * @param randomData iterate through the data randomly or not
+    * @param verbose    choose to display information about the execution or not
     * @return undersampled data structure
     */
-  def compute(): Data = {
+  def compute(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN, k: Int = 3,
+              threshold: Double = 0.5, normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false): Data = {
     // Note: the notation used to refers the subsets of data is the used in the original paper.
     val initTime: Long = System.nanoTime()
 
@@ -66,8 +66,8 @@ class NCL(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
     val indexA1: Array[Int] = if (classesToWorkWith.distinct.length > 2) {
       val ennData = new Data(toXData((majorityIndex map dataToWorkWith).toArray), (majorityIndex map classesToWorkWith).toArray, None, data.fileInfo)
       ennData.processedData = (majorityIndex map dataToWorkWith).toArray
-      val enn = new ENN(ennData, dist = dist, k = k)
-      val resultENN: Data = enn.compute()
+      val enn = new ENN()
+      val resultENN: Data = enn.compute(ennData, dist = dist, k = k)
       classesToWorkWith.indices.diff(resultENN.index.get).toArray
     } else {
       new Array[Int](0)
@@ -128,7 +128,6 @@ class NCL(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
 
     val finalIndex: Array[Int] = classesToWorkWith.indices.diff(indexA1.toList ++ indexA2.distinct).toArray
     val finishTime: Long = System.nanoTime()
-    val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
 
     if (verbose) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
@@ -140,6 +139,6 @@ class NCL(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    newData
+    new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
   }
 }

@@ -9,24 +9,24 @@ import scala.collection.mutable.ArrayBuffer
 /** Spider2 algorithm. Original paper: "Learning from Imbalanced Data in Presence of Noisy and Borderline Examples" by
   * Krystyna Napiera la, Jerzy Stefanowski and Szymon Wilk.
   *
-  * @param data      data to work with
-  * @param seed      seed to use. If it is not provided, it will use the system time
-  * @param relabel   relabeling option
-  * @param ampl      amplification option
-  * @param k         number of minority class nearest neighbors
-  * @param dist      object of Distance enumeration representing the distance to be used
-  * @param normalize normalize the data or not
-  * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
-class Spider2(data: Data, seed: Long = System.currentTimeMillis(), relabel: String = "yes", ampl: String = "weak", k: Int = 5,
-              dist: Distance = Distance.EUCLIDEAN, normalize: Boolean = false, verbose: Boolean = false) {
+class Spider2() {
 
   /** Compute the Spider2 algorithm
     *
+    * @param data      data to work with
+    * @param seed      seed to use. If it is not provided, it will use the system time
+    * @param relabel   relabeling option
+    * @param ampl      amplification option
+    * @param k         number of minority class nearest neighbors
+    * @param dist      object of Distance enumeration representing the distance to be used
+    * @param normalize normalize the data or not
+    * @param verbose   choose to display information about the execution or not
     * @return synthetic samples generated
     */
-  def compute(): Data = {
+  def compute(data: Data, seed: Long = System.currentTimeMillis(), relabel: String = "yes", ampl: String = "weak", k: Int = 5,
+              dist: Distance = Distance.EUCLIDEAN, normalize: Boolean = false, verbose: Boolean = false): Data = {
     val initTime: Long = System.nanoTime()
 
     if (relabel != "no" && relabel != "yes") {
@@ -159,21 +159,18 @@ class Spider2(data: Data, seed: Long = System.currentTimeMillis(), relabel: Stri
       })
     }
 
-    // check if the data is nominal or numerical
-    val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
-      to2Decimals(if (normalize) zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray)
-    } else {
-      toNominal(if (normalize) zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray, data.nomToNum)
-    }, resultClasses, None, data.fileInfo)
-
     val finishTime: Long = System.nanoTime()
 
     if (verbose) {
       println("ORIGINAL SIZE: %d".format(data.x.length))
-      println("NEW DATA SIZE: %d".format(newData.x.length))
+      println("NEW DATA SIZE: %d".format(data.x.length + output.length))
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    newData
+    new Data(if (data.fileInfo.nominal.length == 0) {
+      to2Decimals(if (normalize) zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray)
+    } else {
+      toNominal(if (normalize) zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray, data.nomToNum)
+    }, resultClasses, None, data.fileInfo)
   }
 }
