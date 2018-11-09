@@ -64,15 +64,12 @@ class OSS(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
     val misclassified: Array[Int] = labels.collect { case (i, label) if label != classesToWorkWith(i) => i }.toArray
     val finalC: Array[Int] = (misclassified ++ c).distinct
 
-    val auxData: Data = new Data(x = toXData(finalC map dataToWorkWith),
-      y = finalC map classesToWorkWith, fileInfo = data.fileInfo)
+    val auxData: Data = new Data(x = toXData(finalC map dataToWorkWith), y = finalC map classesToWorkWith, fileInfo = data.fileInfo)
     auxData.processedData = finalC map dataToWorkWith
     val tl = new TL(auxData, dist = dist, minorityClass = Some(untouchableClass))
     val resultTL: Data = tl.compute()
     val finalIndex: Array[Int] = (resultTL.index.get.toList map finalC).toArray
     val finishTime: Long = System.nanoTime()
-
-    val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
 
     if (verbose) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
@@ -84,6 +81,6 @@ class OSS(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    newData
+    new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
   }
 }

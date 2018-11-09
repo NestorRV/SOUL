@@ -97,8 +97,6 @@ class ClusterOSS(data: Data, seed: Long = System.currentTimeMillis(),
     val finalIndex: Array[Int] = (resultTL.index.get.toList map newDataIndex).toArray
     val finishTime: Long = System.nanoTime()
 
-    val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
-
     if (verbose) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
       println("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
@@ -109,6 +107,6 @@ class ClusterOSS(data: Data, seed: Long = System.currentTimeMillis(),
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    newData
+    new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
   }
 }

@@ -92,8 +92,6 @@ class TL(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = D
     val finalIndex: Array[Int] = dataToWorkWith.indices.diff(removedInstances).toArray
     val finishTime: Long = System.nanoTime()
 
-    val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
-
     if (verbose) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
       println("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
@@ -105,6 +103,6 @@ class TL(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = D
       println("REMOVED INSTANCES: %s".format(ratio))
     }
 
-    newData
+    new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
   }
 }

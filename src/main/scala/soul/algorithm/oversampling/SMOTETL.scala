@@ -93,20 +93,18 @@ class SMOTETL(data: Data, seed: Long = System.currentTimeMillis(), percent: Int 
     val resultTL: Data = tl.compute()
     val finalIndex: Array[Int] = result.indices.diff(resultTL.index.get).toArray
 
-    // check if the data is nominal or numerical
-    val newData: Data = new Data(if (data.nomToNum(0).isEmpty) {
-      to2Decimals(zeroOneDenormalization(finalIndex map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs))
-    } else {
-      toNominal(zeroOneDenormalization(finalIndex map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs), data.nomToNum)
-    }, finalIndex map resultClasses, None, data.fileInfo)
     val finishTime: Long = System.nanoTime()
 
     if (verbose) {
       println("ORIGINAL SIZE: %d".format(data.x.length))
-      println("NEW DATA SIZE: %d".format(newData.x.length))
+      println("NEW DATA SIZE: %d".format(data.x.length + output.length))
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    newData
+    new Data(if (data.nomToNum(0).isEmpty) {
+      to2Decimals(zeroOneDenormalization(finalIndex map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs))
+    } else {
+      toNominal(zeroOneDenormalization(finalIndex map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs), data.nomToNum)
+    }, finalIndex map resultClasses, None, data.fileInfo)
   }
 }

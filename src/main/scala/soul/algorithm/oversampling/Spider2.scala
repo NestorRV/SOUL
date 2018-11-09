@@ -159,21 +159,18 @@ class Spider2(data: Data, seed: Long = System.currentTimeMillis(), relabel: Stri
       })
     }
 
-    // check if the data is nominal or numerical
-    val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
-      to2Decimals(if (normalize) zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray)
-    } else {
-      toNominal(if (normalize) zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray, data.nomToNum)
-    }, resultClasses, None, data.fileInfo)
-
     val finishTime: Long = System.nanoTime()
 
     if (verbose) {
       println("ORIGINAL SIZE: %d".format(data.x.length))
-      println("NEW DATA SIZE: %d".format(newData.x.length))
+      println("NEW DATA SIZE: %d".format(data.x.length + output.length))
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    newData
+    new Data(if (data.fileInfo.nominal.length == 0) {
+      to2Decimals(if (normalize) zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray)
+    } else {
+      toNominal(if (normalize) zeroOneDenormalization(output.toArray, data.fileInfo.maxAttribs, data.fileInfo.minAttribs) else output.toArray, data.nomToNum)
+    }, resultClasses, None, data.fileInfo)
   }
 }

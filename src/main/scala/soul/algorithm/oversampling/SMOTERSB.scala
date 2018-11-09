@@ -125,22 +125,20 @@ class SMOTERSB(data: Data, seed: Long = System.currentTimeMillis(), percent: Int
       result = Array.range(0, output.length)
     }
 
-    // check if the data is nominal or numerical
-    val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
+    val finishTime: Long = System.nanoTime()
+
+    if (verbose) {
+      println("ORIGINAL SIZE: %d".format(data.x.length))
+      println("NEW DATA SIZE: %d".format(data.x.length + output.length))
+      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+    }
+
+    new Data(if (data.fileInfo.nominal.length == 0) {
       to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(result map output, data.fileInfo.maxAttribs,
         data.fileInfo.minAttribs) else result map output))
     } else {
       toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(result map output, data.fileInfo.maxAttribs,
         data.fileInfo.minAttribs) else result map output), data.nomToNum)
     }, Array.concat(data.y, Array.fill((result map output).length)(minorityClass)), None, data.fileInfo)
-    val finishTime: Long = System.nanoTime()
-
-    if (verbose) {
-      println("ORIGINAL SIZE: %d".format(data.x.length))
-      println("NEW DATA SIZE: %d".format(newData.x.length))
-      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-    }
-
-    data
   }
 }

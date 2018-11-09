@@ -113,8 +113,6 @@ class CNN(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
     val storeIndex: Array[Int] = location.zipWithIndex.filter((x: (Int, Int)) => x._1 == 1).collect { case (_, a) => a }
     val finishTime: Long = System.nanoTime()
 
-    val newData: Data = new Data(storeIndex map data.x, storeIndex map data.y, Some(storeIndex), data.fileInfo)
-
     if (verbose) {
       val newCounter: Map[Any, Int] = (storeIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
       println("NEW DATA SIZE: %d".format(storeIndex.length))
@@ -124,6 +122,6 @@ class CNN(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    newData
+    new Data(storeIndex map data.x, storeIndex map data.y, Some(storeIndex), data.fileInfo)
   }
 }

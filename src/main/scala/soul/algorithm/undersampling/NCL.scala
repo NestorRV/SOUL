@@ -128,7 +128,6 @@ class NCL(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
 
     val finalIndex: Array[Int] = classesToWorkWith.indices.diff(indexA1.toList ++ indexA2.distinct).toArray
     val finishTime: Long = System.nanoTime()
-    val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
 
     if (verbose) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
@@ -140,6 +139,6 @@ class NCL(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    newData
+    new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
   }
 }

@@ -91,8 +91,6 @@ class ENN(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
 
     val finishTime: Long = System.nanoTime()
 
-    val newData: Data = new Data(finalIndex.toArray map data.x, finalIndex.toArray map data.y, Some(finalIndex.toArray), data.fileInfo)
-
     if (verbose) {
       val newCounter: Map[Any, Int] = (finalIndex.toArray map classesToWorkWith).groupBy(identity).mapValues(_.length)
       println("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
@@ -103,6 +101,6 @@ class ENN(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    newData
+    new Data(finalIndex.toArray map data.x, finalIndex.toArray map data.y, Some(finalIndex.toArray), data.fileInfo)
   }
 }

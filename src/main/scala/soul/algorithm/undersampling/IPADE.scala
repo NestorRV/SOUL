@@ -472,8 +472,6 @@ class IPADE(data: Data, seed: Long = System.currentTimeMillis(), iterations: Int
 
     val finishTime: Long = System.nanoTime()
 
-    val newData: Data = new Data(population.map((row: Array[Double]) => row.map((e: Double) => e.asInstanceOf[Any])), classes, None, data.fileInfo)
-
     if (verbose) {
       val newCounter: Map[Any, Int] = classes.groupBy(identity).mapValues(_.length)
       println("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
@@ -484,6 +482,6 @@ class IPADE(data: Data, seed: Long = System.currentTimeMillis(), iterations: Int
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    newData
+    new Data(population.map((row: Array[Double]) => row.map((e: Double) => e.asInstanceOf[Any])), classes, None, data.fileInfo)
   }
 }

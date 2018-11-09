@@ -127,8 +127,6 @@ class CPM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
 
     val finishTime: Long = System.nanoTime()
 
-    val newData: Data = new Data(centers.toArray map data.x, centers.toArray map data.y, Some(centers.toArray), data.fileInfo)
-
     if (verbose) {
       val newCounter: Map[Any, Int] = (centers.toArray map classesToWorkWith).groupBy(identity).mapValues(_.length)
       println("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
@@ -139,6 +137,6 @@ class CPM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    newData
+    new Data(centers.toArray map data.x, centers.toArray map data.y, Some(centers.toArray), data.fileInfo)
   }
 }

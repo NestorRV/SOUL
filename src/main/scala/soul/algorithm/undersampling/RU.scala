@@ -36,8 +36,6 @@ class RU(data: Data, seed: Long = System.currentTimeMillis(), ratio: Double = 1.
     val finalIndex: Array[Int] = minorityIndex ++ selectedMajorityIndex
     val finishTime: Long = System.nanoTime()
 
-    val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
-
     if (verbose) {
       val newCounter: Map[Any, Int] = (finalIndex map data.y).groupBy(identity).mapValues(_.length)
       println("ORIGINAL SIZE: %d".format(data.x.length))
@@ -48,6 +46,6 @@ class RU(data: Data, seed: Long = System.currentTimeMillis(), ratio: Double = 1.
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    newData
+    new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
   }
 }
