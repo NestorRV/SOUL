@@ -31,8 +31,8 @@ class SBC() {
     * @return undersampled data structure
     */
   def compute(data: Data, seed: Long = System.currentTimeMillis(), method: String = "random", m: Double = 1.0, k: Int = 3, numClusters: Int = 50,
-              restarts: Int = 1, minDispersion: Double = 0.0001, maxIterations: Int = 200, val dist: Distance = Distance.EUCLIDEAN,
-  normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false): Data = {
+              restarts: Int = 1, minDispersion: Double = 0.0001, maxIterations: Int = 200, dist: Distance = Distance.EUCLIDEAN,
+              normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false): Data = {
     val initTime: Long = System.nanoTime()
 
     val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
