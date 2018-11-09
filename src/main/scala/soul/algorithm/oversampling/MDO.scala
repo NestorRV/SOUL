@@ -9,9 +9,13 @@ import scala.util.Random
 /** MDO algorithm. Original paper: "To combat multi-class imbalanced problems by means of over-sampling and boosting
   * techniques" by Lida Adbi and Sattar Hashemi.
   *
+  * @param data      data to work with
+  * @param seed      seed to use. If it is not provided, it will use the system time
+  * @param normalize normalize the data or not
+  * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
-class MDO() {
+class MDO(data: Data, seed: Long = System.currentTimeMillis(), normalize: Boolean = false, verbose: Boolean = false) {
 
   /** create the new samples for MDO algorithm
     *
@@ -63,13 +67,9 @@ class MDO() {
 
   /** Compute the MDO algorithm
     *
-    * @param data      data to work with
-    * @param seed      seed to use. If it is not provided, it will use the system time
-    * @param normalize normalize the data or not
-    * @param verbose   choose to display information about the execution or not
     * @return synthetic samples generated
     */
-  def compute(data: Data, seed: Long = System.currentTimeMillis(), normalize: Boolean = false, verbose: Boolean = false): Data = {
+  def compute(): Data = {
     val initTime: Long = System.nanoTime()
     val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
     // compute minority class
@@ -105,20 +105,22 @@ class MDO() {
     // the output
     val output: Array[Array[Double]] = Array.range(0, samplesWithMean.rows).map(i => samplesWithMean(i, ::).t.toArray)
 
-    val finishTime: Long = System.nanoTime()
-
-    if (verbose) {
-      println("ORIGINAL SIZE: %d".format(data.x.length))
-      println("NEW DATA SIZE: %d".format(data.x.length + output.length))
-      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-    }
-
-    new Data(if (data.fileInfo.nominal.length == 0) {
+    // check if the data is nominal or numerical
+    val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
       to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
         data.fileInfo.minAttribs) else output))
     } else {
       toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
         data.fileInfo.minAttribs) else output), data.nomToNum)
     }, Array.concat(data.y, Array.fill(output.length)(minorityClass)), None, data.fileInfo)
+    val finishTime: Long = System.nanoTime()
+
+    if (verbose) {
+      println("ORIGINAL SIZE: %d".format(data.x.length))
+      println("NEW DATA SIZE: %d".format(newData.x.length))
+      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+    }
+
+    newData
   }
 }

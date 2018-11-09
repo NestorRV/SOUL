@@ -10,23 +10,23 @@ import scala.util.Random
 /** SMOTEENN algorithm. Original paper: "A Study of the Behavior of Several Methods for Balancing Machine Learning
   * Training Data" by Gustavo E. A. P. A. Batista, Ronaldo C. Prati and Maria Carolina Monard.
   *
+  * @param data      data to work with
+  * @param seed      seed to use. If it is not provided, it will use the system time
+  * @param percent   amount of Smote N%
+  * @param k         number of minority class nearest neighbors
+  * @param dist      object of Distance enumeration representing the distance to be used
+  * @param normalize normalize the data or not
+  * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
-class SMOTEENN() {
+class SMOTEENN(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 500, k: Int = 5,
+               dist: Distance = Distance.EUCLIDEAN, normalize: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the SMOTEENN algorithm
     *
-    * @param data      data to work with
-    * @param seed      seed to use. If it is not provided, it will use the system time
-    * @param percent   amount of Smote N%
-    * @param k         number of minority class nearest neighbors
-    * @param dist      object of Distance enumeration representing the distance to be used
-    * @param normalize normalize the data or not
-    * @param verbose   choose to display information about the execution or not
     * @return synthetic samples generated
     */
-  def compute(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 500, k: Int = 5,
-              dist: Distance = Distance.EUCLIDEAN, normalize: Boolean = false, verbose: Boolean = false): Data = {
+  def compute(): Data = {
     val initTime: Long = System.nanoTime()
 
     if (percent > 100 && percent % 100 != 0) {
@@ -89,22 +89,24 @@ class SMOTEENN() {
 
     val ennData: Data = new Data(x = toXData(result), y = resultClasses, fileInfo = data.fileInfo)
     ennData.processedData = result
-    val enn = new ENN()
-    val resultENN: Data = enn.compute(ennData, dist = dist)
-    val finalIndex: Array[Int] = result.indices.diff(resultENN.index.get).toArray
+    val enn = new ENN(ennData, dist = dist)
+    val resultTL: Data = enn.compute()
+    val finalIndex: Array[Int] = result.indices.diff(resultTL.index.get).toArray
 
-    val finishTime: Long = System.nanoTime()
-
-    if (verbose) {
-      println("ORIGINAL SIZE: %d".format(data.x.length))
-      println("NEW DATA SIZE: %d".format(data.x.length + output.length))
-      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-    }
-
-    new Data(if (data.nomToNum(0).isEmpty) {
+    // check if the data is nominal or numerical
+    val newData: Data = new Data(if (data.nomToNum(0).isEmpty) {
       to2Decimals(zeroOneDenormalization(finalIndex map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs))
     } else {
       toNominal(zeroOneDenormalization(finalIndex map result, data.fileInfo.maxAttribs, data.fileInfo.minAttribs), data.nomToNum)
     }, finalIndex map resultClasses, None, data.fileInfo)
+    val finishTime: Long = System.nanoTime()
+
+    if (verbose) {
+      println("ORIGINAL SIZE: %d".format(data.x.length))
+      println("NEW DATA SIZE: %d".format(newData.x.length))
+      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+    }
+
+    newData
   }
 }

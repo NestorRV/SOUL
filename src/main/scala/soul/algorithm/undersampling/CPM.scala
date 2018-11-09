@@ -10,22 +10,22 @@ import scala.math.min
 /** Class Purity Maximization. Original paper: "An Unsupervised Learning Approach to Resolving the
   * Data Imbalanced Issue in Supervised Learning Problems in Functional Genomics" by Kihoon Yoon and Stephen Kwek.
   *
+  * @param data       data to work with
+  * @param seed       seed to use. If it is not provided, it will use the system time
+  * @param dist       object of Distance enumeration representing the distance to be used
+  * @param normalize  normalize the data or not
+  * @param randomData iterate through the data randomly or not
+  * @param verbose    choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class CPM() {
+class CPM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN,
+          normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the CPM algorithm.
     *
-    * @param data       data to work with
-    * @param seed       seed to use. If it is not provided, it will use the system time
-    * @param dist       object of Distance enumeration representing the distance to be used
-    * @param normalize  normalize the data or not
-    * @param randomData iterate through the data randomly or not
-    * @param verbose    choose to display information about the execution or not
     * @return undersampled data structure
     */
-  def compute(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN,
-              normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false): Data = {
+  def compute(): Data = {
     val initTime: Long = System.nanoTime()
 
     val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
@@ -127,6 +127,8 @@ class CPM() {
 
     val finishTime: Long = System.nanoTime()
 
+    val newData: Data = new Data(centers.toArray map data.x, centers.toArray map data.y, Some(centers.toArray), data.fileInfo)
+
     if (verbose) {
       val newCounter: Map[Any, Int] = (centers.toArray map classesToWorkWith).groupBy(identity).mapValues(_.length)
       println("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
@@ -137,6 +139,6 @@ class CPM() {
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    new Data(centers.toArray map data.x, centers.toArray map data.y, Some(centers.toArray), data.fileInfo)
+    newData
   }
 }

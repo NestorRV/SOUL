@@ -7,29 +7,29 @@ import soul.util.Utilities._
 /** ClusterOSS. Original paper: "ClusterOSS: a new undersampling method for imbalanced learning."
   * by Victor H Barella, Eduardo P Costa and André C P L F Carvalho.
   *
+  * @param data          data to work with
+  * @param seed          seed to use. If it is not provided, it will use the system time
+  * @param dist          object of Distance enumeration representing the distance to be used
+  * @param k             number of neighbours to use when computing k-NN rule (normally 3 neighbours)
+  * @param numClusters   number of clusters to be created by KMeans core
+  * @param restarts      number of times to relaunch KMeans core
+  * @param minDispersion stop KMeans core if dispersion is lower than this value
+  * @param maxIterations number of iterations to be done in KMeans core
+  * @param normalize     normalize the data or not
+  * @param randomData    iterate through the data randomly or not
+  * @param verbose       choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class ClusterOSS() {
+class ClusterOSS(data: Data, seed: Long = System.currentTimeMillis(),
+                 dist: Distance = Distance.EUCLIDEAN, k: Int = 3, numClusters: Int = 15, restarts: Int = 5,
+                 minDispersion: Double = 0.0001, maxIterations: Int = 100, normalize: Boolean = false,
+                 randomData: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the ClusterOSS algorithm
     *
-    * @param data          data to work with
-    * @param seed          seed to use. If it is not provided, it will use the system time
-    * @param dist          object of Distance enumeration representing the distance to be used
-    * @param k             number of neighbours to use when computing k-NN rule (normally 3 neighbours)
-    * @param numClusters   number of clusters to be created by KMeans core
-    * @param restarts      number of times to relaunch KMeans core
-    * @param minDispersion stop KMeans core if dispersion is lower than this value
-    * @param maxIterations number of iterations to be done in KMeans core
-    * @param normalize     normalize the data or not
-    * @param randomData    iterate through the data randomly or not
-    * @param verbose       choose to display information about the execution or not
     * @return undersampled data structure
     */
-  def compute(data: Data, seed: Long = System.currentTimeMillis(),
-              dist: Distance = Distance.EUCLIDEAN, k: Int = 3, numClusters: Int = 15, restarts: Int = 5,
-              minDispersion: Double = 0.0001, maxIterations: Int = 100, normalize: Boolean = false,
-              randomData: Boolean = false, verbose: Boolean = false): Data = {
+  def compute(): Data = {
     val initTime: Long = System.nanoTime()
 
     val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
@@ -91,11 +91,13 @@ class ClusterOSS() {
     val auxData: Data = new Data(x = toXData(newDataIndex map dataToWorkWith),
       y = newDataIndex map classesToWorkWith, fileInfo = data.fileInfo)
     auxData.processedData = newDataIndex map dataToWorkWith
-    val tl = new TL()
-    val resultTL: Data = tl.compute(auxData, dist = dist, minorityClass = Some(untouchableClass))
+    val tl = new TL(auxData, dist = dist, minorityClass = Some(untouchableClass))
+    val resultTL: Data = tl.compute()
     // The final instances is the result of applying Tomek Link to the content of newDataIndex
     val finalIndex: Array[Int] = (resultTL.index.get.toList map newDataIndex).toArray
     val finishTime: Long = System.nanoTime()
+
+    val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
 
     if (verbose) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
@@ -107,6 +109,6 @@ class ClusterOSS() {
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
+    newData
   }
 }

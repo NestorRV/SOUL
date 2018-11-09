@@ -9,30 +9,30 @@ import scala.math.{max, min}
 /** Undersampling Based on Clustering. Original paper: "Under-Sampling Approaches for Improving Prediction of the
   * Minority Class in an Imbalanced Dataset" by Show-Jane Yen and Yue-Shi Lee.
   *
+  * @param data          data to work with
+  * @param seed          seed to use. If it is not provided, it will use the system time
+  * @param method        selection method to apply. Possible options: random, NearMiss1, NearMiss2, NearMiss3, MostDistant and MostFar
+  * @param m             ratio used in the SSize calculation
+  * @param k             number of neighbours to use when computing k-NN rule (normally 3 neighbours)
+  * @param numClusters   number of clusters to be created by KMeans core
+  * @param restarts      number of times to relaunch KMeans core
+  * @param minDispersion stop KMeans core if dispersion is lower than this value
+  * @param maxIterations number of iterations to be done in KMeans core
+  * @param dist          object of Distance enumeration representing the distance to be used
+  * @param normalize     normalize the data or not
+  * @param randomData    iterate through the data randomly or not
+  * @param verbose       choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class SBC() {
+class SBC(data: Data, seed: Long = System.currentTimeMillis(), method: String = "random", m: Double = 1.0, k: Int = 3, numClusters: Int = 50,
+          restarts: Int = 1, minDispersion: Double = 0.0001, maxIterations: Int = 200, val dist: Distance = Distance.EUCLIDEAN,
+          normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the SBC algorithm.
     *
-    * @param data          data to work with
-    * @param seed          seed to use. If it is not provided, it will use the system time
-    * @param method        selection method to apply. Possible options: random, NearMiss1, NearMiss2, NearMiss3, MostDistant and MostFar
-    * @param m             ratio used in the SSize calculation
-    * @param k             number of neighbours to use when computing k-NN rule (normally 3 neighbours)
-    * @param numClusters   number of clusters to be created by KMeans core
-    * @param restarts      number of times to relaunch KMeans core
-    * @param minDispersion stop KMeans core if dispersion is lower than this value
-    * @param maxIterations number of iterations to be done in KMeans core
-    * @param dist          object of Distance enumeration representing the distance to be used
-    * @param normalize     normalize the data or not
-    * @param randomData    iterate through the data randomly or not
-    * @param verbose       choose to display information about the execution or not
     * @return undersampled data structure
     */
-  def compute(data: Data, seed: Long = System.currentTimeMillis(), method: String = "random", m: Double = 1.0, k: Int = 3, numClusters: Int = 50,
-              restarts: Int = 1, minDispersion: Double = 0.0001, maxIterations: Int = 200, dist: Distance = Distance.EUCLIDEAN,
-              normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false): Data = {
+  def compute(): Data = {
     val initTime: Long = System.nanoTime()
 
     val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
@@ -174,6 +174,8 @@ class SBC() {
     val finalIndex: Array[Int] = minorityElements.distinct ++ majorityElements.distinct
     val finishTime: Long = System.nanoTime()
 
+    val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
+
     if (verbose) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
       println("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
@@ -184,6 +186,6 @@ class SBC() {
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
+    newData
   }
 }

@@ -18,24 +18,24 @@ import scala.collection.mutable.ArrayBuffer
 /** Iterative Instance Adjustment for Imbalanced Domains. Original paper: "Addressing imbalanced classification with instance
   * generation techniques: IPADE-ID" by Victoria López, Isaac Triguero, Cristóbal J. Carmona, Salvador García and Francisco Herrera.
   *
+  * @param data         localTrainData to work with
+  * @param seed         seed to use. If it is not provided, it will use the system time
+  * @param iterations   number of iterations used in Differential Evolution
+  * @param strategy     strategy used in the mutation process of Differential Evolution
+  * @param randomChoice whether to choose a random individual or not
+  * @param normalize    normalize the data or not
+  * @param randomData   iterate through the data randomly or not
+  * @param verbose      choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class IPADE() {
+class IPADE(data: Data, seed: Long = System.currentTimeMillis(), iterations: Int = 100, strategy: Int = 1,
+            randomChoice: Boolean = true, normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the IPADE algorithm.
     *
-    * @param data         localTrainData to work with
-    * @param seed         seed to use. If it is not provided, it will use the system time
-    * @param iterations   number of iterations used in Differential Evolution
-    * @param strategy     strategy used in the mutation process of Differential Evolution
-    * @param randomChoice whether to choose a random individual or not
-    * @param normalize    normalize the data or not
-    * @param randomData   iterate through the data randomly or not
-    * @param verbose      choose to display information about the execution or not
     * @return undersampled data structure
     */
-  def compute(data: Data, seed: Long = System.currentTimeMillis(), iterations: Int = 100, strategy: Int = 1,
-              randomChoice: Boolean = true, normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false): Data = {
+  def compute(): Data = {
     val initTime: Long = System.nanoTime()
     val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
     val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
@@ -472,6 +472,8 @@ class IPADE() {
 
     val finishTime: Long = System.nanoTime()
 
+    val newData: Data = new Data(population.map((row: Array[Double]) => row.map((e: Double) => e.asInstanceOf[Any])), classes, None, data.fileInfo)
+
     if (verbose) {
       val newCounter: Map[Any, Int] = classes.groupBy(identity).mapValues(_.length)
       println("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
@@ -482,6 +484,6 @@ class IPADE() {
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    new Data(population.map((row: Array[Double]) => row.map((e: Double) => e.asInstanceOf[Any])), classes, None, data.fileInfo)
+    newData
   }
 }

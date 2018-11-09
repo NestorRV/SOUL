@@ -10,31 +10,31 @@ import scala.math.{abs, sqrt}
 /** Evolutionary Under Sampling. Original paper: "Evolutionary Under-Sampling for Classification with Imbalanced Data
   * Sets: Proposals and Taxonomy" by Salvador Garcia and Francisco Herrera.
   *
+  * @param data           data to work with
+  * @param seed           seed to use. If it is not provided, it will use the system time
+  * @param populationSize number of chromosomes to generate
+  * @param maxEvaluations number of evaluations
+  * @param algorithm      version of core to execute. One of: EBUSGSGM, EBUSMSGM, EBUSGSAUC, EBUSMSAUC,
+  *                       EUSCMGSGM, EUSCMMSGM, EUSCMGSAUC or EUSCMMSAUC
+  * @param dist           object of Distance enumeration representing the distance to be used
+  * @param probHUX        probability of changing a gen from 0 to 1 (used in crossover)
+  * @param recombination  recombination threshold (used in reinitialization)
+  * @param prob0to1       probability of changing a gen from 0 to 1 (used in reinitialization)
+  * @param normalize      normalize the data or not
+  * @param randomData     iterate through the data randomly or not
+  * @param verbose        choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class EUS() {
+class EUS(data: Data, seed: Long = System.currentTimeMillis(), populationSize: Int = 50, maxEvaluations: Int = 1000,
+          algorithm: String = "EBUSMSGM", dist: Distance = Distance.EUCLIDEAN, probHUX: Double = 0.25,
+          recombination: Double = 0.35, prob0to1: Double = 0.05, normalize: Boolean = false, randomData: Boolean = false,
+          verbose: Boolean = false) {
 
   /** Compute the EUS algorithm.
     *
-    * @param data           data to work with
-    * @param seed           seed to use. If it is not provided, it will use the system time
-    * @param populationSize number of chromosomes to generate
-    * @param maxEvaluations number of evaluations
-    * @param algorithm      version of core to execute. One of: EBUSGSGM, EBUSMSGM, EBUSGSAUC, EBUSMSAUC,
-    *                       EUSCMGSGM, EUSCMMSGM, EUSCMGSAUC or EUSCMMSAUC
-    * @param dist           object of Distance enumeration representing the distance to be used
-    * @param probHUX        probability of changing a gen from 0 to 1 (used in crossover)
-    * @param recombination  recombination threshold (used in reinitialization)
-    * @param prob0to1       probability of changing a gen from 0 to 1 (used in reinitialization)
-    * @param normalize      normalize the data or not
-    * @param randomData     iterate through the data randomly or not
-    * @param verbose        choose to display information about the execution or not
     * @return undersampled data structure
     */
-  def compute(data: Data, seed: Long = System.currentTimeMillis(), populationSize: Int = 50, maxEvaluations: Int = 1000,
-              algorithm: String = "EBUSMSGM", dist: Distance = Distance.EUCLIDEAN, probHUX: Double = 0.25,
-              recombination: Double = 0.35, prob0to1: Double = 0.05, normalize: Boolean = false, randomData: Boolean = false,
-              verbose: Boolean = false): Data = {
+  def compute(): Data = {
     val initTime: Long = System.nanoTime()
 
     val counter: Map[Any, Int] = data.y.groupBy(identity).mapValues(_.length)
@@ -212,6 +212,8 @@ class EUS() {
     val finalIndex: Array[Int] = zeroOneToIndex(bestChromosome) map targetInstances
     val finishTime: Long = System.nanoTime()
 
+    val newData: Data = new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
+
     if (verbose) {
       val newCounter: Map[Any, Int] = (finalIndex map classesToWorkWith).groupBy(identity).mapValues(_.length)
       println("ORIGINAL SIZE: %d".format(dataToWorkWith.length))
@@ -222,6 +224,6 @@ class EUS() {
       println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
     }
 
-    new Data(finalIndex map data.x, finalIndex map data.y, Some(finalIndex), data.fileInfo)
+    newData
   }
 }

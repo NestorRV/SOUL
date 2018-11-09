@@ -10,9 +10,17 @@ import scala.util.Random
 /** ADOMS algorithm. Original paper: "The Generation Mechanism of Synthetic Minority Class Examples" by Sheng TANG
   * and Si-ping CHEN.
   *
+  * @param data      data to work with
+  * @param seed      seed to use. If it is not provided, it will use the system time
+  * @param percent   amount of samples N%
+  * @param k         number of neighbors
+  * @param dist      object of Distance enumeration representing the distance to be used
+  * @param normalize normalize the data or not
+  * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
-class ADOMS() {
+class ADOMS(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 300, k: Int = 5,
+            dist: Distance = Distance.EUCLIDEAN, normalize: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the first principal component axis
     *
@@ -35,17 +43,9 @@ class ADOMS() {
 
   /** Compute the ADOMS algorithm
     *
-    * @param data      data to work with
-    * @param seed      seed to use. If it is not provided, it will use the system time
-    * @param percent   amount of samples N%
-    * @param k         number of neighbors
-    * @param dist      object of Distance enumeration representing the distance to be used
-    * @param normalize normalize the data or not
-    * @param verbose   choose to display information about the execution or not
     * @return synthetic samples generated
     */
-  def compute(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 300, k: Int = 5,
-              dist: Distance = Distance.EUCLIDEAN, normalize: Boolean = false, verbose: Boolean = false): Data = {
+  def compute(): Data = {
     val initTime: Long = System.nanoTime()
     val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
     val minorityClassIndex: Array[Int] = minority(data.y)
@@ -97,20 +97,22 @@ class ADOMS() {
       })
     })
 
-    val finishTime: Long = System.nanoTime()
-
-    if (verbose) {
-      println("ORIGINAL SIZE: %d".format(data.x.length))
-      println("NEW DATA SIZE: %d".format(data.x.length + output.length))
-      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-    }
-
-    new Data(if (data.fileInfo.nominal.length == 0) {
+    // check if the data is nominal or numerical
+    val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
       to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
         data.fileInfo.minAttribs) else output))
     } else {
       toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
         data.fileInfo.minAttribs) else output), data.nomToNum)
     }, Array.concat(data.y, Array.fill(output.length)(minorityClass)), None, data.fileInfo)
+    val finishTime: Long = System.nanoTime()
+
+    if (verbose) {
+      println("ORIGINAL SIZE: %d".format(data.x.length))
+      println("NEW DATA SIZE: %d".format(newData.x.length))
+      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+    }
+
+    newData
   }
 }

@@ -10,23 +10,23 @@ import scala.util.Random
 /** SMOTE algorithm. Original paper: "SMOTE: Synthetic Minority Over-sampling Technique" by Nitesh V. Chawla, Kevin W.
   * Bowyer, Lawrence O. Hall and W. Philip Kegelmeyer.
   *
+  * @param data      data to work with
+  * @param seed      seed to use. If it is not provided, it will use the system time
+  * @param percent   amount of SMOTE N%
+  * @param k         number of minority class nearest neighbors
+  * @param dist      object of Distance enumeration representing the distance to be used
+  * @param normalize normalize the data or not
+  * @param verbose   choose to display information about the execution or not
   * @author David López Pretel
   */
-class SMOTE() {
+class SMOTE(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 500, k: Int = 5,
+            dist: Distance = Distance.EUCLIDEAN, normalize: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the SMOTE algorithm
     *
-    * @param data      data to work with
-    * @param seed      seed to use. If it is not provided, it will use the system time
-    * @param percent   amount of SMOTE N%
-    * @param k         number of minority class nearest neighbors
-    * @param dist      object of Distance enumeration representing the distance to be used
-    * @param normalize normalize the data or not
-    * @param verbose   choose to display information about the execution or not
     * @return synthetic samples generated
     */
-  def compute(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 500, k: Int = 5,
-              dist: Distance = Distance.EUCLIDEAN, normalize: Boolean = false, verbose: Boolean = false): Data = {
+  def compute(): Data = {
     val initTime: Long = System.nanoTime()
 
     if (percent > 100 && percent % 100 != 0) {
@@ -90,20 +90,22 @@ class SMOTE() {
       })
     })
 
-    val finishTime: Long = System.nanoTime()
-
-    if (verbose) {
-      println("ORIGINAL SIZE: %d".format(data.x.length))
-      println("NEW DATA SIZE: %d".format(data.x.length + output.length))
-      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-    }
-
-    new Data(if (data.fileInfo.nominal.length == 0) {
+    // check if the data is nominal or numerical
+    val newData: Data = new Data(if (data.fileInfo.nominal.length == 0) {
       to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
         data.fileInfo.minAttribs) else output))
     } else {
       toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
         data.fileInfo.minAttribs) else output), data.nomToNum)
     }, Array.concat(data.y, Array.fill(output.length)(minorityClass)), None, data.fileInfo)
+    val finishTime: Long = System.nanoTime()
+
+    if (verbose) {
+      println("ORIGINAL SIZE: %d".format(data.x.length))
+      println("NEW DATA SIZE: %d".format(newData.x.length))
+      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+    }
+
+    newData
   }
 }
