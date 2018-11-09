@@ -90,8 +90,8 @@ class SMOTEENN(data: Data, seed: Long = System.currentTimeMillis(), percent: Int
     val ennData: Data = new Data(x = toXData(result), y = resultClasses, fileInfo = data.fileInfo)
     ennData.processedData = result
     val enn = new ENN(ennData, dist = dist)
-    val resultTL: Data = enn.compute()
-    val finalIndex: Array[Int] = result.indices.diff(resultTL.index.get).toArray
+    val resultENN: Data = enn.compute()
+    val finalIndex: Array[Int] = result.indices.diff(resultENN.index.get).toArray
 
     // check if the data is nominal or numerical
     val newData: Data = new Data(if (data.nomToNum(0).isEmpty) {
