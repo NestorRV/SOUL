@@ -90,8 +90,8 @@ class SMOTEENN() {
     val ennData: Data = new Data(x = toXData(result), y = resultClasses, fileInfo = data.fileInfo)
     ennData.processedData = result
     val enn = new ENN()
-    val resultTL: Data = enn.compute(ennData, dist = dist)
-    val finalIndex: Array[Int] = result.indices.diff(resultTL.index.get).toArray
+    val resultENN: Data = enn.compute(ennData, dist = dist)
+    val finalIndex: Array[Int] = result.indices.diff(resultENN.index.get).toArray
 
     val finishTime: Long = System.nanoTime()
 
