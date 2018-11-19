@@ -4,6 +4,7 @@ import soul.data.Data
 import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
+import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
 /** NearMiss. Original paper: "kNN Approach to Unbalanced Data Distribution: A Case Study involving Information
@@ -52,12 +53,13 @@ class NM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = D
       (null, null, null)
     }
 
-    val majElements: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label != untouchableClass => i }
-    val minElements: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label == untouchableClass => i }
-    val minNeighbours: Array[Array[Double]] = minElements map dataToWorkWith
-    val majNeighbours: Array[Array[Double]] = majElements map dataToWorkWith
-    val minClasses: Array[Any] = minElements map classesToWorkWith
-    val majClasses: Array[Any] = majElements map classesToWorkWith
+    val majElements: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
+    val minElements: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
+    classesToWorkWith.zipWithIndex.foreach(i => if (i._1 == untouchableClass) minElements += i._2 else majElements += i._2)
+    val minNeighbours: Array[Array[Double]] = minElements.toArray map dataToWorkWith
+    val majNeighbours: Array[Array[Double]] = majElements.toArray map dataToWorkWith
+    val minClasses: Array[Any] = minElements.toArray map classesToWorkWith
+    val majClasses: Array[Any] = majElements.toArray map classesToWorkWith
     val selectedMajElements: Array[Int] = if (version == 1) {
       majElements.map { i: Int =>
         val result: (Any, Array[Int], Array[Double]) = if (dist == Distance.EUCLIDEAN) {
