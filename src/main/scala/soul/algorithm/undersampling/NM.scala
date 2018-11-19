@@ -69,7 +69,7 @@ class NM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = D
             attrClassesCounter, "nearest")
         }
         (i, (result._2 map result._3).sum / result._2.length)
-      }.sortBy(_._2).map(_._1)
+      }.toArray.sortBy(_._2).map(_._1)
     } else if (version == 2) {
       majElements.map { i: Int =>
         val result: (Any, Array[Int], Array[Double]) = if (dist == Distance.EUCLIDEAN) {
@@ -79,7 +79,7 @@ class NM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = D
             attrClassesCounter, "farthest")
         }
         (i, (result._2 map result._3).sum / result._2.length)
-      }.sortBy(_._2).map(_._1)
+      }.toArray.sortBy(_._2).map(_._1)
     } else if (version == 3) {
       // We shuffle the data because, at last, we are going to take, at least, minElements.length * ratio elements and if
       // we don't shuffle, we only take majority elements examples that are near to the first minority class examples
