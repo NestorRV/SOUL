@@ -55,9 +55,9 @@ class OSS(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
     val classes = c map classesToWorkWith
     val labels: Seq[(Int, Any)] = dataToWorkWith.indices.map { i: Int =>
       val label: Any = if (dist == Distance.EUCLIDEAN) {
-        nnRule(neighbours, dataToWorkWith(i), i, classes, 1, "nearest")._1
+        nnRule(neighbours, dataToWorkWith(i), c.indexOf(i), classes, 1, "nearest")._1
       } else {
-        nnRuleHVDM(neighbours, dataToWorkWith(i), i, classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
+        nnRuleHVDM(neighbours, dataToWorkWith(i), c.indexOf(i), classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
       }
       (i, label)
     }
