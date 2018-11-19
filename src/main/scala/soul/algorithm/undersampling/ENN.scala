@@ -33,10 +33,8 @@ class ENN(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
     val untouchableClass: Any = counter.minBy((c: (Any, Int)) => c._2)._1
     val random: scala.util.Random = new scala.util.Random(seed)
     var dataToWorkWith: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
-    var randomIndex: List[Int] = data.x.indices.toList
     val classesToWorkWith: Array[Any] = if (randomData) {
-      // Index to shuffle (randomize) the data
-      randomIndex = random.shuffle(data.y.indices.toList)
+      val randomIndex: List[Int] = random.shuffle(data.y.indices.toList)
       dataToWorkWith = (randomIndex map dataToWorkWith).toArray
       (randomIndex map data.y).toArray
     } else {
