@@ -95,7 +95,7 @@ class NM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = D
       throw new Exception("Invalid argument: version should be: 1, 2 or 3")
     }
 
-    val finalIndex: Array[Int] = minElements ++ selectedMajElements.take((minElements.length * ratio).toInt)
+    val finalIndex: Array[Int] = minElements.toArray ++ selectedMajElements.take((minElements.length * ratio).toInt)
     val finishTime: Long = System.nanoTime()
 
     if (verbose) {
