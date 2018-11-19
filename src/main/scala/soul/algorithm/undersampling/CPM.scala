@@ -55,8 +55,6 @@ class CPM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
     }
 
     def purityMaximization(parentImpurity: Double, parentCluster: Array[Int], center: Int): Unit = {
-      val classes: Array[Any] = (randomIndex map data.y).toArray
-
       val cluster1: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
       val cluster2: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
       val posElements: ArrayBuffer[Int] = new ArrayBuffer[Int](0)
@@ -69,7 +67,7 @@ class CPM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
       var impurity1: Double = Double.PositiveInfinity
       var impurity2: Double = Double.PositiveInfinity
 
-      parentCluster.foreach((f: Int) => if (classes(f) == untouchableClass) posElements += f else negElements += f)
+      parentCluster.foreach((f: Int) => if (data.y(f) == untouchableClass) posElements += f else negElements += f)
 
       val pairs: ArrayBuffer[(Int, Int)] = for {x <- negElements; y <- posElements} yield (x, y)
 
@@ -100,14 +98,14 @@ class CPM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
         }
 
         if (cluster1.nonEmpty)
-          impurity1 = cluster1.count((element: Int) => classes(element) == untouchableClass).toDouble / cluster1.length
+          impurity1 = cluster1.count((element: Int) => data.y(element) == untouchableClass).toDouble / cluster1.length
         else {
           centers += center2
           return
         }
 
         if (cluster2.nonEmpty)
-          impurity2 = cluster2.count((element: Int) => classes(element) == untouchableClass).toDouble / cluster2.length
+          impurity2 = cluster2.count((element: Int) => data.y(element) == untouchableClass).toDouble / cluster2.length
         else {
           centers += center1
           return
