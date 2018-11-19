@@ -1,6 +1,7 @@
 package soul.algorithm.undersampling
 
 import soul.data.Data
+import soul.util.KDTree
 import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
@@ -49,15 +50,21 @@ class OSS(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
     val positives: Array[Int] = classesToWorkWith.zipWithIndex.collect { case (label, i) if label == untouchableClass => i }
     val randomElement: Int = classesToWorkWith.indices.diff(positives)(new util.Random(seed).nextInt(classesToWorkWith.length - positives.length))
     val c: Array[Int] = positives ++ Array(randomElement)
-    val neighbours = c map dataToWorkWith
-    val classes = c map classesToWorkWith
-    val labels: Seq[(Int, Any)] = dataToWorkWith.indices.map { i: Int =>
-      val label: Any = if (dist == Distance.EUCLIDEAN) {
-        nnRule(neighbours, dataToWorkWith(i), c.indexOf(i), classes, 1, "nearest")._1
-      } else {
-        nnRuleHVDM(neighbours, dataToWorkWith(i), c.indexOf(i), classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
-      }
-      (i, label)
+
+    val kdTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+      Some(new KDTree(c map dataToWorkWith, c map classesToWorkWith, dataToWorkWith(0).length))
+    } else {
+      None
+    }
+
+    val labels: Seq[(Int, Any)] = if (dist == Distance.EUCLIDEAN) {
+      dataToWorkWith.indices.map(i => (i, mode(kdTree.get.nNeighbours(dataToWorkWith(i), 1)._2.toArray)))
+    } else {
+      val neighbours = c map dataToWorkWith
+      val classes = c map classesToWorkWith
+
+      dataToWorkWith.indices.map(i => (i, nnRuleHVDM(neighbours, dataToWorkWith(i), c.indexOf(i), classes, 1, data.fileInfo.nominal,
+        sds, attrCounter, attrClassesCounter, "nearest")._1))
     }
     val misclassified: Array[Int] = labels.collect { case (i, label) if label != classesToWorkWith(i) => i }.toArray
     val finalC: Array[Int] = (misclassified ++ c).distinct
