@@ -70,22 +70,23 @@ class SMOTE(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
     var newIndex: Int = 0
     val r: Random = new Random(seed)
     // for each minority class sample
-    minorityClassIndex.zipWithIndex.par.foreach((i: (Int, Int)) => {
+    minorityClassIndex.par.foreach((i: Int) => {
       neighbors = if (dist == Distance.EUCLIDEAN) {
-        kdTree.get.nNeighbours(samples(i._1), k)._3.toArray
+        kdTree.get.nNeighbours(samples(i), k)._3.toArray
       } else {
-        kNeighborsHVDM(minorityClassIndex map samples, i._2, k, data.fileInfo.nominal, sds, attrCounter,
-          attrClassesCounter).map(minorityClassIndex(_))
+        kNeighborsHVDM(samples, i, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
       // compute populate for the sample
       (0 until N).par.foreach((j: Int) => {
         val nn: Int = r.nextInt(neighbors.length)
         // compute attributes of the sample
-        samples(0).indices.foreach((atrib: Int) => {
-          val diff: Double = samples(neighbors(nn))(atrib) - samples(i._1)(atrib)
+        var atrib: Int = 0
+        while(atrib < samples(0).length) {
+          val diff: Double = samples(neighbors(nn))(atrib) - samples(i)(atrib)
           val gap: Float = r.nextFloat
-          output(newIndex)(atrib) = samples(i._1)(atrib) + gap * diff
-        })
+          output(newIndex)(atrib) = samples(i)(atrib) + gap * diff
+          atrib += 1
+        }
         newIndex = newIndex + 1
       })
     })
