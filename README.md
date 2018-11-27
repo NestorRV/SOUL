@@ -72,9 +72,9 @@ import soul.io.Reader
 import soul.data.Data
 
 /* Read a csv file or any delimited text file */
-val csvData: Data = Reader.readDelimitedText(file = pathToFile)
+val csvData: Data = Reader.readDelimitedText(file = <pathToFile>)
 /* Read a WEKA arff file */
-val arffData: Data = Reader.readArff(file = pathToFile)
+val arffData: Data = Reader.readArff(file = <pathToFile>)
 ```
 
 Now we're going to run an undersampling algorithm:
@@ -97,6 +97,6 @@ Finally, we only need to save the result to a file:
 ```scala
 import soul.io.Writer
 
-Writer.writeDelimitedText(file = "resultCSV.csv", data = resultCSV)
-Writer.writeArff(file = "resultARFF.arff", data = resultARFF)
+Writer.writeDelimitedText(file = <pathToFile>, data = resultCSV)
+Writer.writeArff(file = <pathToFile>, data = resultARFF)
 ```
