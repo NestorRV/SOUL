@@ -24,7 +24,7 @@ class KDTree(x: Array[Array[Double]], y: Array[Any], dimensions: Int) {
     (instances._1, labels, index)
   }
 
-  def apply(x: Array[Double]) = kDTreeMap(x)
+  def apply(x: Array[Double]): (Any, Int) = kDTreeMap(x)
 
   def addElement(x: Array[Double], y: Any): Unit = {
     kDTreeMap = kDTreeMap + (x -> (y, kDTreeMap.size + 1))

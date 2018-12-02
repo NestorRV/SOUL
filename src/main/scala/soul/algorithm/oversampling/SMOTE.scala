@@ -77,7 +77,7 @@ class SMOTE(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
         kNeighborsHVDM(samples, i, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
       // compute populate for the sample
-      (0 until N).par.foreach((j: Int) => {
+      (0 until N).par.foreach((_: Int) => {
         val nn: Int = r.nextInt(neighbors.length)
         // compute attributes of the sample
         var atrib: Int = 0
