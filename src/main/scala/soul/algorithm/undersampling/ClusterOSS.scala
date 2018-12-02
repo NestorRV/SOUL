@@ -73,7 +73,7 @@ class ClusterOSS(data: Data, seed: Long = System.currentTimeMillis(),
     val classes: Array[Any] = test map classesToWorkWith
     val calculatedLabels: Array[(Int, Any)] = test.zipWithIndex.map { i =>
       val label: Any = if (dist == Distance.EUCLIDEAN) {
-        nnRule(neighbours, dataToWorkWith(i._1), i._2, classes, 1, "nearet")._1
+        nnRule(neighbours, dataToWorkWith(i._1), i._2, classes, 1, "nearest")._1
       } else {
         nnRuleHVDM(neighbours, dataToWorkWith(i._1), i._2, classes, 1, data.fileInfo.nominal, sds, attrCounter,
           attrClassesCounter, "nearest")._1
