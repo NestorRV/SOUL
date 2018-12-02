@@ -72,9 +72,9 @@ class SBC(data: Data, seed: Long = System.currentTimeMillis(), method: String = 
       classesToWorkWith(index) == untouchableClass)).toArray
 
     val majorityElements: Array[Int] = if (method.equals("random")) {
-      sSizes.filter(_._2 != 0).flatMap { clusteridSize: (Int, Int) =>
-        random.shuffle(assignment(clusteridSize._1).toList).filter((e: Int) =>
-          classesToWorkWith(e) != untouchableClass).take(clusteridSize._2)
+      sSizes.filter(_._2 != 0).flatMap { clusterIdSize: (Int, Int) =>
+        random.shuffle(assignment(clusterIdSize._1).toList).filter((e: Int) =>
+          classesToWorkWith(e) != untouchableClass).take(clusterIdSize._2)
       }
     } else {
       sSizes.filter(_._2 != 0).flatMap { clusteridSize: (Int, Int) =>
