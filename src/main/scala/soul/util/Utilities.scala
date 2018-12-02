@@ -501,7 +501,7 @@ object Utilities {
     "%03d min, %03d sec, %03d millis".format(minutes, seconds, millis)
   }
 
-  /** Decide the label using the NNRule considering k neighbours of data set
+  /** Decide the label using the NNRule considering k neighbours of dataset
     *
     * @param neighbours neighbours of the element
     * @param instance   target instance
@@ -554,7 +554,7 @@ object Utilities {
     (mode(kBest map labels), kBest, distances)
   }
 
-  /** Decide the label using the NNRule considering k neighbours of data set
+  /** Decide the label using the NNRule considering k neighbours of dataset
     *
     * @param neighbours         neighbours of the element
     * @param instance           target instance
