@@ -59,7 +59,7 @@ class ENN(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
       j += 1
     }
 
-    val kdTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+    val KDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
       Some(new KDTree(dataToWorkWith, classesToWorkWith, dataToWorkWith(0).length))
     } else {
       None
@@ -71,7 +71,7 @@ class ENN(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
       val selected: Array[(Int, Boolean)] = if (targetClass != untouchableClass) {
         majorityClassIndex.par.map { j =>
           val label = if (dist == Distance.EUCLIDEAN) {
-            mode(kdTree.get.nNeighbours(dataToWorkWith(j), k)._2.toArray)
+            mode(KDTree.get.nNeighbours(dataToWorkWith(j), k)._2.toArray)
           } else {
             nnRuleHVDM(dataToWorkWith, dataToWorkWith(j), j, classesToWorkWith, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
           }

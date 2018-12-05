@@ -51,14 +51,14 @@ class OSS(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
     val randomElement: Int = classesToWorkWith.indices.diff(positives)(new util.Random(seed).nextInt(classesToWorkWith.length - positives.length))
     val c: Array[Int] = positives ++ Array(randomElement)
 
-    val kdTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+    val KDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
       Some(new KDTree(c map dataToWorkWith, c map classesToWorkWith, dataToWorkWith(0).length))
     } else {
       None
     }
 
     val labels: Seq[(Int, Any)] = if (dist == Distance.EUCLIDEAN) {
-      dataToWorkWith.indices.map(i => (i, mode(kdTree.get.nNeighbours(dataToWorkWith(i), 1)._2.toArray)))
+      dataToWorkWith.indices.map(i => (i, mode(KDTree.get.nNeighbours(dataToWorkWith(i), 1)._2.toArray)))
     } else {
       val neighbours = c map dataToWorkWith
       val classes = c map classesToWorkWith

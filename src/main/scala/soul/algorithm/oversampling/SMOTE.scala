@@ -45,7 +45,7 @@ class SMOTE(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
       (null, null, null)
     }
 
-    val kdTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+    val KDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
       Some(new KDTree(samples, data.y, samples(0).length))
     } else {
       None
@@ -72,7 +72,7 @@ class SMOTE(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
     // for each minority class sample
     minorityClassIndex.par.foreach((i: Int) => {
       neighbors = if (dist == Distance.EUCLIDEAN) {
-        kdTree.get.nNeighbours(samples(i), k)._3.toArray
+        KDTree.get.nNeighbours(samples(i), k)._3.toArray
       } else {
         kNeighborsHVDM(samples, i, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }

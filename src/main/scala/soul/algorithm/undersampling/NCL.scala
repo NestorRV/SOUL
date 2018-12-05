@@ -74,7 +74,7 @@ class NCL(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
     val uniqueMajClasses = (majorityIndex map classesToWorkWith).distinct
     val ratio: Double = dataToWorkWith.length * threshold
 
-    val kdTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+    val KDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
       Some(new KDTree((minorityIndex map dataToWorkWith).toArray, (majorityIndex map classesToWorkWith).toArray, dataToWorkWith(0).length))
     } else {
       None
@@ -82,7 +82,7 @@ class NCL(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
 
     def selectNeighbours(l: Int): ArrayBuffer[Int] = {
       var selectedElements = new ArrayBuffer[Int](0)
-      val (_, labels, index) = kdTree.get.nNeighbours(dataToWorkWith(l), k)
+      val (_, labels, index) = KDTree.get.nNeighbours(dataToWorkWith(l), k)
       val label = mode(labels.toArray)
 
       if (label != classesToWorkWith(l)) {
