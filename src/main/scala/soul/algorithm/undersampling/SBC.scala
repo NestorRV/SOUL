@@ -1,6 +1,7 @@
 package soul.algorithm.undersampling
 
 import soul.data.Data
+import soul.util.KDTree
 import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
@@ -100,66 +101,87 @@ class SBC(data: Data, seed: Long = System.currentTimeMillis(), method: String = 
           val minClasses: Array[Any] = minorityElementsIndex.unzip._2 map classesToWorkWith
           val majClasses: Array[Any] = majorityElementsIndex.unzip._2 map classesToWorkWith
 
+          val KDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+            Some(new KDTree(minNeighbours, minClasses, dataToWorkWith(0).length))
+          } else {
+            None
+          }
+
+          val majorityKDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+            Some(new KDTree(majNeighbours, majClasses, dataToWorkWith(0).length))
+          } else {
+            None
+          }
+
+          val reverseKDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+            Some(new KDTree(minNeighbours, minClasses, dataToWorkWith(0).length, which = "farthest"))
+          } else {
+            None
+          }
+
           if (method.equals("NearMiss1")) {
             // selects the majority class samples whose average distances to k nearest minority class samples in the ith cluster are the smallest.
             val meanDistances: Array[(Int, Double)] = majorityElementsIndex.map { i: (Int, Int) =>
-              val result: (Any, Array[Int], Array[Double]) = if (dist == Distance.EUCLIDEAN) {
-                nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, "nearest")
+              if (dist == Distance.EUCLIDEAN) {
+                val index = KDTree.get.nNeighbours(dataToWorkWith(i._1), k)._3
+                (i._1, index.map(j => euclidean(dataToWorkWith(i._1), dataToWorkWith(j))).sum / index.length)
               } else {
-                nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, data.fileInfo.nominal, sds, attrCounter,
-                  attrClassesCounter, "nearest")
+                val result: (Any, Array[Int], Array[Double]) = nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), -1, minClasses, k,
+                  data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
+                (i._1, (result._2 map result._3).sum / result._2.length)
               }
-
-              (i._1, (result._2 map result._3).sum / result._2.length)
             }
             meanDistances.sortBy((pair: (Int, Double)) => pair._2).take(clusteridSize._2).map(_._1)
           } else if (method.equals("NearMiss2")) {
             // selects the majority class samples whose average distances to k farthest minority class samples in the ith cluster are the smallest.
             val meanDistances: Array[(Int, Double)] = majorityElementsIndex.map { i: (Int, Int) =>
-              val result: (Any, Array[Int], Array[Double]) = if (dist == Distance.EUCLIDEAN) {
-                nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, "farthest")
+              if (dist == Distance.EUCLIDEAN) {
+                val index = reverseKDTree.get.nNeighbours(dataToWorkWith(i._1), k)._3
+                (i._1, index.map(j => euclidean(dataToWorkWith(i._1), dataToWorkWith(j))).sum / index.length)
               } else {
-                nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, 3, data.fileInfo.nominal, sds, attrCounter,
-                  attrClassesCounter, "farthest")
+                val result: (Any, Array[Int], Array[Double]) = nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), -1, minClasses, k,
+                  data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "farthest")
+                (i._1, (result._2 map result._3).sum / result._2.length)
               }
-              (i._1, (result._2 map result._3).sum / result._2.length)
             }
             meanDistances.sortBy((pair: (Int, Double)) => pair._2).take(clusteridSize._2).map(_._1)
           } else if (method.equals("NearMiss3")) {
             // selects the majority class samples whose average distances to the closest minority class samples in the ith cluster are the smallest.
             val meanDistances: Array[(Int, Double)] = majorityElementsIndex.map { i: (Int, Int) =>
-              val result: (Any, Array[Int], Array[Double]) = if (dist == Distance.EUCLIDEAN) {
-                nnRule(majNeighbours, dataToWorkWith(i._1), i._1, majClasses, k, "nearest")
+              if (dist == Distance.EUCLIDEAN) {
+                val index = majorityKDTree.get.nNeighbours(dataToWorkWith(i._1), k)._3
+                (i._1, index.map(j => euclidean(dataToWorkWith(i._1), dataToWorkWith(j))).sum / index.length)
               } else {
-                nnRuleHVDM(majNeighbours, dataToWorkWith(i._1), i._1, majClasses, k, data.fileInfo.nominal, sds, attrCounter,
-                  attrClassesCounter, "nearest")
+                val result: (Any, Array[Int], Array[Double]) = nnRuleHVDM(majNeighbours, dataToWorkWith(i._1), -1, majClasses, k,
+                  data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
+                (i._1, (result._2 map result._3).sum / result._2.length)
               }
-              (i._1, (result._2 map result._3).sum / result._2.length)
             }
             meanDistances.sortBy((pair: (Int, Double)) => pair._2).take(clusteridSize._2).map(_._1)
           } else if (method.equals("MostDistant")) {
             // selects the majority class samples whose average distances to M closest minority class samples in the ith cluster are the farthest.
             val meanDistances: Array[(Int, Double)] = majorityElementsIndex.map { i: (Int, Int) =>
-              val result: (Any, Array[Int], Array[Double]) = if (dist == Distance.EUCLIDEAN) {
-                nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, k, "nearest")
+              if (dist == Distance.EUCLIDEAN) {
+                val index = KDTree.get.nNeighbours(dataToWorkWith(i._1), k)._3
+                (i._1, index.map(j => euclidean(dataToWorkWith(i._1), dataToWorkWith(j))).sum / index.length)
               } else {
-                nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, k, data.fileInfo.nominal, sds, attrCounter,
-                  attrClassesCounter, "nearest")
+                val result: (Any, Array[Int], Array[Double]) = nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), -1, minClasses, k,
+                  data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
+                (i._1, (result._2 map result._3).sum / result._2.length)
               }
-              (i._1, (result._2 map result._3).sum / result._2.length)
             }
             meanDistances.sortBy((pair: (Int, Double)) => pair._2).reverse.take(clusteridSize._2).map(_._1)
           } else if (method.equals("MostFar")) {
             // selects the majority class samples whose average distances to all minority class samples in the cluster are the farthest
             val meanDistances: Array[(Int, Double)] = majorityElementsIndex.map { i: (Int, Int) =>
-              val result: (Any, Array[Int], Array[Double]) = if (dist == Distance.EUCLIDEAN) {
-                nnRule(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, minorityElementsIndex.unzip._2.length, "nearest")
+              if (dist == Distance.EUCLIDEAN) {
+                val index = KDTree.get.nNeighbours(dataToWorkWith(i._1), minorityElementsIndex.length)._3
+                (i._1, index.map(j => euclidean(dataToWorkWith(i._1), dataToWorkWith(j))).sum / index.length)
               } else {
-                nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), i._1, minClasses, minorityElementsIndex.unzip._2.length,
-                  data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
+                val result: (Any, Array[Int], Array[Double]) = nnRuleHVDM(minNeighbours, dataToWorkWith(i._1), -1, minClasses,
+                  minorityElementsIndex.length, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
+                (i._1, (result._2 map result._3).sum / result._2.length)
               }
-
-              (i._1, (result._2 map result._3).sum / result._2.length)
             }
             meanDistances.sortBy((pair: (Int, Double)) => pair._2).take(clusteridSize._2).map(_._1)
           } else {
