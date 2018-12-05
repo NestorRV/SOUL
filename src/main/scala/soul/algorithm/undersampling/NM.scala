@@ -68,6 +68,12 @@ class NM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = D
       None
     }
 
+    val majorityKDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+      Some(new KDTree(majNeighbours, majClasses, dataToWorkWith(0).length))
+    } else {
+      None
+    }
+
     val reverseKDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
       Some(new KDTree(minNeighbours, minClasses, dataToWorkWith(0).length, which = "farthest"))
     } else {
@@ -101,7 +107,7 @@ class NM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = D
       // we don't shuffle, we only take majority elements examples that are near to the first minority class examples
       new Random(seed).shuffle(minElements.flatMap { i: Int =>
         if (dist == Distance.EUCLIDEAN) {
-          KDTree.get.nNeighbours(dataToWorkWith(i), 3)._3
+          majorityKDTree.get.nNeighbours(dataToWorkWith(i), 3)._3
         } else {
           nnRuleHVDM(majNeighbours, dataToWorkWith(i), -1, majClasses, nNeighbours, data.fileInfo.nominal, sds, attrCounter,
             attrClassesCounter, "nearest")._2
