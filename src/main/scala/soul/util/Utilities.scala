@@ -508,7 +508,7 @@ object Utilities {
     * @param id         id of the instance
     * @param labels     labels associated to each point in data
     * @param k          number of neighbours to consider
-    * @param which      if it's sets to "nearest", return the nearest which, if it sets "farthest", return the farthest which
+    * @param which      if it's set to "nearest", return the nearest neighbours, if it sets "farthest", return the farthest ones
     * @return the label associated to newPoint and the index of the k-nearest which
     */
   def nnRule(neighbours: Array[Array[Double]], instance: Array[Double], id: Int, labels: Array[Any], k: Int,
