@@ -83,7 +83,7 @@ class NM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = D
     val selectedMajElements: Array[Int] = if (version == 1) {
       majElements.map { i: Int =>
         if (dist == Distance.EUCLIDEAN) {
-          val (_, labels, index) = KDTree.get.nNeighbours(dataToWorkWith(i), 3)
+          val index = KDTree.get.nNeighbours(dataToWorkWith(i), 3)._3
           (i, index.map(j => euclidean(dataToWorkWith(i), dataToWorkWith(j))).sum / index.length)
         } else {
           val result: (Any, Array[Int], Array[Double]) = nnRuleHVDM(minNeighbours, dataToWorkWith(i), -1, minClasses, 3,
@@ -94,7 +94,7 @@ class NM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = D
     } else if (version == 2) {
       majElements.map { i: Int =>
         if (dist == Distance.EUCLIDEAN) {
-          val (_, labels, index) = reverseKDTree.get.nNeighbours(dataToWorkWith(i), 3)
+          val index = reverseKDTree.get.nNeighbours(dataToWorkWith(i), 3)._3
           (i, index.map(j => euclidean(dataToWorkWith(i), dataToWorkWith(j))).sum / index.length)
         } else {
           val result: (Any, Array[Int], Array[Double]) = nnRuleHVDM(minNeighbours, dataToWorkWith(i), -1, minClasses, 3,
