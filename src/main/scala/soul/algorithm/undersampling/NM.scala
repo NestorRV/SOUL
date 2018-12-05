@@ -1,6 +1,7 @@
 package soul.algorithm.undersampling
 
 import soul.data.Data
+import soul.util.KDTree
 import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
@@ -60,34 +61,49 @@ class NM(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = D
     val majNeighbours: Array[Array[Double]] = majElements.toArray map dataToWorkWith
     val minClasses: Array[Any] = minElements.toArray map classesToWorkWith
     val majClasses: Array[Any] = majElements.toArray map classesToWorkWith
+
+    val KDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+      Some(new KDTree(minNeighbours, minClasses, dataToWorkWith(0).length))
+    } else {
+      None
+    }
+
+    val reverseKDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+      Some(new KDTree(minNeighbours, minClasses, dataToWorkWith(0).length, which = "farthest"))
+    } else {
+      None
+    }
+
     val selectedMajElements: Array[Int] = if (version == 1) {
       majElements.map { i: Int =>
-        val result: (Any, Array[Int], Array[Double]) = if (dist == Distance.EUCLIDEAN) {
-          nnRule(minNeighbours, dataToWorkWith(i), i, minClasses, 3, "nearest")
+        if (dist == Distance.EUCLIDEAN) {
+          val (_, labels, index) = KDTree.get.nNeighbours(dataToWorkWith(i), 3)
+          (i, index.map(j => euclidean(dataToWorkWith(i), dataToWorkWith(j))).sum / index.length)
         } else {
-          nnRuleHVDM(minNeighbours, dataToWorkWith(i), i, minClasses, 3, data.fileInfo.nominal, sds, attrCounter,
-            attrClassesCounter, "nearest")
+          val result: (Any, Array[Int], Array[Double]) = nnRuleHVDM(minNeighbours, dataToWorkWith(i), -1, minClasses, 3,
+            data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")
+          (i, (result._2 map result._3).sum / result._2.length)
         }
-        (i, (result._2 map result._3).sum / result._2.length)
       }.toArray.sortBy(_._2).map(_._1)
     } else if (version == 2) {
       majElements.map { i: Int =>
-        val result: (Any, Array[Int], Array[Double]) = if (dist == Distance.EUCLIDEAN) {
-          nnRule(minNeighbours, dataToWorkWith(i), i, minClasses, 3, "farthest")
+        if (dist == Distance.EUCLIDEAN) {
+          val (_, labels, index) = reverseKDTree.get.nNeighbours(dataToWorkWith(i), 3)
+          (i, index.map(j => euclidean(dataToWorkWith(i), dataToWorkWith(j))).sum / index.length)
         } else {
-          nnRuleHVDM(minNeighbours, dataToWorkWith(i), i, minClasses, 3, data.fileInfo.nominal, sds, attrCounter,
-            attrClassesCounter, "farthest")
+          val result: (Any, Array[Int], Array[Double]) = nnRuleHVDM(minNeighbours, dataToWorkWith(i), -1, minClasses, 3,
+            data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "farthest")
+          (i, (result._2 map result._3).sum / result._2.length)
         }
-        (i, (result._2 map result._3).sum / result._2.length)
       }.toArray.sortBy(_._2).map(_._1)
     } else if (version == 3) {
       // We shuffle the data because, at last, we are going to take, at least, minElements.length * ratio elements and if
       // we don't shuffle, we only take majority elements examples that are near to the first minority class examples
       new Random(seed).shuffle(minElements.flatMap { i: Int =>
         if (dist == Distance.EUCLIDEAN) {
-          nnRule(majNeighbours, dataToWorkWith(i), i, majClasses, nNeighbours, "nearest")._2
+          KDTree.get.nNeighbours(dataToWorkWith(i), 3)._3
         } else {
-          nnRuleHVDM(majNeighbours, dataToWorkWith(i), i, majClasses, nNeighbours, data.fileInfo.nominal, sds, attrCounter,
+          nnRuleHVDM(majNeighbours, dataToWorkWith(i), -1, majClasses, nNeighbours, data.fileInfo.nominal, sds, attrCounter,
             attrClassesCounter, "nearest")._2
         }
       }.distinct.toList).toArray
