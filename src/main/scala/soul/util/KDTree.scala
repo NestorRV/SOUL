@@ -10,11 +10,16 @@ import scala.math.sqrt
   * @param x          data
   * @param y          labels
   * @param dimensions number of dimensions
+  * @param which      if it's set to "nearest", return the nearest neighbours, if it sets "farthest", return the farthest ones
   * @author Néstor Rodríguez Vico
   */
-class KDTree(x: Array[Array[Double]], y: Array[Any], dimensions: Int) {
+class KDTree(x: Array[Array[Double]], y: Array[Any], dimensions: Int, which: String = "nearest") {
 
-  private[soul] var kDTreeMap: KDTreeMap[Array[Double], (Any, Int)] = KDTreeMap.fromSeq((x zip y.zipWithIndex).map(f => f._1 -> (f._2._1, f._2._2)))(dimensionalOrderingForArray[Array[Double], Double](dimensions))
+  private[soul] var kDTreeMap: KDTreeMap[Array[Double], (Any, Int)] = if (which == "nearest"){
+    KDTreeMap.fromSeq((x zip y.zipWithIndex).map(f => f._1 -> (f._2._1, f._2._2)))(dimensionalOrderingForArray[Array[Double], Double](dimensions))
+  } else {
+    KDTreeMap.fromSeq((x zip y.zipWithIndex).map(f => f._1 -> (f._2._1, f._2._2)))(dimensionalReverseOrderingForArray[Array[Double], Double](dimensions))
+  }
 
   def nNeighbours(instance: Array[Double], k: Int, leaveOneOut: Boolean = true): (Seq[Array[Double]], Seq[Any], Seq[Int]) = {
     val realK: Int = if (leaveOneOut) k + 1 else k
@@ -35,6 +40,13 @@ class KDTree(x: Array[Array[Double]], y: Array[Any], dimensions: Int) {
       val dimensions: Int = dim
 
       def compareProjection(d: Int)(x: T, y: T): Int = ord.compare(x(d), y(d))
+    }
+
+  def dimensionalReverseOrderingForArray[T <: Array[A], A](dim: Int)(implicit ord: Ordering[A]): DimensionalOrdering[T] =
+    new DimensionalOrdering[T] {
+      val dimensions: Int = dim
+
+      def compareProjection(d: Int)(x: T, y: T): Int = ord.compare(y(d), x(d))
     }
 
   implicit def metricFromArray(implicit n: Numeric[Double]): Metric[Array[Double], Double] = new Metric[Array[Double], Double] {
