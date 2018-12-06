@@ -10,20 +10,18 @@ import soul.util.Utilities._
   * @param data          data to work with
   * @param seed          seed to use. If it is not provided, it will use the system time
   * @param dist          object of Distance enumeration representing the distance to be used
-  * @param k             number of neighbours to use when computing k-NN rule (normally 3 neighbours)
-  * @param numClusters   number of clusters to be created by KMeans core
-  * @param restarts      number of times to relaunch KMeans core
+  * @param numClusters   number of clusters to be created by KMeans algorithm
+  * @param restarts      number of times to relaunch KMeans algorithm
   * @param minDispersion stop KMeans core if dispersion is lower than this value
-  * @param maxIterations number of iterations to be done in KMeans core
+  * @param maxIterations number of iterations to be done in KMeans algorithm
   * @param normalize     normalize the data or not
   * @param randomData    iterate through the data randomly or not
   * @param verbose       choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class ClusterOSS(data: Data, seed: Long = System.currentTimeMillis(),
-                 dist: Distance = Distance.EUCLIDEAN, k: Int = 3, numClusters: Int = 15, restarts: Int = 5,
-                 minDispersion: Double = 0.0001, maxIterations: Int = 100, normalize: Boolean = false,
-                 randomData: Boolean = false, verbose: Boolean = false) {
+class ClusterOSS(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = Distance.EUCLIDEAN,
+                 numClusters: Int = 15, restarts: Int = 5, minDispersion: Double = 0.0001, maxIterations: Int = 100,
+                 normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
 
   /** Compute the ClusterOSS algorithm
     *
