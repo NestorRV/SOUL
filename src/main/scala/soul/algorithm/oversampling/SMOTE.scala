@@ -81,7 +81,7 @@ class SMOTE(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
         val nn: Int = r.nextInt(neighbors.length)
         // compute attributes of the sample
         var atrib: Int = 0
-        while(atrib < samples(0).length) {
+        while (atrib < samples(0).length) {
           val diff: Double = samples(neighbors(nn))(atrib) - samples(i)(atrib)
           val gap: Float = r.nextFloat
           output(newIndex)(atrib) = samples(i)(atrib) + gap * diff

@@ -15,7 +15,7 @@ import scala.math.sqrt
   */
 class KDTree(x: Array[Array[Double]], y: Array[Any], dimensions: Int, which: String = "nearest") {
 
-  private[soul] var kDTreeMap: KDTreeMap[Array[Double], (Any, Int)] = if (which == "nearest"){
+  private[soul] var kDTreeMap: KDTreeMap[Array[Double], (Any, Int)] = if (which == "nearest") {
     KDTreeMap.fromSeq((x zip y.zipWithIndex).map(f => f._1 -> (f._2._1, f._2._2)))(dimensionalOrderingForArray[Array[Double], Double](dimensions))
   } else {
     KDTreeMap.fromSeq((x zip y.zipWithIndex).map(f => f._1 -> (f._2._1, f._2._2)))(dimensionalReverseOrderingForArray[Array[Double], Double](dimensions))

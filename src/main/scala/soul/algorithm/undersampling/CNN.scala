@@ -96,7 +96,7 @@ class CNN(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
       // Iterate the data, x (except the first instance)
       dataToWorkWith.zipWithIndex.tail.foreach { instance: (Array[Double], Int) =>
         val label = mode(store.nNeighbours(instance._1, k = 1, leaveOneOut = false)._2.toArray)
-        if(label != classesToWorkWith(instance._2)){
+        if (label != classesToWorkWith(instance._2)) {
           store.addElement(instance._1, classesToWorkWith(instance._2))
         } else {
           grabbag += instance
@@ -108,7 +108,7 @@ class CNN(data: Data, seed: Long = System.currentTimeMillis(), dist: Distance = 
         changed = false
         grabbag.foreach { instance =>
           val label = mode(store.nNeighbours(instance._1, k = 1, leaveOneOut = false)._2.toArray)
-          if(label != classesToWorkWith(instance._2)){
+          if (label != classesToWorkWith(instance._2)) {
             store.addElement(instance._1, classesToWorkWith(instance._2))
             changed = true
           } else {
