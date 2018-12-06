@@ -25,7 +25,7 @@ import scala.math.{max, min}
   * @param verbose       choose to display information about the execution or not
   * @author Néstor Rodríguez Vico
   */
-class SBC(data: Data, seed: Long = System.currentTimeMillis(), method: String = "random", m: Double = 1.0, k: Int = 3, numClusters: Int = 50,
+class SBC(data: Data, seed: Long = System.currentTimeMillis(), method: String = "NearMiss1", m: Double = 1.0, k: Int = 3, numClusters: Int = 50,
           restarts: Int = 1, minDispersion: Double = 0.0001, maxIterations: Int = 200, val dist: Distance = Distance.EUCLIDEAN,
           normalize: Boolean = false, randomData: Boolean = false, verbose: Boolean = false) {
 
