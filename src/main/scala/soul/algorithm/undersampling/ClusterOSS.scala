@@ -68,8 +68,8 @@ class ClusterOSS(data: Data, seed: Long = System.currentTimeMillis(), dist: Dist
     val train: Array[Int] = closestInstances.diff(List(-1))
     // Flatten all the clusters
     val test: Array[Int] = restOfInstances.flatten
-    val neighbours: Array[Array[Double]] = test map dataToWorkWith
-    val classes: Array[Any] = test map classesToWorkWith
+    val neighbours: Array[Array[Double]] = train map dataToWorkWith
+    val classes: Array[Any] = train map classesToWorkWith
 
     val KDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
       Some(new KDTree(neighbours, classes, dataToWorkWith(0).length))
@@ -82,7 +82,7 @@ class ClusterOSS(data: Data, seed: Long = System.currentTimeMillis(), dist: Dist
         val labels = KDTree.get.nNeighbours(dataToWorkWith(i._1), 1)._2
         mode(labels.toArray)
       } else {
-        nnRuleHVDM(neighbours, dataToWorkWith(i._1), i._2, classes, 1, data.fileInfo.nominal, sds, attrCounter,
+        nnRuleHVDM(neighbours, dataToWorkWith(i._1), -1, classes, 1, data.fileInfo.nominal, sds, attrCounter,
           attrClassesCounter, "nearest")._1
       }
       (i._1, label)
