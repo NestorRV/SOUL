@@ -1,6 +1,7 @@
 package soul.algorithm.undersampling
 
 import soul.data.Data
+import soul.util.KDTree
 import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
@@ -69,9 +70,17 @@ class ClusterOSS(data: Data, seed: Long = System.currentTimeMillis(), dist: Dist
     val test: Array[Int] = clusters.flatten
     val neighbours: Array[Array[Double]] = test map dataToWorkWith
     val classes: Array[Any] = test map classesToWorkWith
+
+    val KDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+      Some(new KDTree(neighbours, classes, dataToWorkWith(0).length))
+    } else {
+      None
+    }
+
     val calculatedLabels: Array[(Int, Any)] = test.zipWithIndex.map { i =>
       val label: Any = if (dist == Distance.EUCLIDEAN) {
-        nnRule(neighbours, dataToWorkWith(i._1), i._2, classes, 1, "nearest")._1
+        val (_, labels, index) = KDTree.get.nNeighbours(dataToWorkWith(i._1), 1)
+        mode(labels.toArray)
       } else {
         nnRuleHVDM(neighbours, dataToWorkWith(i._1), i._2, classes, 1, data.fileInfo.nominal, sds, attrCounter,
           attrClassesCounter, "nearest")._1
