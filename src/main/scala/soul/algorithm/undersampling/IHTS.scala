@@ -76,7 +76,7 @@ class IHTS(data: Data, seed: Long = System.currentTimeMillis(), nFolds: Int = 5,
         classesToWorkWith.zipWithIndex.collect { case (c, i) if c == targetClass => i }
       }
 
-      indexTargetClass map boolToIndex(classesToWorkWith.map((c: Any) => c == targetClass))
+      indexTargetClass
     }
 
     val finishTime: Long = System.nanoTime()
