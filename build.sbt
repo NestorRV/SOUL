@@ -14,11 +14,10 @@ scalacOptions += "-deprecation"
 scalacOptions += "-unchecked"
 scalacOptions += "-feature"
 
-libraryDependencies += "nz.ac.waikato.cms.weka" % "weka-stable" % "3.8.2"
-libraryDependencies += "com.paypal.digraph" % "digraph-parser" % "1.0"
-libraryDependencies += "com.thesamet" %% "kdtree" % "1.0.5"
-
 libraryDependencies ++= Seq(
+  "nz.ac.waikato.cms.weka" % "weka-stable" % "3.8.2",
+  "com.paypal.digraph" % "digraph-parser" % "1.0",
+  "com.thesamet" %% "kdtree" % "1.0.5",
   "org.scalanlp" %% "breeze" % "0.13.2",
   "org.scalanlp" %% "breeze-natives" % "0.13.2",
   "org.scalanlp" %% "breeze-viz" % "0.13.2"
