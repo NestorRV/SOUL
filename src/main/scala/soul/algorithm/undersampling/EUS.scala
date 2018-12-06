@@ -67,9 +67,9 @@ class EUS(data: Data, seed: Long = System.currentTimeMillis(), populationSize: I
       val classes: Array[Any] = index map classesToWorkWith
       val predicted: Array[Any] = dataToWorkWith.indices.map { e: Int =>
         if (dist == Distance.EUCLIDEAN) {
-          nnRule(neighbours, dataToWorkWith(e), e, classes, 1, "nearest")._1
+          nnRule(neighbours, dataToWorkWith(e), index.indexOf(e), classes, 1, "nearest")._1
         } else {
-          nnRuleHVDM(neighbours, dataToWorkWith(e), e, classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
+          nnRuleHVDM(neighbours, dataToWorkWith(e), index.indexOf(e), classes, 1, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter, "nearest")._1
         }
       }.toArray
 
@@ -127,7 +127,7 @@ class EUS(data: Data, seed: Long = System.currentTimeMillis(), populationSize: I
     }
 
     val evaluations: Array[Double] = new Array[Double](population.length)
-    population.zipWithIndex.par.foreach { chromosome: (Array[Int], Int) =>
+    population.zipWithIndex.foreach { chromosome: (Array[Int], Int) =>
       evaluations(chromosome._2) = fitnessFunction(chromosome._1)
     }
 
@@ -163,7 +163,7 @@ class EUS(data: Data, seed: Long = System.currentTimeMillis(), populationSize: I
       }
 
       val newEvaluations: Array[Double] = new Array[Double](newPopulation.length)
-      newPopulation.zipWithIndex.par.foreach { chromosome: (Array[Int], Int) =>
+      newPopulation.zipWithIndex.foreach { chromosome: (Array[Int], Int) =>
         newEvaluations(chromosome._2) = fitnessFunction(chromosome._1)
       }
 
