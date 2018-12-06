@@ -55,7 +55,7 @@ class ClusterOSS(data: Data, seed: Long = System.currentTimeMillis(), dist: Dist
     val (_, centroids, assignment) = kMeans(data = majElements map dataToWorkWith, nominal = data.fileInfo.nominal,
       numClusters = numClusters, restarts = restarts, minDispersion = minDispersion, maxIterations = maxIterations, seed = seed)
 
-    val (closestInstances, clusters) = assignment.par.map { cluster: (Int, Array[Int]) =>
+    val (closestInstances, restOfInstances) = assignment.par.map { cluster: (Int, Array[Int]) =>
       val distances: Array[(Int, Double)] = cluster._2.map { instance: Int =>
         (instance, euclidean(dataToWorkWith(instance), centroids(cluster._1)))
       }
@@ -67,7 +67,7 @@ class ClusterOSS(data: Data, seed: Long = System.currentTimeMillis(), dist: Dist
     // Remove foo values
     val train: Array[Int] = closestInstances.diff(List(-1))
     // Flatten all the clusters
-    val test: Array[Int] = clusters.flatten
+    val test: Array[Int] = restOfInstances.flatten
     val neighbours: Array[Array[Double]] = test map dataToWorkWith
     val classes: Array[Any] = test map classesToWorkWith
 
