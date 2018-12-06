@@ -79,7 +79,7 @@ class ClusterOSS(data: Data, seed: Long = System.currentTimeMillis(), dist: Dist
 
     val calculatedLabels: Array[(Int, Any)] = test.zipWithIndex.map { i =>
       val label: Any = if (dist == Distance.EUCLIDEAN) {
-        val (_, labels, index) = KDTree.get.nNeighbours(dataToWorkWith(i._1), 1)
+        val labels = KDTree.get.nNeighbours(dataToWorkWith(i._1), 1)._2
         mode(labels.toArray)
       } else {
         nnRuleHVDM(neighbours, dataToWorkWith(i._1), i._2, classes, 1, data.fileInfo.nominal, sds, attrCounter,
