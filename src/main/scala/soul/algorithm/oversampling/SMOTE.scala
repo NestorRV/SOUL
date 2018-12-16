@@ -62,32 +62,26 @@ class SMOTE(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
     N = N / 100
 
     // output with a size of T*N samples
-    val output: Array[Array[Double]] = Array.fill(N * T, samples(0).length)(0.0)
+    val output: Array[Array[Double]] = Array.ofDim[Double](N * T, samples(0).length)
 
-    // index array to save the neighbors of each sample
-    var neighbors: Array[Int] = new Array[Int](minorityClassIndex.length)
-
-    var newIndex: Int = 0
     val r: Random = new Random(seed)
+
     // for each minority class sample
-    minorityClassIndex.par.foreach((i: Int) => {
-      neighbors = if (dist == Distance.EUCLIDEAN) {
-        KDTree.get.nNeighbours(samples(i), k)._3.toArray
+    minorityClassIndex.indices.par.foreach((i: Int) => {
+      val neighbors: Array[Int] = if (dist == Distance.EUCLIDEAN) {
+        KDTree.get.nNeighbours(samples(minorityClassIndex(i)), k)._3.toArray
       } else {
         kNeighborsHVDM(samples, i, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
       // compute populate for the sample
-      (0 until N).par.foreach((_: Int) => {
-        val nn: Int = r.nextInt(neighbors.length)
+      (0 until N).par.foreach((n: Int) => {
+        val nn: Int = neighbors(r.nextInt(neighbors.length))
         // compute attributes of the sample
-        var atrib: Int = 0
-        while (atrib < samples(0).length) {
-          val diff: Double = samples(neighbors(nn))(atrib) - samples(i)(atrib)
-          val gap: Float = r.nextFloat
-          output(newIndex)(atrib) = samples(i)(atrib) + gap * diff
-          atrib += 1
-        }
-        newIndex = newIndex + 1
+        samples(0).indices.foreach((atrib: Int) => {
+          val diff: Double = samples(nn)(atrib) - samples(minorityClassIndex(i))(atrib)
+          val gap: Double = r.nextFloat()
+          output(i*N + n)(atrib) = samples(minorityClassIndex(i))(atrib) + gap * diff
+        })
       })
     })
 

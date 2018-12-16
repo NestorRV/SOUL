@@ -1,6 +1,7 @@
 package soul.algorithm.oversampling
 
 import soul.data.Data
+import soul.util.KDTree
 import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
@@ -47,6 +48,12 @@ class ADASYN(data: Data, seed: Long = System.currentTimeMillis(), d: Double = 1,
       (null, null, null)
     }
 
+    val KDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+      Some(new KDTree(samples, data.y, samples(0).length))
+    } else {
+      None
+    }
+
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))
 
@@ -54,42 +61,59 @@ class ADASYN(data: Data, seed: Long = System.currentTimeMillis(), d: Double = 1,
     val ms: Int = minorityClassIndex.length
     val ml: Int = data.y.length - ms
     val G: Int = ((ml - ms) * B).asInstanceOf[Int]
+
     // k neighbors of each minority sample
-    val neighbors: Array[Array[Int]] = minorityClassIndex.indices.map { sample =>
+    val neighbors: Array[Array[Int]] = new Array[Array[Int]](minorityClassIndex.length)
+    minorityClassIndex.indices.par.foreach { i =>
       if (dist == Distance.EUCLIDEAN) {
-        kNeighbors(samples, minorityClassIndex(sample), k)
+        neighbors(i) = kNeighbors(samples, minorityClassIndex(i), k)
+        //neighbors(i) = KDTree.get.nNeighbours(samples(minorityClassIndex(i)), k)._3.toArray
       } else {
-        kNeighborsHVDM(samples, minorityClassIndex(sample), k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+        neighbors(i) = kNeighborsHVDM(samples, minorityClassIndex(i), k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
-    }.toArray
+    }
 
     // ratio of each minority sample
-    var ratio: Array[Double] = neighbors.map(neighborsOfX => {
-      neighborsOfX.map(neighbor => {
+    var ratio: Array[Double] = new Array[Double](neighbors.length)
+    neighbors.zipWithIndex.par.foreach(neighborsOfX => {
+      ratio(neighborsOfX._2) = neighborsOfX._1.map(neighbor => {
         if (data.y(neighbor) != minorityClass) 1 else 0
       }).sum.asInstanceOf[Double] / k
     })
 
     // normalize ratios
-    ratio = ratio.map(_ / ratio.sum)
-    // number of synthetic samples for each sample
-    val g: Array[Int] = ratio.map(ri => (ri * G).asInstanceOf[Int])
-    // output with a size of sum(Gi) samples
-    val output: Array[Array[Double]] = Array.fill(g.sum, samples(0).length)(0.0)
-    var newIndex: Int = 0
-    val r: Random = new Random(seed)
-    // for each minority class sample, create gi synthetic samples
-    minorityClassIndex.zipWithIndex.foreach(xi => {
-      (0 until g(xi._2)).foreach(_ => {
-        // compute synthetic sample si = (xzi - xi) * lambda + xi
-        val xzi = r.nextInt(neighbors(xi._2).length)
+    val sumRatios: Double = ratio.sum
+    ratio.indices.par.foreach(i => ratio(i) = ratio(i) / sumRatios)
 
+    // number of synthetic samples for each sample
+    val g: Array[Int] = new Array[Int](ratio.length)
+    ratio.zipWithIndex.par.foreach(ri => g(ri._2) = (ri._1 * G).asInstanceOf[Int])
+
+    // output with a size of sum(Gi) samples
+    val output: Array[Array[Double]] = Array.ofDim(g.sum, samples(0).length)
+
+    val r: Random = new Random(seed)
+    // must compute the random information before the loops due to parallelism
+
+    var counter: Int = 0
+    val increment: Array[Int] = new Array[Int](g.length)
+    var i = 0
+    while(i < g.length) {
+      increment(i) = counter
+      counter += g(i)
+      i += 1
+    }
+
+    // for each minority class sample, create gi synthetic samples
+    minorityClassIndex.indices.zip(increment).foreach(xi => {
+      (0 until g(xi._1)).foreach(n => {
+        // compute synthetic sample si = (xzi - xi) * lambda + xi
         samples(0).indices.foreach(atrib => {
-          val diff: Double = samples(neighbors(xi._2)(xzi))(atrib) - samples(xi._1)(atrib)
+          val nn: Int = neighbors(xi._1)(r.nextInt(neighbors(xi._1).length))
+          val diff: Double = samples(nn)(atrib) - samples(minorityClassIndex(xi._1))(atrib)
           val gap: Float = r.nextFloat
-          output(newIndex)(atrib) = samples(xi._1)(atrib) + gap * diff
+          output(xi._2 + n)(atrib) = samples(minorityClassIndex(xi._1))(atrib) + gap * diff
         })
-        newIndex += 1
       })
     })
 
