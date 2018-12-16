@@ -66,8 +66,7 @@ class ADASYN(data: Data, seed: Long = System.currentTimeMillis(), d: Double = 1,
     val neighbors: Array[Array[Int]] = new Array[Array[Int]](minorityClassIndex.length)
     minorityClassIndex.indices.par.foreach { i =>
       if (dist == Distance.EUCLIDEAN) {
-        neighbors(i) = kNeighbors(samples, minorityClassIndex(i), k)
-        //neighbors(i) = KDTree.get.nNeighbours(samples(minorityClassIndex(i)), k)._3.toArray
+        neighbors(i) = KDTree.get.nNeighbours(samples(minorityClassIndex(i)), k)._3.toArray
       } else {
         neighbors(i) = kNeighborsHVDM(samples, minorityClassIndex(i), k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }

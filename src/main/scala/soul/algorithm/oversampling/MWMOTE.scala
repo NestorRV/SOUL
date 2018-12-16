@@ -78,19 +78,27 @@ class MWMOTE(data: Data, seed: Long = System.currentTimeMillis(), N: Int = 500, 
 
     def minDistance(cluster: ArrayBuffer[ArrayBuffer[Int]]): (Int, Int, Double) = {
       var minDist: (Int, Int, Double) = (0, 0, 99999999)
-      cluster.indices.foreach(i => cluster.indices.foreach(j => {
-        if (i != j) {
-          val dist = clusterDistance(cluster(i).toArray, cluster(j).toArray)
-          if (dist < minDist._3) minDist = (i, j, dist)
+      var i, j: Int = 0
+      while (i < cluster.length) {
+        j = 0
+        while (j < cluster.length) {
+          if (i != j) {
+            val dist = clusterDistance(cluster(i).toArray, cluster(j).toArray)
+            if (dist < minDist._3) minDist = (i, j, dist)
+          }
+          j += 1
         }
-      }))
+        i += 1
+      }
       minDist
     }
 
     def cluster(Sminf: Array[Int]): Array[Array[Int]] = {
       val distances: Array[Array[Double]] = Array.fill(Sminf.length, Sminf.length)(9999999.0)
-      Sminf.indices.foreach { i =>
-        Sminf.indices.foreach { j =>
+      var i, j: Int = 0
+      while (i < Sminf.length) {
+        j = 0
+        while (j < Sminf.length) {
           if (i != j) {
             distances(i)(j) = if (dist == Distance.EUCLIDEAN) {
               euclidean(samples(Sminf(i)), samples(Sminf(j)))
@@ -98,7 +106,9 @@ class MWMOTE(data: Data, seed: Long = System.currentTimeMillis(), N: Int = 500, 
               HVDM(samples(Sminf(i)), samples(Sminf(j)), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
             }
           }
+          j += 1
         }
+        i += 1
       }
 
       val Cp: Double = 3 // used in paper
@@ -120,10 +130,10 @@ class MWMOTE(data: Data, seed: Long = System.currentTimeMillis(), N: Int = 500, 
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))
     // compute majority class
-    val majorityClassIndex: Array[Int] = samples.indices.diff(minorityClassIndex.toList).toArray
+    val majorityClassIndex: Array[Int] = samples.indices.par.diff(minorityClassIndex.toList).toArray
 
     // construct the filtered minority set
-    val Sminf: Array[Int] = minorityClassIndex.map(index => {
+    val Sminf: Array[Int] = minorityClassIndex.par.map(index => {
       val neighbors = if (dist == Distance.EUCLIDEAN) {
         kNeighbors(samples, index, k1)
       } else {
@@ -134,33 +144,33 @@ class MWMOTE(data: Data, seed: Long = System.currentTimeMillis(), N: Int = 500, 
       } else {
         None
       }
-    }).filterNot(_.forall(_ == None)).map(_.get)
+    }).filterNot(_.forall(_ == None)).map(_.get).toArray
 
     //for each sample in Sminf compute the nearest majority set
-    val Sbmaj: Array[Int] = Sminf.flatMap { x =>
+    val Sbmaj: Array[Int] = Sminf.par.flatMap { x =>
       if (dist == Distance.EUCLIDEAN) {
         kNeighbors(majorityClassIndex map samples, samples(x), k2)
       } else {
         kNeighborsHVDM(majorityClassIndex map samples, samples(x), k2, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
-    }.distinct.map(majorityClassIndex(_))
+    }.distinct.par.map(majorityClassIndex(_)).toArray
 
     // for each majority example in Sbmaj , compute the nearest minority set
-    val Nmin: Array[Array[Int]] = Sbmaj.map { x =>
+    val Nmin: Array[Array[Int]] = Sbmaj.par.map { x =>
       (if (dist == Distance.EUCLIDEAN) {
         kNeighbors(minorityClassIndex map samples, samples(x), k3)
       } else {
         kNeighborsHVDM(minorityClassIndex map samples, samples(x), k3, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
-      }).map(minorityClassIndex(_))
-    }
+      }).par.map(minorityClassIndex(_)).toArray
+    }.toArray
 
     // find the informative minority set (union of all Nmin)
-    val Simin: Array[Int] = Nmin.flatten.distinct
+    val Simin: Array[Int] = Nmin.par.flatten.distinct.toArray
     // for each sample in Simin compute the selection weight
-    val Sw: Array[Double] = Simin.map(x => Sbmaj.zipWithIndex.map(y => Iw(y, x, Nmin, Simin)).sum)
+    val Sw: Array[Double] = Simin.par.map(x => Sbmaj.zipWithIndex.par.map(y => Iw(y, x, Nmin, Simin)).sum).toArray
     val sumSw: Double = Sw.sum
     // convert each Sw into probability
-    val Sp: Array[(Double, Int)] = Sw.map(_ / sumSw).zip(Simin).sortWith(_._1 > _._1)
+    val Sp: Array[(Double, Int)] = Sw.par.map(_ / sumSw).toArray.zip(Simin).sortWith(_._1 > _._1)
 
     // compute the clusters
     val clusters: Array[Array[Int]] = cluster(minorityClassIndex) // cluster => index to processedData
@@ -169,12 +179,12 @@ class MWMOTE(data: Data, seed: Long = System.currentTimeMillis(), N: Int = 500, 
     }).toMap // index to processedData => cluster
 
     //output data
-    val output: Array[Array[Double]] = Array.fill(N, samples(0).length)(0.0)
+    val output: Array[Array[Double]] = Array.ofDim(N, samples(0).length)
 
     val probsSum: Double = Sp.map(_._1).sum
     val r: Random = new Random(seed)
 
-    (0 until N).foreach(i => {
+    (0 until N).par.foreach(i => {
       // select a sample, then select another randomly from the cluster that have this sample
       val x = chooseByProb(Sp, probsSum, r)
       val y = clusters(clustersIndex(x))(r.nextInt(clusters(clustersIndex(x)).length))

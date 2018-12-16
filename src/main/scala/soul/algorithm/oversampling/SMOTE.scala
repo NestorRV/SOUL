@@ -71,8 +71,9 @@ class SMOTE(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
       val neighbors: Array[Int] = if (dist == Distance.EUCLIDEAN) {
         KDTree.get.nNeighbours(samples(minorityClassIndex(i)), k)._3.toArray
       } else {
-        kNeighborsHVDM(samples, i, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+        kNeighborsHVDM(samples, minorityClassIndex(i), k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
+
       // compute populate for the sample
       (0 until N).par.foreach((n: Int) => {
         val nn: Int = neighbors(r.nextInt(neighbors.length))
