@@ -311,22 +311,32 @@ object Utilities {
     * @return index of the neighbors of node
     */
   def kNeighbors(data: Array[Array[Double]], node: Array[Double], k: Int): Array[Int] = {
-    val distances: Array[Double] = new Array[Double](data.length)
-
-    data.indices.foreach(i => {
-      distances(i) = euclidean(node, data(i))
-      if (distances(i) == 0) {
-        distances(i) = 9999999
+    val distances: Array[Double] = Array.fill[Double](data.length)(99999999)
+    val kNeighbors: Array[Int] = (0 until k).toArray
+    var i: Int = 0
+    var j: Int = 0
+    var maxDistance: (Double, Int) = (0.0, 0)
+    var distance: Double = 0
+    //compute distances
+    while (i < data.length) {
+      j = 0
+      maxDistance = (0.0, 0)
+      distance = euclidean(data(i), node)
+      //save the best neighbors
+      while (j < kNeighbors.length) {
+        if (maxDistance._1 < distances(kNeighbors(j))) {
+          maxDistance = (distances(kNeighbors(j)), j)
+        }
+        j = j + 1
       }
-    })
-    val result = distances.toList.view.zipWithIndex.sortBy(_._1)
-    val index = result.unzip._2
-
-    var kk: Int = k
-    if (k > distances.length) {
-      kk = distances.length
+      if (distance < maxDistance._1) {
+        kNeighbors(maxDistance._2) = i
+      }
+      distances(i) = distance
+      i = i + 1
     }
-    range(0, kk).map(i => index.toList(i))
+
+    kNeighbors
   }
 
   /** Compute kNN core
@@ -369,29 +379,27 @@ object Utilities {
     */
   def kNeighbors(data: Array[Array[Double]], node: Int, k: Int): Array[Int] = {
     val distances: Array[Double] = Array.fill[Double](data.length)(99999999)
-
     val kNeighbors: Array[Int] = (0 until k).toArray
     var i: Int = 0
     var j: Int = 0
-    var found: Boolean = false
+    var maxDistance: (Double, Int) = (0.0, 0)
+    var distance: Double = 0
     //compute distances
     while (i < data.length) {
-      if (i != node) {
-        j = 0
-        found = false
-        distances(i) = euclidean(data(i), data(node))
-        //save the best neighbors
-        while (j < kNeighbors.length && !found) {
-          if (distances(i) < distances(kNeighbors(j))) {
-            found = true
-          } else {
-            j = j + 1
-          }
+      j = 0
+      maxDistance = (0.0, 0)
+      distance = euclidean(data(i), data(node))
+      //save the best neighbors
+      while (j < kNeighbors.length) {
+        if (maxDistance._1 < distances(kNeighbors(j))) {
+          maxDistance = (distances(kNeighbors(j)), j)
         }
-        if (found) {
-          kNeighbors(j) = i
-        }
+        j = j + 1
       }
+      if (distance < maxDistance._1) {
+        kNeighbors(maxDistance._2) = i
+      }
+      distances(i) = distance
       i = i + 1
     }
 
