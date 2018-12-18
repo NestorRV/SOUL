@@ -315,7 +315,7 @@ object Utilities {
     * @return index of the neighbors of node
     */
   def kNeighborsHVDM(data: Array[Array[Double]], node: Array[Double], k: Int, nominal: Array[Int], sds: Array[Double],
-  attrCounter: Array[Map[Double, Int]], attrClassesCounter: Array[Map[Double, Map[Any, Int]]]): Array[Int] = {
+                     attrCounter: Array[Map[Double, Int]], attrClassesCounter: Array[Map[Double, Map[Any, Int]]]): Array[Int] = {
     val distances: Array[Double] = new Array[Double](data.length)
 
     data.indices.foreach(i => {

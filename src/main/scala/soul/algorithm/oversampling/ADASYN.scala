@@ -97,7 +97,7 @@ class ADASYN(data: Data, seed: Long = System.currentTimeMillis(), d: Double = 1,
     var counter: Int = 0
     val increment: Array[Int] = new Array[Int](g.length)
     var i = 0
-    while(i < g.length) {
+    while (i < g.length) {
       increment(i) = counter
       counter += g(i)
       i += 1

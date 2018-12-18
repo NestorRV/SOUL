@@ -81,7 +81,7 @@ class SMOTE(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
         samples(0).indices.foreach((atrib: Int) => {
           val diff: Double = samples(nn)(atrib) - samples(minorityClassIndex(i))(atrib)
           val gap: Double = r.nextFloat()
-          output(i*N + n)(atrib) = samples(minorityClassIndex(i))(atrib) + gap * diff
+          output(i * N + n)(atrib) = samples(minorityClassIndex(i))(atrib) + gap * diff
         })
       })
     })
