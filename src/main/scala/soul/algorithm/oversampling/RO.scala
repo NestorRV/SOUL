@@ -35,7 +35,7 @@ class RO(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 500
     val r: Random = new Random(seed)
 
     // for each minority class sample
-    (0 until percent).par.map((i: Int) => {
+    (0 until percent).par.foreach((i: Int) => {
       output(i) = data.processedData(minorityClassIndex(r.nextInt(minorityClassIndex.length)))
     })
 

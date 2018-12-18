@@ -73,7 +73,7 @@ class ADASYN(data: Data, seed: Long = System.currentTimeMillis(), d: Double = 1,
     }
 
     // ratio of each minority sample
-    var ratio: Array[Double] = new Array[Double](neighbors.length)
+    val ratio: Array[Double] = new Array[Double](neighbors.length)
     neighbors.zipWithIndex.par.foreach(neighborsOfX => {
       ratio(neighborsOfX._2) = neighborsOfX._1.map(neighbor => {
         if (data.y(neighbor) != minorityClass) 1 else 0
