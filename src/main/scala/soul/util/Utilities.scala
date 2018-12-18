@@ -305,42 +305,6 @@ object Utilities {
 
   /** Compute kNN core
     *
-    * @param data array of samples
-    * @param node array with the attributes of the node
-    * @param k    number of neighbors
-    * @return index of the neighbors of node
-    */
-  def kNeighbors(data: Array[Array[Double]], node: Array[Double], k: Int): Array[Int] = {
-    val distances: Array[Double] = Array.fill[Double](data.length)(99999999)
-    val kNeighbors: Array[Int] = (0 until k).toArray
-    var i: Int = 0
-    var j: Int = 0
-    var maxDistance: (Double, Int) = (0.0, 0)
-    var distance: Double = 0
-    //compute distances
-    while (i < data.length) {
-      j = 0
-      maxDistance = (0.0, 0)
-      distance = euclidean(data(i), node)
-      //save the best neighbors
-      while (j < kNeighbors.length) {
-        if (maxDistance._1 < distances(kNeighbors(j))) {
-          maxDistance = (distances(kNeighbors(j)), j)
-        }
-        j = j + 1
-      }
-      if (distance < maxDistance._1) {
-        kNeighbors(maxDistance._2) = i
-      }
-      distances(i) = distance
-      i = i + 1
-    }
-
-    kNeighbors
-  }
-
-  /** Compute kNN core
-    *
     * @param data               array of samples
     * @param node               array with the attributes of the node
     * @param k                  number of neighbors
@@ -351,7 +315,7 @@ object Utilities {
     * @return index of the neighbors of node
     */
   def kNeighborsHVDM(data: Array[Array[Double]], node: Array[Double], k: Int, nominal: Array[Int], sds: Array[Double],
-                     attrCounter: Array[Map[Double, Int]], attrClassesCounter: Array[Map[Double, Map[Any, Int]]]): Array[Int] = {
+  attrCounter: Array[Map[Double, Int]], attrClassesCounter: Array[Map[Double, Map[Any, Int]]]): Array[Int] = {
     val distances: Array[Double] = new Array[Double](data.length)
 
     data.indices.foreach(i => {
@@ -370,41 +334,6 @@ object Utilities {
     range(0, kk).map(i => index.toList(i))
   }
 
-  /** Compute kNN core
-    *
-    * @param data array of samples
-    * @param node index whom neighbors are going to be evaluated
-    * @param k    number of neighbors
-    * @return index of the neighbors of node
-    */
-  def kNeighbors(data: Array[Array[Double]], node: Int, k: Int): Array[Int] = {
-    val distances: Array[Double] = Array.fill[Double](data.length)(99999999)
-    val kNeighbors: Array[Int] = (0 until k).toArray
-    var i: Int = 0
-    var j: Int = 0
-    var maxDistance: (Double, Int) = (0.0, 0)
-    var distance: Double = 0
-    //compute distances
-    while (i < data.length) {
-      j = 0
-      maxDistance = (0.0, 0)
-      distance = euclidean(data(i), data(node))
-      //save the best neighbors
-      while (j < kNeighbors.length) {
-        if (maxDistance._1 < distances(kNeighbors(j))) {
-          maxDistance = (distances(kNeighbors(j)), j)
-        }
-        j = j + 1
-      }
-      if (distance < maxDistance._1) {
-        kNeighbors(maxDistance._2) = i
-      }
-      distances(i) = distance
-      i = i + 1
-    }
-
-    kNeighbors
-  }
 
   /** Compute kNN core
     *
@@ -447,6 +376,74 @@ object Utilities {
     }
 
     kNeighbors
+  }
+
+  /** Compute kNN core
+    *
+    * @param data array of samples
+    * @param node array with the attributes of the node
+    * @param k    number of neighbors
+    * @return index of the neighbors of node
+    */
+  def kNeighbors(data: Array[Array[Double]], node: Array[Double], k: Int): Array[Int] = {
+    val kNeighbors: Array[(Int, Double)] = (0 until k).map((_, 99999999.0)).toArray
+    var i: Int = 0
+    var j: Int = 0
+    var maxDistance: (Double, Int) = (0.0, 0)
+    var distance: Double = 0
+    //compute distances
+    while (i < data.length) {
+      j = 0
+      maxDistance = (0.0, 0)
+      distance = euclidean(data(i), node)
+      //save the best neighbors
+      while (j < kNeighbors.length) {
+        if (maxDistance._1 < kNeighbors(j)._2) {
+          maxDistance = (kNeighbors(j)._2, j)
+        }
+        j = j + 1
+      }
+      if (distance < maxDistance._1) {
+        kNeighbors(maxDistance._2) = (i, distance)
+      }
+      i = i + 1
+    }
+
+    kNeighbors.map(_._1)
+  }
+
+  /** Compute kNN core
+    *
+    * @param data array of samples
+    * @param node index whom neighbors are going to be evaluated
+    * @param k    number of neighbors
+    * @return index of the neighbors of node
+    */
+  def kNeighbors(data: Array[Array[Double]], node: Int, k: Int): Array[Int] = {
+    val kNeighbors: Array[(Int, Double)] = (0 until k).map((_, 99999999.0)).toArray
+    var i: Int = 0
+    var j: Int = 0
+    var maxDistance: (Double, Int) = (0.0, 0)
+    var distance: Double = 0
+    //compute distances
+    while (i < data.length) {
+      j = 0
+      maxDistance = (0.0, 0)
+      distance = euclidean(data(i), data(node))
+      //save the best neighbors
+      while (j < kNeighbors.length) {
+        if (maxDistance._1 < kNeighbors(j)._2) {
+          maxDistance = (kNeighbors(j)._2, j)
+        }
+        j = j + 1
+      }
+      if (distance < maxDistance._1) {
+        kNeighbors(maxDistance._2) = (i, distance)
+      }
+      i = i + 1
+    }
+
+    kNeighbors.map(_._1)
   }
 
   /** Calculate minority class
