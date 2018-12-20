@@ -1,6 +1,7 @@
 package soul.algorithm.oversampling
 
 import soul.data.Data
+import soul.util.KDTree
 import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
@@ -39,21 +40,19 @@ class SafeLevelSMOTE(data: Data, seed: Long = System.currentTimeMillis(), k: Int
       (null, null, null)
     }
 
-    // output with a size of |D|-t samples
-    val output: Array[Array[Double]] = Array.fill(minorityClassIndex.length, samples(0).length)(0.0)
+    val KDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+      Some(new KDTree(samples, data.y, samples(0).length))
+    } else {
+      None
+    }
 
-    // index array to save the neighbors of each sample
-    var neighbors: Array[Int] = new Array[Int](minorityClassIndex.length)
-
-    var newIndex: Int = 0
     var sl_ratio: Double = 0.0
-    val r: Random.type = scala.util.Random
-    r.setSeed(seed)
-    // for each minority class sample
-    minorityClassIndex.foreach(i => {
+    val r: Random = new Random(seed)
+
+    val output: Array[Array[Double]] = minorityClassIndex.indices.par.map(i => {
       // compute k neighbors from p and save number of positive instances
-      neighbors = if (dist == Distance.EUCLIDEAN) {
-        kNeighbors(samples, i, k)
+      val neighbors: Array[Int] = if (dist == Distance.EUCLIDEAN) {
+        KDTree.get.nNeighbours(samples(minorityClassIndex(i)), k)._3.toArray
       } else {
         kNeighborsHVDM(samples, i, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
@@ -67,7 +66,7 @@ class SafeLevelSMOTE(data: Data, seed: Long = System.currentTimeMillis(), k: Int
       }).sum
       // compute k neighbors from n and save number of positive instances
       val selectedNeighbors: Array[Int] = if (dist == Distance.EUCLIDEAN) {
-        kNeighbors(samples, n, k)
+        KDTree.get.nNeighbours(samples(n), k)._3.toArray
       } else {
         kNeighborsHVDM(samples, n, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
       }
@@ -84,26 +83,29 @@ class SafeLevelSMOTE(data: Data, seed: Long = System.currentTimeMillis(), k: Int
       } else {
         sl_ratio = 99999999
       }
-      if (!(sl_ratio == 99999999 && slp == 0)) {
-        // calculate synthetic sample
-        var gap: Double = 0.0 // 2 case
-        if (sl_ratio == 1) { // 3 case
-          gap = r.nextFloat
-        } else if (sl_ratio > 1 && sl_ratio != 99999999) { // 4 case
-          gap = r.nextFloat * (1 / sl_ratio)
-        } else if (sl_ratio < 1) { // 5 case
-          gap = r.nextFloat()
-          if (gap < 1 - sl_ratio) {
-            gap = gap + 1 - sl_ratio
-          }
-        }
-        samples(i).indices.foreach(atrib => {
-          val diff: Double = samples(n)(atrib) - samples(i)(atrib)
-          output(newIndex)(atrib) = samples(i)(atrib) + gap * diff
-        })
-        newIndex = newIndex + 1
+      if (sl_ratio == 99999999 && slp == 0) {
+        // dont create a synthetic instance
+        None
       }
-    })
+      else {
+        // calculate synthetic sample
+        Some(samples(i).indices.map(atrib => {
+          var gap: Double = 0.0 // 2 case
+          if (sl_ratio == 1) { // 3 case
+            gap = r.nextFloat
+          } else if (sl_ratio > 1 && sl_ratio != 99999999) { // 4 case
+            gap = r.nextFloat * (1 / sl_ratio)
+          } else if (sl_ratio < 1) { // 5 case
+            gap = r.nextFloat()
+            if (gap < 1 - sl_ratio) {
+              gap = gap + 1 - sl_ratio
+            }
+          }
+          val diff: Double = samples(n)(atrib) - samples(minorityClassIndex(i))(atrib)
+          samples(minorityClassIndex(i))(atrib) + gap * diff
+        }).toArray)
+      }
+    }).filterNot(_.forall(_ == None)).map(_.get).toArray
 
     val finishTime: Long = System.nanoTime()
 
