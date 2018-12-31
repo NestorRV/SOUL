@@ -2,6 +2,7 @@ package soul.algorithm.oversampling
 
 import breeze.linalg.{DenseMatrix, eigSym}
 import soul.data.Data
+import soul.util.KDTree
 import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
@@ -30,10 +31,10 @@ class ADOMS(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
   private def PCA(A: Array[Array[Double]]): Array[Double] = {
     val mean: Array[Double] = A.transpose.map(_.sum / A.length)
     // subtract the mean to the data
-    val dataNoMean: DenseMatrix[Double] = DenseMatrix(A: _*) :- DenseMatrix(A.map(_ => mean): _*)
+    val dataNoMean: DenseMatrix[Double] = DenseMatrix(A: _*) -:- DenseMatrix(A.map(_ => mean): _*)
     // get the covariance matrix
     val oneDividedByN: Array[Array[Double]] = Array.fill(dataNoMean.cols, dataNoMean.cols)(dataNoMean.rows)
-    val S: DenseMatrix[Double] = (dataNoMean.t * dataNoMean) :/ DenseMatrix(oneDividedByN: _*)
+    val S: DenseMatrix[Double] = (dataNoMean.t * dataNoMean) /:/ DenseMatrix(oneDividedByN: _*)
     //compute the eigenvectors and eigenvalues of S
     val eigen = eigSym(S)
 
@@ -51,10 +52,8 @@ class ADOMS(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
     val minorityClassIndex: Array[Int] = minority(data.y)
     val minorityClass: Any = data.y(minorityClassIndex(0))
     // output with a size of T*N samples
-    val output: Array[Array[Double]] = Array.fill(minorityClassIndex.length * percent / 100, samples(0).length)(0.0)
+    val output: Array[Array[Double]] = Array.ofDim(minorityClassIndex.length * percent / 100, samples(0).length)
     // index array to save the neighbors of each sample
-    var neighbors: Array[Int] = new Array[Int](minorityClassIndex.length)
-    var newIndex: Int = 0
     val r: Random = new Random(seed)
 
     val (attrCounter, attrClassesCounter, sds) = if (dist == Distance.HVDM) {
@@ -65,35 +64,43 @@ class ADOMS(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
       (null, null, null)
     }
 
-    (0 until percent / 100).foreach(_ => {
+    val KDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+      Some(new KDTree(samples, data.y, samples(0).length))
+    } else {
+      None
+    }
+
+    val N: Int = percent / 100
+
+    (0 until N).par.foreach(nn => {
       // for each minority class sample
-      minorityClassIndex.zipWithIndex.foreach(i => {
-        neighbors = if (dist == Distance.EUCLIDEAN) {
-          kNeighbors(minorityClassIndex map samples, i._2, k)
+      minorityClassIndex.zipWithIndex.par.foreach(i => {
+        val neighbors: Array[Int] = if (dist == Distance.EUCLIDEAN) {
+          KDTree.get.nNeighbours(samples(i._1), k)._3.toArray
         } else {
-          kNeighborsHVDM(minorityClassIndex map samples, i._2, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+          kNeighborsHVDM(samples, i._2, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
         }
 
         val n: Int = r.nextInt(neighbors.length)
 
         val D: Double = if (dist == Distance.EUCLIDEAN) {
-          euclidean(samples(i._1), samples(minorityClassIndex(neighbors(n))))
+          euclidean(samples(i._1), samples(neighbors(n)))
         } else {
-          HVDM(samples(i._1), samples(minorityClassIndex(neighbors(n))), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+          HVDM(samples(i._1), samples(neighbors(n)), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
         }
 
         // calculate first principal component axis of local data distribution
-        val l2: Array[Double] = PCA((neighbors map minorityClassIndex) map samples)
+        val l2: Array[Double] = PCA(neighbors map samples)
         // compute projection of n in l2, M is on l2
         val dotMN: Double = l2.indices.map(j => {
-          samples(i._1)(j) - samples(minorityClassIndex(neighbors(n)))(j)
+          samples(i._1)(j) - samples(neighbors(n))(j)
         }).toArray.zipWithIndex.map(j => {
           j._1 * l2(j._2)
         }).sum
         val dotMM: Double = l2.map(x => x * x).sum
         // create synthetic sample
-        output(newIndex) = l2.indices.map(j => samples(i._1)(j) + dotMN / dotMM * l2(j) * D * r.nextFloat()).toArray
-        newIndex = newIndex + 1
+        output(nn * minorityClassIndex.length + i._2) = l2.indices.map(j => samples(i._1)(j) + dotMN / dotMM * l2(j)).toArray
+        output(nn * minorityClassIndex.length + i._2) = output(nn * minorityClassIndex.length + i._2).indices.map(j => output(nn * minorityClassIndex.length + i._2)(j) + (samples(i._1)(j) - output(nn * minorityClassIndex.length + i._2)(j))*r.nextFloat()).toArray
       })
     })
 
