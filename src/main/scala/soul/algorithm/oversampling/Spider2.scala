@@ -125,7 +125,6 @@ class Spider2(data: Data, seed: Long = System.currentTimeMillis(), relabel: Stri
       resultClasses = data.y
       RS.foreach(resultClasses(_) = minorityClass)
     } else {
-
       // eliminate the samples from the initial set, first we recalculate the randomIndex for min and maj class
       var newIndex: Int = 0
       minorityClassIndex = minorityClassIndex.map(minor => {
@@ -148,7 +147,6 @@ class Spider2(data: Data, seed: Long = System.currentTimeMillis(), relabel: Stri
 
     // if the neighbors of each sample in minority class belong to it, flag as safe
     minorityClassIndex.foreach(index => if (correct(index, k, out = false)) safeSamples(index) = true)
-
     if (ampl == "weak") {
       // for each sample returned by flagged amplify the data creating n copies (n calculated in amplify)
       flagged(minorityClassIndex, safeSamples).foreach(amplify(_, k))
