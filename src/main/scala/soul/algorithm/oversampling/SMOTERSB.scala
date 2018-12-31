@@ -1,10 +1,12 @@
 package soul.algorithm.oversampling
 
 import soul.data.Data
+import soul.util.KDTree
 import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
 import scala.Array._
+import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
 /** SMOTERSB algorithm. Original paper: "kNN Approach to Unbalanced Data Distribution: SMOTE-RSB: a hybrid preprocessing
@@ -46,6 +48,12 @@ class SMOTERSB(data: Data, seed: Long = System.currentTimeMillis(), percent: Int
       (null, null, null)
     }
 
+    val KDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+      Some(new KDTree(samples, data.y, samples(0).length))
+    } else {
+      None
+    }
+
     // check if the percent is correct
     var T: Int = minorityClassIndex.length
     var N: Int = percent
@@ -57,30 +65,27 @@ class SMOTERSB(data: Data, seed: Long = System.currentTimeMillis(), percent: Int
     N = N / 100
 
     // output with a size of T*N samples
-    val output: Array[Array[Double]] = Array.fill(N * T, samples(0).length)(0.0)
+    val output: Array[Array[Double]] = Array.ofDim[Double](N * T, samples(0).length)
 
-    // index array to save the neighbors of each sample
-    var neighbors: Array[Int] = new Array[Int](minorityClassIndex.length)
-
-    var newIndex: Int = 0
     val r: Random = new Random(seed)
+
     // for each minority class sample
-    minorityClassIndex.zipWithIndex.foreach(i => {
-      neighbors = (if (dist == Distance.EUCLIDEAN) {
-        kNeighbors(minorityClassIndex map samples, i._2, k)
+    minorityClassIndex.indices.par.foreach((i: Int) => {
+      val neighbors: Array[Int] = if (dist == Distance.EUCLIDEAN) {
+        KDTree.get.nNeighbours(samples(minorityClassIndex(i)), k)._3.toArray
       } else {
-        kNeighborsHVDM(minorityClassIndex map samples, i._2, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
-      }).map(minorityClassIndex(_))
-      // calculate populate for the sample
-      (0 until N).foreach(_ => {
-        val nn: Int = r.nextInt(neighbors.length)
-        // calculate attributes of the sample
-        samples(i._1).indices.foreach(atrib => {
-          val diff: Double = samples(neighbors(nn))(atrib) - samples(i._1)(atrib)
-          val gap: Float = r.nextFloat
-          output(newIndex)(atrib) = samples(i._1)(atrib) + gap * diff
+        kNeighborsHVDM(samples, minorityClassIndex(i), k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      }
+
+      // compute populate for the sample
+      (0 until N).par.foreach((n: Int) => {
+        val nn: Int = neighbors(r.nextInt(neighbors.length))
+        // compute attributes of the sample
+        samples(0).indices.foreach((atrib: Int) => {
+          val diff: Double = samples(nn)(atrib) - samples(minorityClassIndex(i))(atrib)
+          val gap: Double = r.nextFloat()
+          output(i * N + n)(atrib) = samples(minorityClassIndex(i))(atrib) + gap * diff
         })
-        newIndex = newIndex + 1
       })
     })
 
@@ -88,41 +93,42 @@ class SMOTERSB(data: Data, seed: Long = System.currentTimeMillis(), percent: Int
     val majorityClassIndex: Array[Int] = samples.indices.diff(minorityClassIndex.toList).toArray
 
     // minimum and maximum value for each attrib
-    val Amax: Array[Double] = Array.concat(majorityClassIndex map samples, output).transpose.map(column => column.max)
-    val Amin: Array[Double] = Array.concat(majorityClassIndex map samples, output).transpose.map(column => column.min)
+    val maxMinValues: Array[(Double, Double)] = Array.concat(majorityClassIndex map samples, output).transpose.map(column => (column.max, column.min))
 
     //compute the similarity matrix
-    val similarityMatrix: Array[Array[Double]] = output.map(i => {
-      (majorityClassIndex map samples).map(j => {
-        i.indices.map(k => {
+    val similarityMatrix: Array[Array[Double]] = Array.ofDim(output.length, majorityClassIndex.length)
+    output.indices.par.foreach(i => {
+      (majorityClassIndex map samples).zipWithIndex.par.foreach(j => {
+        similarityMatrix(i)(j._2) = output(i).indices.map(k => {
           if (data.nomToNum(0).isEmpty) {
-            1 - (Math.abs(i(k) - j(k)) / (Amax(k) - Amin(k))) // this expression must be multiplied by wk
+            1 - (Math.abs(output(i)(k) - j._1(k)) / (maxMinValues(k)._1 - maxMinValues(k)._2)) // this expression must be multiplied by wk
           } else { // but all the features are included, so wk is 1
-            if (i(k) == j(k)) 1 else 0
+            if (output(i)(k) == j._1(k)) 1 else 0
           }
-        }).sum / i.length
+        }).sum / output(i).length
       })
     })
 
-    var result: Array[Int] = Array()
+    var result: ArrayBuffer[Int] = ArrayBuffer()
     var similarityValue: Double = 0.4
-    var lowerApproximation: Boolean = false
-
+    var lowerApproximation: Boolean = true
     while (similarityValue < 0.9) {
       output.indices.foreach(i => {
-        lowerApproximation = false
+        lowerApproximation = true
         majorityClassIndex.indices.foreach(j => {
           if (similarityMatrix(i)(j) > similarityValue)
-            lowerApproximation = true
+            lowerApproximation = false
         })
-        if (!lowerApproximation) result = result :+ i
+        if (lowerApproximation) result += i
       })
       similarityValue += 0.05
     }
 
     //if there are not synthetic samples with lower approximation, return all synthetic samples
-    if (result.length == 0) {
-      result = Array.range(0, output.length)
+    if (result.isEmpty) {
+      result = ArrayBuffer.range(0, output.length)
+    } else {
+      result = result.distinct
     }
 
     val finishTime: Long = System.nanoTime()
@@ -134,11 +140,11 @@ class SMOTERSB(data: Data, seed: Long = System.currentTimeMillis(), percent: Int
     }
 
     new Data(if (data.fileInfo.nominal.length == 0) {
-      to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(result map output, data.fileInfo.maxAttribs,
-        data.fileInfo.minAttribs) else result map output))
+      to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(result.toArray map output, data.fileInfo.maxAttribs,
+        data.fileInfo.minAttribs) else result.toArray map output))
     } else {
-      toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(result map output, data.fileInfo.maxAttribs,
-        data.fileInfo.minAttribs) else result map output), data.nomToNum)
-    }, Array.concat(data.y, Array.fill((result map output).length)(minorityClass)), None, data.fileInfo)
+      toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(result.toArray map output, data.fileInfo.maxAttribs,
+        data.fileInfo.minAttribs) else result.toArray map output), data.nomToNum)
+    }, Array.concat(data.y, Array.fill((result.toArray map output).length)(minorityClass)), None, data.fileInfo)
   }
 }
