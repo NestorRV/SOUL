@@ -2,6 +2,7 @@ package soul.algorithm.oversampling
 
 import soul.algorithm.undersampling.TL
 import soul.data.Data
+import soul.util.KDTree
 import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
@@ -46,6 +47,12 @@ class SMOTETL(data: Data, seed: Long = System.currentTimeMillis(), percent: Int 
       (null, null, null)
     }
 
+    val KDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+      Some(new KDTree(samples, data.y, samples(0).length))
+    } else {
+      None
+    }
+
     // check if the percent is correct
     var T: Int = minorityClassIndex.length
     var N: Int = percent
@@ -57,33 +64,29 @@ class SMOTETL(data: Data, seed: Long = System.currentTimeMillis(), percent: Int 
     N = N / 100
 
     // output with a size of T*N samples
-    val output: Array[Array[Double]] = Array.fill(N * T, samples(0).length)(0.0)
+    val output: Array[Array[Double]] = Array.ofDim[Double](N * T, samples(0).length)
 
-    // index array to save the neighbors of each sample
-    var neighbors: Array[Int] = new Array[Int](minorityClassIndex.length)
-
-    var newIndex: Int = 0
     val r: Random = new Random(seed)
+
     // for each minority class sample
-    minorityClassIndex.zipWithIndex.foreach(i => {
-      neighbors = (if (dist == Distance.EUCLIDEAN) {
-        kNeighbors(minorityClassIndex map samples, i._2, k)
+    minorityClassIndex.indices.par.foreach((i: Int) => {
+      val neighbors: Array[Int] = if (dist == Distance.EUCLIDEAN) {
+        KDTree.get.nNeighbours(samples(minorityClassIndex(i)), k)._3.toArray
       } else {
-        kNeighborsHVDM(minorityClassIndex map samples, i._2, k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
-      }).map(minorityClassIndex(_))
+        kNeighborsHVDM(samples, minorityClassIndex(i), k, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
+      }
+
       // compute populate for the sample
-      (0 until N).foreach(_ => {
-        val nn: Int = r.nextInt(neighbors.length)
+      (0 until N).par.foreach((n: Int) => {
+        val nn: Int = neighbors(r.nextInt(neighbors.length))
         // compute attributes of the sample
-        samples(i._1).indices.foreach(atrib => {
-          val diff: Double = samples(neighbors(nn))(atrib) - samples(i._1)(atrib)
-          val gap: Float = r.nextFloat
-          output(newIndex)(atrib) = samples(i._1)(atrib) + gap * diff
+        samples(0).indices.foreach((atrib: Int) => {
+          val diff: Double = samples(nn)(atrib) - samples(minorityClassIndex(i))(atrib)
+          val gap: Double = r.nextFloat()
+          output(i * N + n)(atrib) = samples(minorityClassIndex(i))(atrib) + gap * diff
         })
-        newIndex = newIndex + 1
       })
     })
-
     val result: Array[Array[Double]] = Array.concat(samples, output)
     val resultClasses: Array[Any] = Array.concat(data.y, Array.fill(output.length)(minorityClass))
 
