@@ -1,6 +1,7 @@
 package soul.algorithm.oversampling
 
 import soul.data.Data
+import soul.util.KDTree
 import soul.util.Utilities.Distance.Distance
 import soul.util.Utilities._
 
@@ -39,11 +40,24 @@ class BorderlineSMOTE(data: Data, seed: Long = System.currentTimeMillis(), m: In
       (null, null, null)
     }
 
-    // compute minority class neighbors
-    val minorityClassNeighbors: Array[Array[Int]] = if (dist == Distance.EUCLIDEAN) {
-      minorityClassIndex.map(node => kNeighbors(samples, node, m))
+    val KDTree: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+      Some(new KDTree(samples, data.y, samples(0).length))
     } else {
-      minorityClassIndex.map(node => kNeighborsHVDM(samples, node, m, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter))
+      None
+    }
+
+    val KDTreeMinority: Option[KDTree] = if (dist == Distance.EUCLIDEAN) {
+      Some(new KDTree(minorityClassIndex map samples, minorityClassIndex map data.y, samples(0).length))
+    } else {
+      None
+    }
+
+    // compute minority class neighbors
+    val minorityClassNeighbors: Array[Array[Int]] = new Array[Array[Int]](minorityClassIndex.length)
+    if (dist == Distance.EUCLIDEAN) {
+      minorityClassIndex.indices.par.foreach(i => minorityClassNeighbors(i) = KDTree.get.nNeighbours(samples(minorityClassIndex(i)), k)._3.toArray)
+    } else {
+      minorityClassIndex.indices.par.foreach(i => minorityClassNeighbors(i) = kNeighborsHVDM(samples, minorityClassIndex(i), m, data.fileInfo.nominal, sds, attrCounter, attrClassesCounter))
     }
 
     //compute nodes in borderline
@@ -52,13 +66,11 @@ class BorderlineSMOTE(data: Data, seed: Long = System.currentTimeMillis(), m: In
       neighbors.foreach(neighbor => {
         if (data.y(neighbor) != minorityClass) {
           counter += 1
-        } else {
-          counter
         }
       })
       counter
     }).zipWithIndex.map(nNonMinorityClass => {
-      if (m / 2 <= nNonMinorityClass._1 && nNonMinorityClass._1 < m) {
+      if (nNonMinorityClass._1 >= (m / 2) && nNonMinorityClass._1 < m) {
         Some(nNonMinorityClass._2)
       } else {
         None
@@ -69,31 +81,25 @@ class BorderlineSMOTE(data: Data, seed: Long = System.currentTimeMillis(), m: In
     val s: Int = r.nextInt(k) + 1
 
     // output with a size of T*N samples
-    val output: Array[Array[Double]] = Array.fill(s * DangerNodes.length, samples(0).length)(0.0)
+    val output: Array[Array[Double]] = Array.ofDim(s * DangerNodes.length, samples(0).length)
 
-    // index array to save the neighbors of each sample
-    var neighbors: Array[Int] = new Array[Int](minorityClassIndex.length)
-
-    var newIndex: Int = 0
     // for each minority class sample
-    DangerNodes.zipWithIndex.foreach(i => {
-      neighbors = if (dist == Distance.EUCLIDEAN) {
-        kNeighbors(minorityClassIndex map samples, i._2, k)
+    DangerNodes.zipWithIndex.par.foreach(i => {
+      val neighbors = if (dist == Distance.EUCLIDEAN) {
+        KDTreeMinority.get.nNeighbours(samples(i._1), k)._3.toArray
       } else {
         kNeighborsHVDM(minorityClassIndex map samples, i._2, k, data.fileInfo.nominal, sds, attrCounter,
           attrClassesCounter).map(minorityClassIndex(_))
       }
-      val sNeighbors: Array[Int] = (0 until s).map(_ => r.nextInt(neighbors.length)).toArray.distinct
-      neighbors = sNeighbors map neighbors
+      val sNeighbors: Array[Int] = (0 until s).map(_ => r.nextInt(neighbors.length)).toArray
       // calculate populate for the sample
-      neighbors.foreach(j => {
+      (sNeighbors map neighbors).zipWithIndex.par.foreach(j => {
         // calculate attributes of the sample
         samples(i._1).indices.foreach(attrib => {
-          val diff: Double = samples(j)(attrib) - samples(i._1)(attrib)
+          val diff: Double = samples(minorityClassIndex(j._1))(attrib) - samples(i._1)(attrib)
           val gap: Float = r.nextFloat
-          output(newIndex)(attrib) = samples(i._1)(attrib) + gap * diff
+          output(i._2 * s + j._2)(attrib) = samples(i._1)(attrib) + gap * diff
         })
-        newIndex = newIndex + 1
       })
     })
 
