@@ -17,6 +17,62 @@ import scala.util.Random
   */
 class MDO(data: Data, seed: Long = System.currentTimeMillis(), normalize: Boolean = false, verbose: Boolean = false) {
 
+  /** Compute the MDO algorithm
+    *
+    * @return synthetic samples generated
+    */
+  def compute(): Data = {
+    val initTime: Long = System.nanoTime()
+    val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
+    // compute minority class
+    val minorityClassIndex: Array[Int] = minority(data.y)
+    // compute majority class
+    val minorityClass: Any = data.y(minorityClassIndex(0))
+    val majorityClassIndex: Array[Int] = samples.indices.diff(minorityClassIndex.toList).toArray
+
+    // compute the mean for the values of each attribute
+    val mean: Array[Double] = (minorityClassIndex map samples).transpose.map(_.sum / minorityClassIndex.length)
+
+    // subtract the mean to every attrib and then compute the covariance matrix
+    val Zi: DenseMatrix[Double] = DenseMatrix(minorityClassIndex map samples: _*) -:- DenseMatrix(minorityClassIndex.map(_ => mean): _*)
+    val oneDividedByN: Array[Array[Double]] = Array.fill(Zi.cols, Zi.cols)(Zi.rows)
+    val S: DenseMatrix[Double] = (Zi.t * Zi) /:/ DenseMatrix(oneDividedByN: _*)
+    //compute the eigenvectors and eigenvalues of S
+    val eigen = eigSym(S)
+    // the eigenvectors form the columns of the matrix that performs the change os basis
+    val Ti: DenseMatrix[Double] = (eigen.eigenvectors * Zi.t).t
+    // the diag are the eigenvalues
+    val V: DenseVector[Double] = eigen.eigenvalues
+
+    //compute the new samples
+    val newSamples: Array[Array[Double]] = MDO_oversampling(Ti, mean, V, majorityClassIndex.length - minorityClassIndex.length, seed)
+
+    //transform the samples to the original basis
+    val newSamplesToOriginalSpace: DenseMatrix[Double] = (inv(eigen.eigenvectors) * DenseMatrix(newSamples: _*).t).t
+
+    //sum the mean again
+    val samplesWithMean: DenseMatrix[Double] = newSamplesToOriginalSpace +:+ DenseMatrix((0 until newSamplesToOriginalSpace.rows).map(_ => mean): _*)
+
+    // the output
+    val output: Array[Array[Double]] = Array.range(0, samplesWithMean.rows).map(i => samplesWithMean(i, ::).t.toArray)
+
+    val finishTime: Long = System.nanoTime()
+
+    if (verbose) {
+      println("ORIGINAL SIZE: %d".format(data.x.length))
+      println("NEW DATA SIZE: %d".format(data.x.length + output.length))
+      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
+    }
+
+    new Data(if (data.fileInfo.nominal.length == 0) {
+      to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
+        data.fileInfo.minAttribs) else output))
+    } else {
+      toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
+        data.fileInfo.minAttribs) else output), data.nomToNum)
+    }, Array.concat(data.y, Array.fill(output.length)(minorityClass)), None, data.fileInfo)
+  }
+
   /** create the new samples for MDO algorithm
     *
     * @param Ti    the samples changed of basis
@@ -42,10 +98,10 @@ class MDO(data: Data, seed: Long = System.currentTimeMillis(), normalize: Boolea
 
     (0 until I).foreach(i => {
       // square of each sample
-      val x: DenseVector[Double] = Ti(i, ::).t :* Ti(i, ::).t
+      val x: DenseVector[Double] = Ti(i, ::).t *:* Ti(i, ::).t
       // vector results from α × V , which forms the denominators of ellipse equation
-      val alpha: Double = sum(x :/ V)
-      val alphaV: DenseVector[Double] = V :* alpha
+      val alpha: Double = sum(x /:/ V)
+      val alphaV: DenseVector[Double] = V *:* alpha
       (0 until N).foreach(_ => {
         var s: Double = 0.0
         (0 until Ti.cols - 1).foreach(p => {
@@ -57,68 +113,11 @@ class MDO(data: Data, seed: Long = System.currentTimeMillis(), normalize: Boolea
           s = s + (r * r / alphaV(p))
         })
         //compute the last attrib
-        val lastFeaVal: Double = (1 - s) * alphaV(alphaV.size - 1) / (Ti.cols - 1)
+        val lastFeaVal: Double = (1 - s) * alphaV(alphaV.length - 1)
         output(newIndex)(alphaV.size - 1) = if (rand.nextInt() % 2 == 0) -lastFeaVal else lastFeaVal
         newIndex += 1
       })
     })
     output
-  }
-
-  /** Compute the MDO algorithm
-    *
-    * @return synthetic samples generated
-    */
-  def compute(): Data = {
-    val initTime: Long = System.nanoTime()
-    val samples: Array[Array[Double]] = if (normalize) zeroOneNormalization(data, data.processedData) else data.processedData
-    // compute minority class
-    val minorityClassIndex: Array[Int] = minority(data.y)
-    // compute majority class
-    val minorityClass: Any = data.y(minorityClassIndex(0))
-    val majorityClassIndex: Array[Int] = samples.indices.diff(minorityClassIndex.toList).toArray
-
-    // compute the mean for the values of each attribute
-    val mean: Array[Double] = (minorityClassIndex map samples).transpose.map(_.sum / minorityClassIndex.length)
-
-    // subtract the mean to every attrib and then compute the covariance matrix
-    val Zi: DenseMatrix[Double] = DenseMatrix(minorityClassIndex map samples: _*) :- DenseMatrix(minorityClassIndex.map(_ => mean): _*)
-    val oneDividedByN: Array[Array[Double]] = Array.fill(Zi.cols, Zi.cols)(Zi.rows)
-    val S: DenseMatrix[Double] = (Zi.t * Zi) :/ DenseMatrix(oneDividedByN: _*)
-    //compute the eigenvectors and eigenvalues of S
-    val eigen = eigSym(S)
-
-    // the eigenvectors form the columns of the matrix that performs the change os basis
-    val Ti: DenseMatrix[Double] = (eigen.eigenvectors * Zi.t).t
-    // the diag are the eigenvalues
-    val V: DenseVector[Double] = eigen.eigenvalues
-
-    //compute the new samples
-    val newSamples: Array[Array[Double]] = MDO_oversampling(Ti, mean, V, majorityClassIndex.length - minorityClassIndex.length, seed)
-
-    //transform the samples to the original basis
-    val newSamplesToOriginalSpace: DenseMatrix[Double] = (inv(eigen.eigenvectors) * DenseMatrix(newSamples: _*).t).t
-
-    //sum the mean again
-    val samplesWithMean: DenseMatrix[Double] = newSamplesToOriginalSpace :+ DenseMatrix((0 until newSamplesToOriginalSpace.rows).map(_ => mean): _*)
-
-    // the output
-    val output: Array[Array[Double]] = Array.range(0, samplesWithMean.rows).map(i => samplesWithMean(i, ::).t.toArray)
-
-    val finishTime: Long = System.nanoTime()
-
-    if (verbose) {
-      println("ORIGINAL SIZE: %d".format(data.x.length))
-      println("NEW DATA SIZE: %d".format(data.x.length + output.length))
-      println("TOTAL ELAPSED TIME: %s".format(nanoTimeToString(finishTime - initTime)))
-    }
-
-    new Data(if (data.fileInfo.nominal.length == 0) {
-      to2Decimals(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
-        data.fileInfo.minAttribs) else output))
-    } else {
-      toNominal(Array.concat(data.processedData, if (normalize) zeroOneDenormalization(output, data.fileInfo.maxAttribs,
-        data.fileInfo.minAttribs) else output), data.nomToNum)
-    }, Array.concat(data.y, Array.fill(output.length)(minorityClass)), None, data.fileInfo)
   }
 }
