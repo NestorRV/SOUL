@@ -100,7 +100,7 @@ class ADOMS(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
         val dotMM: Double = l2.map(x => x * x).sum
         // create synthetic sample
         output(nn * minorityClassIndex.length + i._2) = l2.indices.map(j => samples(i._1)(j) + dotMN / dotMM * l2(j)).toArray
-        output(nn * minorityClassIndex.length + i._2) = output(nn * minorityClassIndex.length + i._2).indices.map(j => output(nn * minorityClassIndex.length + i._2)(j) + (samples(i._1)(j) - output(nn * minorityClassIndex.length + i._2)(j))*r.nextFloat()).toArray
+        output(nn * minorityClassIndex.length + i._2) = output(nn * minorityClassIndex.length + i._2).indices.map(j => output(nn * minorityClassIndex.length + i._2)(j) + (samples(i._1)(j) - output(nn * minorityClassIndex.length + i._2)(j)) * r.nextFloat()).toArray
       })
     })
 
