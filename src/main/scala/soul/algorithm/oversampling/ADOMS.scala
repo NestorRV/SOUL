@@ -83,12 +83,6 @@ class ADOMS(data: Data, seed: Long = System.currentTimeMillis(), percent: Int = 
 
         val n: Int = r.nextInt(neighbors.length)
 
-        val D: Double = if (dist == Distance.EUCLIDEAN) {
-          euclidean(samples(i._1), samples(neighbors(n)))
-        } else {
-          HVDM(samples(i._1), samples(neighbors(n)), data.fileInfo.nominal, sds, attrCounter, attrClassesCounter)
-        }
-
         // calculate first principal component axis of local data distribution
         val l2: Array[Double] = PCA(neighbors map samples)
         // compute projection of n in l2, M is on l2
