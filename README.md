@@ -105,3 +105,39 @@ import soul.io.Writer
 Writer.writeDelimitedText(file = <pathToFile>, data = resultCSV)
 Writer.writeArff(file = <pathToFile>, data = resultARFF)
 ```
+
+### Experiments
+
+With the objective of showing the capabilities of **SOUL**, we have generated a two dimension synthetic imbalanced dataset with 1,871 instances. Among them, 1,600 instances belong to the majority class and the remaining 271 belongs to the minority class, leading to about a 17% of minority instances in the whole dataset (IR=5.9). The representation of this dataset can be found below, where we may observe a clear overlapping between the classes, as well as a cluster of minority instances in the middle of the majority instances. 
+
+Next, we have used the following parameters of the algorithms to perform an experiment with some relevant oversampling and undersampling approaches:
+
+
+* **MWMOTE**: *seed*: 0, *N*: 1400, *k1*: 5, *k2*: 5, *k3*: 5, *dist*: euclidean, *normalize*: false, *verbose*: false.
+
+* **SMOTE**: *seed*: 0, *percent*: 500, *k*: 5,, *dist*: euclidean, *normalize*: false, *verbose*: false.
+
+* **ADASYN**: *seed*: 0, *d*: 1, *B*: 1, *k*: 5,, *dist*: euclidean, *normalize*: false, *verbose*: false.
+
+* **SafeLevelSMOTE**: *seed*: 0, *k*: 5,, *dist*: euclidean, *normalize*: false, *verbose*: false.
+
+* **IHTS**: *seed* = 0, *nFolds* = 5, *normalize* = false, *randomData* = false, *verbose* = false
+
+* **IPADE**: *seed* = 0, *iterations* = 100, *strategy* = 1, *randomChoice* = true, *normalize* = false, *randomData* = false, *verbose* = false
+
+* **NCL**: *seed* = 0, *dist* = euclidean, *k* = 3, *threshold* = 0.5, *normalize* = false, *randomData* = false, *verbose* = false
+
+* **SBC**: *seed* = 0, *method* = ``NearMiss1'', *m* = 1.0, *k* = 3, *numClusters* = 50, *restarts* = 1, *minDispersion* = 0.0001, *maxIterations* = 200, val *dist* = euclidean, *normalize* = false, *randomData* = false, *verbose* = false
+
+
+![Original](images/original.png)
+
+
+| ![ADASYN](images/ADASYN.png) | ![SafeLevelSMOTE](images/SafeLevelSMOTE.png) |
+| ------------- | ------------- |
+![MWMOTE](images/MWMOTE.png) | ![SMOTE](images/SMOTE.png)
+
+
+| ![IHTS](images/IHTS.png) | ![IPADE](images/IPADE.png) |
+| ------------- | ------------- |
+![NCL](images/NCL.png) | ![SBC](images/SBC.png)
