@@ -60,7 +60,7 @@ Included algorithms for undersampling:
 
 * **ClusterOSS.** Original paper: "ClusterOSS: a new undersampling method for imbalanced learning." by Victor H Barella, Eduardo P Costa and André C. P. L. F. Carvalho.
 
-* **Iterative Instance Adjustment for Imbalanced Domains.** Original paper: "Addressing imbalanced classification with instance generation techniques: IPADE-ID" by Victoria López, Isaac Triguero, Cristóbal J. Carmona, Salvador García and Francisco Herrera.
+* **Iterative Instance Adjustment for Imbalanced Domains.** Original paper: "Addressing imbalanced classification with instance generation techniques: IPADE-ID" by Victoria López, Isaac Triguero, Cristóbal J. Carmona, Salvador García and Francisco Herrera.
 
 ### How-to use it
 
@@ -115,11 +115,11 @@ Next, we have used the following parameters of the algorithms to perform an expe
 
 * **MWMOTE**: *seed*: 0, *N*: 1400, *k1*: 5, *k2*: 5, *k3*: 5, *dist*: euclidean, *normalize*: false, *verbose*: false.
 
-* **SMOTE**: *seed*: 0, *percent*: 500, *k*: 5,, *dist*: euclidean, *normalize*: false, *verbose*: false.
+* **SMOTE**: *seed*: 0, *percent*: 500, *k*: 5, *dist*: euclidean, *normalize*: false, *verbose*: false.
 
-* **ADASYN**: *seed*: 0, *d*: 1, *B*: 1, *k*: 5,, *dist*: euclidean, *normalize*: false, *verbose*: false.
+* **ADASYN**: *seed*: 0, *d*: 1, *B*: 1, *k*: 5, *dist*: euclidean, *normalize*: false, *verbose*: false.
 
-* **SafeLevelSMOTE**: *seed*: 0, *k*: 5,, *dist*: euclidean, *normalize*: false, *verbose*: false.
+* **SafeLevelSMOTE**: *seed*: 0, *k*: 5, *dist*: euclidean, *normalize*: false, *verbose*: false.
 
 * **IHTS**: *seed* = 0, *nFolds* = 5, *normalize* = false, *randomData* = false, *verbose* = false
 
@@ -127,7 +127,7 @@ Next, we have used the following parameters of the algorithms to perform an expe
 
 * **NCL**: *seed* = 0, *dist* = euclidean, *k* = 3, *threshold* = 0.5, *normalize* = false, *randomData* = false, *verbose* = false
 
-* **SBC**: *seed* = 0, *method* = ``NearMiss1'', *m* = 1.0, *k* = 3, *numClusters* = 50, *restarts* = 1, *minDispersion* = 0.0001, *maxIterations* = 200, val *dist* = euclidean, *normalize* = false, *randomData* = false, *verbose* = false
+* **SBC**: *seed* = 0, *method* = "NearMiss1", *m* = 1.0, *k* = 3, *numClusters* = 50, *restarts* = 1, *minDispersion* = 0.0001, *maxIterations* = 200, val *dist* = euclidean, *normalize* = false, *randomData* = false, *verbose* = false
 
 
 ![Original](images/original.png)
